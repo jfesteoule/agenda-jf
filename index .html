@@ -1,0 +1,2629 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Route du temps 2023-2027</title>
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@tabler/icons-webfont@latest/tabler-icons.min.css">
+<style>
+*{box-sizing:border-box;margin:0;padding:0;}
+body{font-family:Arial,sans-serif;}
+#wrap{position:relative;width:100vw;height:100vh;overflow:hidden;}
+canvas#c{position:absolute;inset:0;width:100%;height:100%;touch-action:none;pointer-events:none;}
+#hud{position:absolute;top:12px;left:12px;right:12px;z-index:1000;display:flex;gap:8px;align-items:center;}
+#sbox{flex:1;height:40px;background:#fff;border:none;border-radius:20px;padding:0 16px 0 40px;font-size:13px;color:#202124;outline:none;box-shadow:0 2px 6px rgba(0,0,0,0.2);}
+#sico{position:absolute;left:26px;top:50%;transform:translateY(-50%);color:#5f6368;font-size:15px;pointer-events:none;}
+#mbtn{width:40px;height:40px;min-width:40px;background:#fff;border-radius:50%;border:none;cursor:pointer;display:flex;align-items:center;justify-content:center;box-shadow:0 2px 6px rgba(0,0,0,0.2);color:#5f6368;}
+#speeds{position:absolute;top:62px;left:12px;z-index:20;display:flex;gap:6px;}
+.sp{background:#fff;border:none;border-radius:20px;padding:5px 11px;font-size:12px;font-weight:500;cursor:pointer;box-shadow:0 1px 4px rgba(0,0,0,0.18);color:#444;}
+.sp.on{background:#1a73e8;color:#fff;}
+#zbx{position:absolute;right:12px;bottom:130px;z-index:20;display:flex;flex-direction:column;gap:1px;}
+.zb{width:36px;height:36px;background:#fff;border:none;cursor:pointer;font-size:18px;color:#444;display:flex;align-items:center;justify-content:center;box-shadow:0 1px 4px rgba(0,0,0,0.2);}
+.zb:first-child{border-radius:4px 4px 0 0;}.zb:last-child{border-radius:0 0 4px 4px;}
+#playbtn{position:absolute;right:12px;bottom:80px;z-index:20;width:42px;height:42px;background:#1a73e8;border:none;border-radius:50%;cursor:pointer;display:flex;align-items:center;justify-content:center;color:#fff;font-size:20px;box-shadow:0 2px 6px rgba(0,0,0,0.25);}
+#resetbtn{position:absolute;right:60px;bottom:80px;z-index:20;width:42px;height:42px;background:#fff;border:none;border-radius:50%;cursor:pointer;display:flex;align-items:center;justify-content:center;color:#1a73e8;font-size:18px;box-shadow:0 2px 6px rgba(0,0,0,0.2);}
+#todaybtn{position:absolute;right:108px;bottom:80px;z-index:20;width:42px;height:42px;background:#fff;border:none;border-radius:50%;cursor:pointer;display:flex;align-items:center;justify-content:center;color:#e53935;font-size:14px;font-weight:700;box-shadow:0 2px 6px rgba(0,0,0,0.2);}
+#legend{position:absolute;top:62px;right:12px;z-index:20;display:flex;flex-direction:column;gap:5px;}
+.leg{background:#fff;border-radius:20px;padding:4px 10px;font-size:11px;font-weight:500;box-shadow:0 1px 4px rgba(0,0,0,0.18);display:flex;align-items:center;gap:6px;}
+.legdot{width:10px;height:10px;border-radius:50%;}
+.legline{width:18px;height:4px;border-radius:2px;background:#e53935;}
+#eta{position:absolute;bottom:12px;left:12px;right:60px;z-index:20;background:#fff;border-radius:12px;padding:10px 14px;display:flex;align-items:center;justify-content:space-between;box-shadow:0 2px 8px rgba(0,0,0,0.18);}
+</style>
+  <script src="https://accounts.google.com/gsi/client" async defer>
+window.syncAllCalendars = syncAllCalendars;
+</script>
+
+<style>
+@keyframes spin { from{transform:rotate(0deg)} to{transform:rotate(360deg)} }
+</style>
+</head>
+<body>
+<div id="wrap">
+  <canvas id="c"></canvas>
+  <div id="hud">
+    <button id="mbtn"><i class="ti ti-menu-2" style="font-size:18px"></i></button>
+    <div style="position:relative;flex:1;">
+      <i class="ti ti-calendar" id="sico"></i>
+      <input id="sbox" type="text" value="Route du temps · Jan 2023 › Déc 2027" readonly>
+    </div>
+    <button id="syncbtn" style="position:relative;z-index:1000;pointer-events:auto;width:40px;height:40px;min-width:40px;background:#fff;border-radius:50%;border:none;cursor:pointer;display:flex;align-items:center;justify-content:center;box-shadow:0 2px 6px rgba(0,0,0,0.2);color:#34a853;font-size:18px;" title="Synchroniser Google Agenda"><i class="ti ti-refresh"></i></button>
+  </div>
+  <div id="speeds">
+    <button class="sp" data-s="0.2">×⅕</button>
+    <button class="sp" data-s="0.5">×½</button>
+    <button class="sp" data-s="1">×1</button>
+    <button class="sp on" data-s="3">×3</button>
+    <button class="sp" data-s="10">×10</button>
+    <button class="sp" data-s="30">×30</button>
+  </div>
+  <div id="legend">
+    <div class="leg"><div class="legdot" style="background:#1a73e8"></div>JF</div>
+    <div class="leg"><div class="legdot" style="background:#e67c73"></div>Anne</div>
+    <div class="leg"><div class="legline"></div>Samedi</div>
+    <div class="leg"><div style="width:10px;height:16px;background:linear-gradient(#ff9800,#66bb6a,#42a5f5);border-radius:2px;"></div>Vacances zone A</div>
+  </div>
+  <div id="zbx">
+    <button class="zb" id="zi">+</button>
+    <button class="zb" id="zo">−</button>
+  </div>
+  <button id="todaybtn" title="Aujourd'hui">Auj</button>  <button id="resetbtn" title="Retour au début"><i class="ti ti-arrow-back-up"></i></button>
+  <button id="playbtn"><i class="ti ti-player-play" id="pico"></i></button>      <div id="eta-name" style="font-size:14px;font-weight:500;color:#202124;margin-top:1px;">—</div>
+    </div>
+    <div style="display:flex;align-items:baseline;gap:3px;">
+      <span id="eta-d" style="font-size:22px;font-weight:500;color:#1a73e8;">—</span>
+      <span id="eta-u" style="font-size:12px;color:#5f6368;">jours</span>
+    </div>
+  </div>
+</div>
+<script>
+
+const TOTAL_DAYS=1825;
+const TODAY_DAY=1231;
+const TODAY_DOW=0;
+const EVT_JF=[
+  {day:1,label:'2 Jan',title:'Noah et Arthur, Bourg d\'Oisans',color:'#1a73e8',side:'right',who:'JF'},
+  {day:1,label:'2 Jan',title:'Russe G3',color:'#1a73e8',side:'right',who:'JF'},
+  {day:2,label:'3 Jan',title:'Bridge D0301 bridge club de Grenoble 26 ',color:'#1a73e8',side:'right',who:'JF'},
+  {day:4,label:'5 Jan',title:'Pilate',color:'#1a73e8',side:'right',who:'JF'},
+  {day:5,label:'6 Jan',title:'CGOS smh',color:'#33b679',side:'right',who:'JF'},
+  {day:5,label:'6 Jan',title:'Jeannonneau',color:'#f6bf26',side:'right',who:'JF'},
+  {day:5,label:'6 Jan',title:'Stretching',color:'#1a73e8',side:'right',who:'JF'},
+  {day:8,label:'9 Jan',title:'Russe G3',color:'#1a73e8',side:'right',who:'JF'},
+  {day:9,label:'10 Jan',title:'Bridge D0301 bridge club de Grenoble 26 ',color:'#1a73e8',side:'right',who:'JF'},
+  {day:11,label:'12 Jan',title:'Pilate',color:'#1a73e8',side:'right',who:'JF'},
+  {day:12,label:'13 Jan',title:'Tanguyneglise de Brignoux',color:'#f6bf26',side:'right',who:'JF'},
+  {day:12,label:'13 Jan',title:'Stretching',color:'#1a73e8',side:'right',who:'JF'},
+  {day:15,label:'16 Jan',title:'Russe G3',color:'#1a73e8',side:'right',who:'JF'},
+  {day:15,label:'16 Jan',title:'Stretching',color:'#1a73e8',side:'right',who:'JF'},
+  {day:16,label:'17 Jan',title:'CITE DODE',color:'#33b679',side:'right',who:'JF'},
+  {day:16,label:'17 Jan',title:'Bridge D0301 bridge club de Grenoble 26 ',color:'#1a73e8',side:'right',who:'JF'},
+  {day:18,label:'19 Jan',title:'Bridge entraînement',color:'#1a73e8',side:'right',who:'JF'},
+  {day:19,label:'20 Jan',title:'Stretching',color:'#1a73e8',side:'right',who:'JF'},
+  {day:21,label:'22 Jan',title:'Soirée Marie Philippe annulée',color:'#f6bf26',side:'right',who:'JF'},
+  {day:22,label:'23 Jan',title:'Révision bridge Éliane',color:'#1a73e8',side:'right',who:'JF'},
+  {day:22,label:'23 Jan',title:'Russe G3',color:'#1a73e8',side:'right',who:'JF'},
+  {day:22,label:'23 Jan',title:'Stretching',color:'#1a73e8',side:'right',who:'JF'},
+  {day:23,label:'24 Jan',title:'Catherine mga',color:'#1a73e8',side:'right',who:'JF'},
+  {day:23,label:'24 Jan',title:'Bridge D0301 bridge club de Grenoble 26 ',color:'#1a73e8',side:'right',who:'JF'},
+  {day:25,label:'26 Jan',title:'Bridge entraînement',color:'#1a73e8',side:'right',who:'JF'},
+  {day:26,label:'27 Jan',title:'Stretching',color:'#1a73e8',side:'right',who:'JF'},
+  {day:27,label:'28 Jan',title:'Saint Vincent tournante annulée',color:'#f6bf26',side:'right',who:'JF'},
+  {day:28,label:'29 Jan',title:'Bdo enfants Célia',color:'#1a73e8',side:'right',who:'JF'},
+  {day:29,label:'30 Jan',title:'Russe G3',color:'#1a73e8',side:'right',who:'JF'},
+  {day:29,label:'30 Jan',title:'Stretching',color:'#1a73e8',side:'right',who:'JF'},
+  {day:29,label:'30 Jan',title:'Restaurant MGA',color:'#1a73e8',side:'right',who:'JF'},
+  {day:30,label:'31 Jan',title:'Bridge D0301 bridge club de Grenoble 26 ',color:'#1a73e8',side:'right',who:'JF'},
+  {day:31,label:'1 Feb',title:'Sidney 17h',color:'#f6bf26',side:'right',who:'JF'},
+  {day:32,label:'2 Feb',title:'Bridge entraînement',color:'#1a73e8',side:'right',who:'JF'},
+  {day:33,label:'3 Feb',title:'CGOS SMH',color:'#33b679',side:'right',who:'JF'},
+  {day:33,label:'3 Feb',title:'Stretching',color:'#1a73e8',side:'right',who:'JF'},
+  {day:34,label:'4 Feb',title:'Balcons de vaujany',color:'#f6bf26',side:'right',who:'JF'},
+  {day:36,label:'6 Feb',title:'Russe G3',color:'#1a73e8',side:'right',who:'JF'},
+  {day:36,label:'6 Feb',title:'Stretching',color:'#1a73e8',side:'right',who:'JF'},
+  {day:37,label:'7 Feb',title:'Bridge D0301 bridge club de Grenoble 26 ',color:'#1a73e8',side:'right',who:'JF'},
+  {day:39,label:'9 Feb',title:'anniversaire Habibi',color:'#33b679',side:'right',who:'JF'},
+  {day:39,label:'9 Feb',title:'Bridge entraînement',color:'#1a73e8',side:'right',who:'JF'},
+  {day:40,label:'10 Feb',title:'Stretching',color:'#1a73e8',side:'right',who:'JF'},
+  {day:42,label:'12 Feb',title:'anniversaire julie',color:'#f6bf26',side:'right',who:'JF'},
+  {day:42,label:'12 Feb',title:'Anniversaire Julie',color:'#0b8043',side:'right',who:'JF'},
+  {day:43,label:'13 Feb',title:'Russe G3',color:'#1a73e8',side:'right',who:'JF'},
+  {day:43,label:'13 Feb',title:'Stretching',color:'#1a73e8',side:'right',who:'JF'},
+  {day:44,label:'14 Feb',title:'Saint Valentin',color:'#33b679',side:'right',who:'JF'},
+  {day:44,label:'14 Feb',title:'Bridge D0301 bridge club de Grenoble 26 ',color:'#1a73e8',side:'right',who:'JF'},
+  {day:45,label:'15 Feb',title:'Donner congé locataire cigalines',color:'#f4511e',side:'right',who:'JF'},
+  {day:46,label:'16 Feb',title:'Bridge entraînement',color:'#1a73e8',side:'right',who:'JF'},
+  {day:47,label:'17 Feb',title:'Stretching',color:'#1a73e8',side:'right',who:'JF'},
+  {day:50,label:'20 Feb',title:'Russe G3',color:'#1a73e8',side:'right',who:'JF'},
+  {day:50,label:'20 Feb',title:'Stretching',color:'#1a73e8',side:'right',who:'JF'},
+  {day:51,label:'21 Feb',title:'Bridge D0301 bridge club de Grenoble 26 ',color:'#1a73e8',side:'right',who:'JF'},
+  {day:53,label:'23 Feb',title:'Maurice Zilli 14h',color:'#33b679',side:'right',who:'JF'},
+  {day:53,label:'23 Feb',title:'Bridge entraînement',color:'#1a73e8',side:'right',who:'JF'},
+  {day:54,label:'24 Feb',title:'Stretching',color:'#1a73e8',side:'right',who:'JF'},
+  {day:57,label:'27 Feb',title:'Dentiste LUCE',color:'#33b679',side:'right',who:'JF'},
+  {day:57,label:'27 Feb',title:'Denise matos à Grenoble',color:'#1a73e8',side:'right',who:'JF'},
+  {day:57,label:'27 Feb',title:'Russe G3',color:'#1a73e8',side:'right',who:'JF'},
+  {day:57,label:'27 Feb',title:'Stretching',color:'#1a73e8',side:'right',who:'JF'},
+  {day:58,label:'28 Feb',title:'Bridge D0301 bridge club de Grenoble 26 ',color:'#1a73e8',side:'right',who:'JF'},
+  {day:60,label:'2 Mar',title:'Bridge entraînement',color:'#1a73e8',side:'right',who:'JF'},
+  {day:60,label:'2 Mar',title:'Massage bien être',color:'#1a73e8',side:'right',who:'JF'},
+  {day:61,label:'3 Mar',title:'St Tropez',color:'#1a73e8',side:'right',who:'JF'},
+  {day:61,label:'3 Mar',title:'CGOS smh',color:'#33b679',side:'right',who:'JF'},
+  {day:61,label:'3 Mar',title:'Stretching',color:'#1a73e8',side:'right',who:'JF'},
+  {day:64,label:'6 Mar',title:'AG moulin blanc',color:'#1a73e8',side:'right',who:'JF'},
+  {day:64,label:'6 Mar',title:'Russe G3',color:'#1a73e8',side:'right',who:'JF'},
+  {day:64,label:'6 Mar',title:'Stretching',color:'#1a73e8',side:'right',who:'JF'},
+  {day:65,label:'7 Mar',title:'Bridge D0301 bridge club de Grenoble 26 ',color:'#1a73e8',side:'right',who:'JF'},
+  {day:66,label:'8 Mar',title:'Sylvie Bigallet 18h',color:'#33b679',side:'right',who:'JF'},
+  {day:67,label:'9 Mar',title:'Défi auto',color:'#1a73e8',side:'right',who:'JF'},
+  {day:67,label:'9 Mar',title:'Bridge entraînement',color:'#1a73e8',side:'right',who:'JF'},
+  {day:67,label:'9 Mar',title:'William Mme Hays',color:'#1a73e8',side:'right',who:'JF'},
+  {day:67,label:'9 Mar',title:'Réunion des associations mairie Meylan',color:'#1a73e8',side:'right',who:'JF'},
+  {day:68,label:'10 Mar',title:'Stretching',color:'#1a73e8',side:'right',who:'JF'},
+  {day:68,label:'10 Mar',title:'RV arrêt C1 cours Russe',color:'#1a73e8',side:'right',who:'JF'},
+  {day:68,label:'10 Mar',title:'Dîner Engelstein',color:'#1a73e8',side:'right',who:'JF'},
+  {day:69,label:'11 Mar',title:'Méditation en mouvement évêché',color:'#1a73e8',side:'right',who:'JF'},
+  {day:70,label:'12 Mar',title:'Anniversaire Sophie et Arthur a confirme',color:'#33b679',side:'right',who:'JF'},
+  {day:71,label:'13 Mar',title:'Russe G3',color:'#1a73e8',side:'right',who:'JF'},
+  {day:71,label:'13 Mar',title:'Stretching',color:'#1a73e8',side:'right',who:'JF'},
+  {day:72,label:'14 Mar',title:'Bridge D0301 bridge club de Grenoble 26 ',color:'#1a73e8',side:'right',who:'JF'},
+  {day:73,label:'15 Mar',title:'Repet',color:'#1a73e8',side:'right',who:'JF'},
+  {day:74,label:'16 Mar',title:'Bridge entraînement',color:'#1a73e8',side:'right',who:'JF'},
+  {day:74,label:'16 Mar',title:'Déjeuner Pauline',color:'#1a73e8',side:'right',who:'JF'},
+  {day:74,label:'16 Mar',title:'Jousselme',color:'#1a73e8',side:'right',who:'JF'},
+  {day:75,label:'17 Mar',title:'Stretching',color:'#1a73e8',side:'right',who:'JF'},
+  {day:77,label:'19 Mar',title:'Anniversaire Sophie Arthur',color:'#33b679',side:'right',who:'JF'},
+  {day:78,label:'20 Mar',title:'Russe G3',color:'#1a73e8',side:'right',who:'JF'},
+  {day:78,label:'20 Mar',title:'Stretching',color:'#1a73e8',side:'right',who:'JF'},
+  {day:79,label:'21 Mar',title:'Coiffeur',color:'#1a73e8',side:'right',who:'JF'},
+  {day:79,label:'21 Mar',title:'Bridge D0301 bridge club de Grenoble 26 ',color:'#1a73e8',side:'right',who:'JF'},
+  {day:81,label:'23 Mar',title:'week end Gordes',color:'#33b679',side:'right',who:'JF'},
+  {day:81,label:'23 Mar',title:'Bridge entraînement',color:'#1a73e8',side:'right',who:'JF'},
+  {day:82,label:'24 Mar',title:'Stay at Bar des Amis',color:'#1a73e8',side:'right',who:'JF'},
+  {day:82,label:'24 Mar',title:'Stretching',color:'#1a73e8',side:'right',who:'JF'},
+  {day:85,label:'27 Mar',title:'Russe G3',color:'#1a73e8',side:'right',who:'JF'},
+  {day:85,label:'27 Mar',title:'Stretching',color:'#1a73e8',side:'right',who:'JF'},
+  {day:85,label:'27 Mar',title:'Prépa AG MGA Catherine',color:'#1a73e8',side:'right',who:'JF'},
+  {day:86,label:'28 Mar',title:'Bridge D0301 bridge club de Grenoble 26 ',color:'#1a73e8',side:'right',who:'JF'},
+  {day:87,label:'29 Mar',title:'Défi auto Scenic 8h',color:'#33b679',side:'right',who:'JF'},
+  {day:87,label:'29 Mar',title:'Noah +Arthur merc18 vendredi12h',color:'#1a73e8',side:'right',who:'JF'},
+  {day:88,label:'30 Mar',title:'Bridge entraînement',color:'#1a73e8',side:'right',who:'JF'},
+  {day:89,label:'31 Mar',title:'Repet 17h',color:'#33b679',side:'right',who:'JF'},
+  {day:89,label:'31 Mar',title:'Stretching',color:'#1a73e8',side:'right',who:'JF'},
+  {day:89,label:'31 Mar',title:'Sophie vend18h dim19h',color:'#1a73e8',side:'right',who:'JF'},
+  {day:92,label:'3 Apr',title:'Appeler Mairice',color:'#33b679',side:'right',who:'JF'},
+  {day:92,label:'3 Apr',title:'Russe G3',color:'#1a73e8',side:'right',who:'JF'},
+  {day:92,label:'3 Apr',title:'Stretching',color:'#1a73e8',side:'right',who:'JF'},
+  {day:93,label:'4 Apr',title:'CITE DODE',color:'#33b679',side:'right',who:'JF'},
+  {day:93,label:'4 Apr',title:'Bridge D0301 bridge club de Grenoble 26 ',color:'#1a73e8',side:'right',who:'JF'},
+  {day:94,label:'5 Apr',title:'Momo vers 17 h a verifier',color:'#33b679',side:'right',who:'JF'},
+  {day:94,label:'5 Apr',title:'Révision Peugeot',color:'#1a73e8',side:'right',who:'JF'},
+  {day:95,label:'6 Apr',title:'Bridge entraînement',color:'#1a73e8',side:'right',who:'JF'},
+  {day:95,label:'6 Apr',title:'Restaurant Pauline',color:'#1a73e8',side:'right',who:'JF'},
+  {day:95,label:'6 Apr',title:'Restau marc Dubuc',color:'#1a73e8',side:'right',who:'JF'},
+  {day:96,label:'7 Apr',title:'CGOS smh',color:'#33b679',side:'right',who:'JF'},
+  {day:96,label:'7 Apr',title:'saint tropez',color:'#33b679',side:'right',who:'JF'},
+  {day:96,label:'7 Apr',title:'Stretching',color:'#1a73e8',side:'right',who:'JF'},
+  {day:97,label:'8 Apr',title:'Paques',color:'#f6bf26',side:'right',who:'JF'},
+  {day:99,label:'10 Apr',title:'Russe G3',color:'#1a73e8',side:'right',who:'JF'},
+  {day:99,label:'10 Apr',title:'Stretching',color:'#1a73e8',side:'right',who:'JF'},
+  {day:100,label:'11 Apr',title:'Bridge D0301 bridge club de Grenoble 26 ',color:'#1a73e8',side:'right',who:'JF'},
+  {day:102,label:'13 Apr',title:'Bridge entraînement',color:'#1a73e8',side:'right',who:'JF'},
+  {day:103,label:'14 Apr',title:'Stretching',color:'#1a73e8',side:'right',who:'JF'},
+  {day:106,label:'17 Apr',title:'Russe G3',color:'#1a73e8',side:'right',who:'JF'},
+  {day:106,label:'17 Apr',title:'Stretching',color:'#1a73e8',side:'right',who:'JF'},
+  {day:107,label:'18 Apr',title:'Bridge D0301 bridge club de Grenoble 26 ',color:'#1a73e8',side:'right',who:'JF'},
+  {day:109,label:'20 Apr',title:'Bridge entraînement',color:'#1a73e8',side:'right',who:'JF'},
+  {day:110,label:'21 Apr',title:'Stretching',color:'#1a73e8',side:'right',who:'JF'},
+  {day:113,label:'24 Apr',title:'Luce 15h30',color:'#33b679',side:'right',who:'JF'},
+  {day:113,label:'24 Apr',title:'Russe G3',color:'#1a73e8',side:'right',who:'JF'},
+  {day:113,label:'24 Apr',title:'Stretching',color:'#1a73e8',side:'right',who:'JF'},
+  {day:114,label:'25 Apr',title:'Bridge D0301 bridge club de Grenoble 26 ',color:'#1a73e8',side:'right',who:'JF'},
+  {day:115,label:'26 Apr',title:'MGEN',color:'#1a73e8',side:'right',who:'JF'},
+  {day:115,label:'26 Apr',title:'Entraînement bridge',color:'#1a73e8',side:'right',who:'JF'},
+  {day:115,label:'26 Apr',title:'Répet Sydney jeannonot',color:'#1a73e8',side:'right',who:'JF'},
+  {day:115,label:'26 Apr',title:'Éric Estelle',color:'#1a73e8',side:'right',who:'JF'},
+  {day:116,label:'27 Apr',title:'Bridge entraînement',color:'#1a73e8',side:'right',who:'JF'},
+  {day:116,label:'27 Apr',title:'Dentiste',color:'#1a73e8',side:'right',who:'JF'},
+  {day:116,label:'27 Apr',title:'Labo',color:'#1a73e8',side:'right',who:'JF'},
+  {day:116,label:'27 Apr',title:'Psychologue William',color:'#1a73e8',side:'right',who:'JF'},
+  {day:117,label:'28 Apr',title:'Tanguy st tropez',color:'#33b679',side:'right',who:'JF'},
+  {day:117,label:'28 Apr',title:'Stretching',color:'#1a73e8',side:'right',who:'JF'},
+  {day:120,label:'1 May',title:'Russe G3',color:'#1a73e8',side:'right',who:'JF'},
+  {day:120,label:'1 May',title:'Stretching',color:'#1a73e8',side:'right',who:'JF'},
+  {day:121,label:'2 May',title:'Bridge D0301 bridge club de Grenoble 26 ',color:'#1a73e8',side:'right',who:'JF'},
+  {day:123,label:'4 May',title:'Bridge entraînement',color:'#1a73e8',side:'right',who:'JF'},
+  {day:124,label:'5 May',title:'CGOS smh',color:'#0b8043',side:'right',who:'JF'},
+  {day:124,label:'5 May',title:'Stretching',color:'#1a73e8',side:'right',who:'JF'},
+  {day:127,label:'8 May',title:'Russe G3',color:'#1a73e8',side:'right',who:'JF'},
+  {day:127,label:'8 May',title:'Stretching',color:'#1a73e8',side:'right',who:'JF'},
+  {day:128,label:'9 May',title:'Jeannenot 20 h',color:'#33b679',side:'right',who:'JF'},
+  {day:128,label:'9 May',title:'Bridge D0301 bridge club de Grenoble 26 ',color:'#1a73e8',side:'right',who:'JF'},
+  {day:130,label:'11 May',title:'Bridge entraînement',color:'#1a73e8',side:'right',who:'JF'},
+  {day:131,label:'12 May',title:'Metayer livre Belime',color:'#039be5',side:'right',who:'JF'},
+  {day:131,label:'12 May',title:'Stretching',color:'#1a73e8',side:'right',who:'JF'},
+  {day:134,label:'15 May',title:'Jeannenot 20h',color:'#33b679',side:'right',who:'JF'},
+  {day:134,label:'15 May',title:'Russe G3',color:'#1a73e8',side:'right',who:'JF'},
+  {day:134,label:'15 May',title:'Stretching',color:'#1a73e8',side:'right',who:'JF'},
+  {day:135,label:'16 May',title:'Bridge D0301 bridge club de Grenoble 26 ',color:'#1a73e8',side:'right',who:'JF'},
+  {day:137,label:'18 May',title:'Ascension',color:'#33b679',side:'right',who:'JF'},
+  {day:137,label:'18 May',title:'Bridge entraînement',color:'#1a73e8',side:'right',who:'JF'},
+  {day:138,label:'19 May',title:'Stretching',color:'#1a73e8',side:'right',who:'JF'},
+  {day:141,label:'22 May',title:'Russe G3',color:'#1a73e8',side:'right',who:'JF'},
+  {day:141,label:'22 May',title:'Stretching',color:'#1a73e8',side:'right',who:'JF'},
+  {day:141,label:'22 May',title:'MGA prépa Ag',color:'#1a73e8',side:'right',who:'JF'},
+  {day:142,label:'23 May',title:'Bridge D0301 bridge club de Grenoble 26 ',color:'#1a73e8',side:'right',who:'JF'},
+  {day:144,label:'25 May',title:'Luce 14h45',color:'#33b679',side:'right',who:'JF'},
+  {day:144,label:'25 May',title:'Jeannennot chez eux',color:'#33b679',side:'right',who:'JF'},
+  {day:144,label:'25 May',title:'Bridge entraînement',color:'#1a73e8',side:'right',who:'JF'},
+  {day:144,label:'25 May',title:'Psychologue William',color:'#1a73e8',side:'right',who:'JF'},
+  {day:145,label:'26 May',title:'Anniversaire Tanguy',color:'#0b8043',side:'right',who:'JF'},
+  {day:145,label:'26 May',title:'Stretching',color:'#1a73e8',side:'right',who:'JF'},
+  {day:148,label:'29 May',title:'Poterie Lucille et Pauline',color:'#1a73e8',side:'right',who:'JF'},
+  {day:148,label:'29 May',title:'Stretching',color:'#1a73e8',side:'right',who:'JF'},
+  {day:149,label:'30 May',title:'Dessange',color:'#1a73e8',side:'right',who:'JF'},
+  {day:149,label:'30 May',title:'Bridge D0301 bridge club de Grenoble 26 ',color:'#1a73e8',side:'right',who:'JF'},
+  {day:150,label:'31 May',title:'Objet encombrant entre 7h30 et 9h30',color:'#33b679',side:'right',who:'JF'},
+  {day:150,label:'31 May',title:'Chai 14h30',color:'#33b679',side:'right',who:'JF'},
+  {day:151,label:'1 Jun',title:'Maison 1 juin 9h chex jeannenot',color:'#33b679',side:'right',who:'JF'},
+  {day:151,label:'1 Jun',title:'Bridge entraînement',color:'#1a73e8',side:'right',who:'JF'},
+  {day:154,label:'4 Jun',title:'Fête des mères',color:'#0b8043',side:'right',who:'JF'},
+  {day:155,label:'5 Jun',title:'Stretching',color:'#1a73e8',side:'right',who:'JF'},
+  {day:156,label:'6 Jun',title:'Fête de l\'école de Bridge',color:'#1a73e8',side:'right',who:'JF'},
+  {day:158,label:'8 Jun',title:'Reunion Copro Notre Dame 18h',color:'#33b679',side:'right',who:'JF'},
+  {day:158,label:'8 Jun',title:'Bridge entraînement',color:'#1a73e8',side:'right',who:'JF'},
+  {day:158,label:'8 Jun',title:'Fête russe uiad B005 Belmont',color:'#1a73e8',side:'right',who:'JF'},
+  {day:159,label:'9 Jun',title:'Réunion Tutelles 9h',color:'#33b679',side:'right',who:'JF'},
+  {day:159,label:'9 Jun',title:'Soirée des médecins retraites',color:'#33b679',side:'right',who:'JF'},
+  {day:159,label:'9 Jun',title:'CGOS smh',color:'#0b8043',side:'right',who:'JF'},
+  {day:160,label:'10 Jun',title:'Journée Ardèche Alain Estéoule',color:'#33b679',side:'right',who:'JF'},
+  {day:161,label:'11 Jun',title:'Repas delpont 11juin midi',color:'#33b679',side:'right',who:'JF'},
+  {day:162,label:'12 Jun',title:'Stretching',color:'#1a73e8',side:'right',who:'JF'},
+  {day:163,label:'13 Jun',title:'Bridge D0301 bridge club de Grenoble 26 ',color:'#1a73e8',side:'right',who:'JF'},
+  {day:166,label:'16 Jun',title:'Soiree',color:'#1a73e8',side:'right',who:'JF'},
+  {day:169,label:'19 Jun',title:'Stretching',color:'#1a73e8',side:'right',who:'JF'},
+  {day:170,label:'20 Jun',title:'Bridge D0301 bridge club de Grenoble 26 ',color:'#1a73e8',side:'right',who:'JF'},
+  {day:171,label:'21 Jun',title:'Chèque place des tuileaux',color:'#1a73e8',side:'right',who:'JF'},
+  {day:172,label:'22 Jun',title:'CITE DODE',color:'#0b8043',side:'right',who:'JF'},
+  {day:172,label:'22 Jun',title:'AG MGA',color:'#1a73e8',side:'right',who:'JF'},
+  {day:179,label:'29 Jun',title:'Entraînement bridge',color:'#1a73e8',side:'right',who:'JF'},
+  {day:186,label:'6 Jul',title:'8h45 luce',color:'#33b679',side:'right',who:'JF'},
+  {day:187,label:'7 Jul',title:'CGOS smh',color:'#0b8043',side:'right',who:'JF'},
+  {day:191,label:'11 Jul',title:'Lucien',color:'#1a73e8',side:'right',who:'JF'},
+  {day:192,label:'12 Jul',title:'Avignon',color:'#33b679',side:'right',who:'JF'},
+  {day:192,label:'12 Jul',title:'Les Arcs - Draguignan - Avignon TGV (à 6',color:'#1a73e8',side:'right',who:'JF'},
+  {day:192,label:'12 Jul',title:'Train to Avignon Centre',color:'#1a73e8',side:'right',who:'JF'},
+  {day:192,label:'12 Jul',title:'Dieu est mort Notre Dame',color:'#1a73e8',side:'right',who:'JF'},
+  {day:192,label:'12 Jul',title:'Very math trip',color:'#1a73e8',side:'right',who:'JF'},
+  {day:193,label:'13 Jul',title:'Ma vie de ténor est un roman st Michel',color:'#1a73e8',side:'right',who:'JF'},
+  {day:193,label:'13 Jul',title:'Zzaj arrache coeur',color:'#1a73e8',side:'right',who:'JF'},
+  {day:193,label:'13 Jul',title:'Welfare cour Pape',color:'#1a73e8',side:'right',who:'JF'},
+  {day:194,label:'14 Jul',title:'Une opérette chien qui fume',color:'#1a73e8',side:'right',who:'JF'},
+  {day:194,label:'14 Jul',title:'La guerre de Troie girasole',color:'#1a73e8',side:'right',who:'JF'},
+  {day:194,label:'14 Jul',title:'Blanche francis essaion',color:'#1a73e8',side:'right',who:'JF'},
+  {day:195,label:'15 Jul',title:'Roméo et Juliette petit louvre',color:'#1a73e8',side:'right',who:'JF'},
+  {day:195,label:'15 Jul',title:'Misanthrope lucioles',color:'#1a73e8',side:'right',who:'JF'},
+  {day:195,label:'15 Jul',title:'Avignon Centre - Avignon TGV (à 6km du c',color:'#1a73e8',side:'right',who:'JF'},
+  {day:195,label:'15 Jul',title:'Avignon TGV (à 6km du centre-ville) - Le',color:'#1a73e8',side:'right',who:'JF'},
+  {day:198,label:'18 Jul',title:'Celia23 noah 28',color:'#33b679',side:'right',who:'JF'},
+  {day:202,label:'22 Jul',title:'Victoria',color:'#33b679',side:'right',who:'JF'},
+  {day:219,label:'8 Aug',title:'Enterrement jc',color:'#33b679',side:'right',who:'JF'},
+  {day:222,label:'11 Aug',title:'Rdv pare-brise 14h',color:'#33b679',side:'right',who:'JF'},
+  {day:223,label:'12 Aug',title:'Nuit des etoiles',color:'#33b679',side:'right',who:'JF'},
+  {day:225,label:'14 Aug',title:'Parid',color:'#33b679',side:'right',who:'JF'},
+  {day:230,label:'19 Aug',title:'Mariage d\'Inès et Antoine',color:'#1a73e8',side:'right',who:'JF'},
+  {day:231,label:'20 Aug',title:'William Saint Tropez',color:'#1a73e8',side:'right',who:'JF'},
+  {day:237,label:'26 Aug',title:'Annie',color:'#1a73e8',side:'right',who:'JF'},
+  {day:237,label:'26 Aug',title:'Biolay',color:'#1a73e8',side:'right',who:'JF'},
+  {day:239,label:'28 Aug',title:'Train to Grenoble',color:'#1a73e8',side:'right',who:'JF'},
+  {day:247,label:'5 Sep',title:'Dr roumieux gynécologue',color:'#1a73e8',side:'right',who:'JF'},
+  {day:249,label:'7 Sep',title:'Dessange',color:'#1a73e8',side:'right',who:'JF'},
+  {day:249,label:'7 Sep',title:'Mga Diho Mairie',color:'#1a73e8',side:'right',who:'JF'},
+  {day:250,label:'8 Sep',title:'CGOS smh',color:'#0b8043',side:'right',who:'JF'},
+  {day:255,label:'13 Sep',title:'William',color:'#1a73e8',side:'right',who:'JF'},
+  {day:256,label:'14 Sep',title:'Déjeuner Jeanne',color:'#1a73e8',side:'right',who:'JF'},
+  {day:256,label:'14 Sep',title:'Nourrir nicky',color:'#1a73e8',side:'right',who:'JF'},
+  {day:256,label:'14 Sep',title:'Psy William',color:'#1a73e8',side:'right',who:'JF'},
+  {day:260,label:'18 Sep',title:'Bretagne',color:'#1a73e8',side:'right',who:'JF'},
+  {day:261,label:'19 Sep',title:'Ravioles st jean',color:'#33b679',side:'right',who:'JF'},
+  {day:261,label:'19 Sep',title:'Quenelles + sauced',color:'#33b679',side:'right',who:'JF'},
+  {day:264,label:'22 Sep',title:'Belimade',color:'#33b679',side:'right',who:'JF'},
+  {day:266,label:'24 Sep',title:'Alain Esteoule',color:'#33b679',side:'right',who:'JF'},
+  {day:267,label:'25 Sep',title:'Cheminée maison 14h',color:'#33b679',side:'right',who:'JF'},
+  {day:267,label:'25 Sep',title:'Stage pré rentrée bridge',color:'#1a73e8',side:'right',who:'JF'},
+  {day:268,label:'26 Sep',title:'Stage pré rentrée bridge',color:'#1a73e8',side:'right',who:'JF'},
+  {day:269,label:'27 Sep',title:'Stage pré rentrée bridge',color:'#1a73e8',side:'right',who:'JF'},
+  {day:270,label:'28 Sep',title:'Folazil etre optimiste',color:'#33b679',side:'right',who:'JF'},
+  {day:271,label:'29 Sep',title:'Voiles de Saint-Tropez',color:'#33b679',side:'right',who:'JF'},
+  {day:275,label:'3 Oct',title:'Cours bridge',color:'#1a73e8',side:'right',who:'JF'},
+  {day:276,label:'4 Oct',title:'Thé Andrée',color:'#1a73e8',side:'right',who:'JF'},
+  {day:276,label:'4 Oct',title:'Dîner Biolay',color:'#1a73e8',side:'right',who:'JF'},
+  {day:277,label:'5 Oct',title:'Parties dirigées bridge',color:'#1a73e8',side:'right',who:'JF'},
+  {day:277,label:'5 Oct',title:'Train to Lyon Part-Dieu',color:'#1a73e8',side:'right',who:'JF'},
+  {day:277,label:'5 Oct',title:'Train to Grenoble',color:'#1a73e8',side:'right',who:'JF'},
+  {day:277,label:'5 Oct',title:'Annie',color:'#1a73e8',side:'right',who:'JF'},
+  {day:278,label:'6 Oct',title:'CGOS smh',color:'#0b8043',side:'right',who:'JF'},
+  {day:278,label:'6 Oct',title:'Taillage de la haie',color:'#33b679',side:'right',who:'JF'},
+  {day:281,label:'9 Oct',title:'Stretching',color:'#1a73e8',side:'right',who:'JF'},
+  {day:282,label:'10 Oct',title:'CITE DODE',color:'#0b8043',side:'right',who:'JF'},
+  {day:282,label:'10 Oct',title:'Mammographie Meylan',color:'#1a73e8',side:'right',who:'JF'},
+  {day:282,label:'10 Oct',title:'Cours bridge',color:'#1a73e8',side:'right',who:'JF'},
+  {day:282,label:'10 Oct',title:'Réunion Mga Catherine',color:'#1a73e8',side:'right',who:'JF'},
+  {day:283,label:'11 Oct',title:'Banque postale',color:'#1a73e8',side:'right',who:'JF'},
+  {day:283,label:'11 Oct',title:'Répèt 17h',color:'#1a73e8',side:'right',who:'JF'},
+  {day:284,label:'12 Oct',title:'Arthur',color:'#1a73e8',side:'right',who:'JF'},
+  {day:284,label:'12 Oct',title:'Carrosserie Richard a l ouverture 8h sce',color:'#33b679',side:'right',who:'JF'},
+  {day:284,label:'12 Oct',title:'Parties dirigées bridge',color:'#1a73e8',side:'right',who:'JF'},
+  {day:285,label:'13 Oct',title:'Sophie',color:'#1a73e8',side:'right',who:'JF'},
+  {day:285,label:'13 Oct',title:'Stretching',color:'#1a73e8',side:'right',who:'JF'},
+  {day:286,label:'14 Oct',title:'Mariage  Bruno Soler',color:'#33b679',side:'right',who:'JF'},
+  {day:286,label:'14 Oct',title:'Dessange',color:'#1a73e8',side:'right',who:'JF'},
+  {day:287,label:'15 Oct',title:'Savas homme d\'arme Jeanne Duvallet',color:'#1a73e8',side:'right',who:'JF'},
+  {day:288,label:'16 Oct',title:'Mini bridge rondeau',color:'#1a73e8',side:'right',who:'JF'},
+  {day:288,label:'16 Oct',title:'Stretching',color:'#1a73e8',side:'right',who:'JF'},
+  {day:288,label:'16 Oct',title:'Travail richard',color:'#1a73e8',side:'right',who:'JF'},
+  {day:288,label:'16 Oct',title:'Dîner richard',color:'#1a73e8',side:'right',who:'JF'},
+  {day:289,label:'17 Oct',title:'Chaudière cab 8h30-13h',color:'#33b679',side:'right',who:'JF'},
+  {day:289,label:'17 Oct',title:'Cours bridge',color:'#1a73e8',side:'right',who:'JF'},
+  {day:290,label:'18 Oct',title:'Notaire Claude Richard',color:'#1a73e8',side:'right',who:'JF'},
+  {day:291,label:'19 Oct',title:'Parties dirigées bridge',color:'#1a73e8',side:'right',who:'JF'},
+  {day:292,label:'20 Oct',title:'Stretching',color:'#1a73e8',side:'right',who:'JF'},
+  {day:292,label:'20 Oct',title:'Tournoi bridge',color:'#1a73e8',side:'right',who:'JF'},
+  {day:293,label:'21 Oct',title:'Vacances de la Toussaint',color:'#33b679',side:'right',who:'JF'},
+  {day:293,label:'21 Oct',title:'Sophie',color:'#1a73e8',side:'right',who:'JF'},
+  {day:295,label:'23 Oct',title:'Expertise Catherine Ydraut',color:'#1a73e8',side:'right',who:'JF'},
+  {day:295,label:'23 Oct',title:'Déjeuner Catherine Ydraut',color:'#1a73e8',side:'right',who:'JF'},
+  {day:295,label:'23 Oct',title:'Stretching',color:'#1a73e8',side:'right',who:'JF'},
+  {day:297,label:'25 Oct',title:'Formation mini bridge',color:'#1a73e8',side:'right',who:'JF'},
+  {day:297,label:'25 Oct',title:'Départ st Tropez',color:'#1a73e8',side:'right',who:'JF'},
+  {day:297,label:'25 Oct',title:'Apéritif moulin blanc',color:'#1a73e8',side:'right',who:'JF'},
+  {day:299,label:'27 Oct',title:'croisiere',color:'#e67c73',side:'right',who:'JF'},
+  {day:299,label:'27 Oct',title:'Stretching',color:'#1a73e8',side:'right',who:'JF'},
+  {day:299,label:'27 Oct',title:'Bus Toulon',color:'#1a73e8',side:'right',who:'JF'},
+  {day:302,label:'30 Oct',title:'Mini bridge rondeau',color:'#1a73e8',side:'right',who:'JF'},
+  {day:302,label:'30 Oct',title:'Stretching',color:'#1a73e8',side:'right',who:'JF'},
+  {day:303,label:'31 Oct',title:'Cours bridge',color:'#1a73e8',side:'right',who:'JF'},
+  {day:305,label:'2 Nov',title:'Parties dirigées bridge',color:'#1a73e8',side:'right',who:'JF'},
+  {day:306,label:'3 Nov',title:'Stretching',color:'#1a73e8',side:'right',who:'JF'},
+  {day:308,label:'5 Nov',title:'Latitudes 20h',color:'#1a73e8',side:'right',who:'JF'},
+  {day:309,label:'6 Nov',title:'Cuisine orée du parc o2gamme Moirans',color:'#1a73e8',side:'right',who:'JF'},
+  {day:309,label:'6 Nov',title:'Mini bridge rondeau',color:'#1a73e8',side:'right',who:'JF'},
+  {day:309,label:'6 Nov',title:'Stretching',color:'#1a73e8',side:'right',who:'JF'},
+  {day:310,label:'7 Nov',title:'Cours bridge',color:'#1a73e8',side:'right',who:'JF'},
+  {day:311,label:'8 Nov',title:'Latitudes 17h',color:'#1a73e8',side:'right',who:'JF'},
+  {day:312,label:'9 Nov',title:'Parties dirigées bridge',color:'#1a73e8',side:'right',who:'JF'},
+  {day:312,label:'9 Nov',title:'Philippe Sarazin',color:'#1a73e8',side:'right',who:'JF'},
+  {day:313,label:'10 Nov',title:'CGOS smh',color:'#33b679',side:'right',who:'JF'},
+  {day:313,label:'10 Nov',title:'Stretching',color:'#1a73e8',side:'right',who:'JF'},
+  {day:314,label:'11 Nov',title:'Lucille et William',color:'#1a73e8',side:'right',who:'JF'},
+  {day:314,label:'11 Nov',title:'Visioconférence Johann belle Gabrielle',color:'#1a73e8',side:'right',who:'JF'},
+  {day:314,label:'11 Nov',title:'Véronique et Richard',color:'#1a73e8',side:'right',who:'JF'},
+  {day:315,label:'12 Nov',title:'Manif antisémite',color:'#33b679',side:'right',who:'JF'},
+  {day:315,label:'12 Nov',title:'Romain et Katia',color:'#1a73e8',side:'right',who:'JF'},
+  {day:316,label:'13 Nov',title:'Amener à 18h15 pour 18h30 asptt',color:'#33b679',side:'right',who:'JF'},
+  {day:316,label:'13 Nov',title:'Chercher William 17 h30  grand portail c',color:'#33b679',side:'right',who:'JF'},
+  {day:316,label:'13 Nov',title:'Mini bridge rondeau',color:'#1a73e8',side:'right',who:'JF'},
+  {day:316,label:'13 Nov',title:'Jeune fille à la perle',color:'#1a73e8',side:'right',who:'JF'},
+  {day:316,label:'13 Nov',title:'Stretching',color:'#1a73e8',side:'right',who:'JF'},
+  {day:317,label:'14 Nov',title:'Cours bridge',color:'#1a73e8',side:'right',who:'JF'},
+  {day:318,label:'15 Nov',title:'Ayguinards',color:'#039be5',side:'right',who:'JF'},
+  {day:318,label:'15 Nov',title:'Externat notre dame',color:'#1a73e8',side:'right',who:'JF'},
+  {day:318,label:'15 Nov',title:'William',color:'#1a73e8',side:'right',who:'JF'},
+  {day:319,label:'16 Nov',title:'15h20 vaccination COVID grippe',color:'#33b679',side:'right',who:'JF'},
+  {day:319,label:'16 Nov',title:'Parties dirigées bridge',color:'#1a73e8',side:'right',who:'JF'},
+  {day:320,label:'17 Nov',title:'Stretching',color:'#1a73e8',side:'right',who:'JF'},
+  {day:320,label:'17 Nov',title:'Simultané des élèves bridge',color:'#1a73e8',side:'right',who:'JF'},
+  {day:321,label:'18 Nov',title:'Thé Dominique et Claude',color:'#1a73e8',side:'right',who:'JF'},
+  {day:322,label:'19 Nov',title:'Saint Tanguy',color:'#1a73e8',side:'right',who:'JF'},
+  {day:323,label:'20 Nov',title:'Révision  Scenic défi auto+pneus',color:'#33b679',side:'right',who:'JF'},
+  {day:323,label:'20 Nov',title:'Mini bridge rondeau',color:'#1a73e8',side:'right',who:'JF'},
+  {day:323,label:'20 Nov',title:'Stretching',color:'#1a73e8',side:'right',who:'JF'},
+  {day:324,label:'21 Nov',title:'Cours bridge',color:'#1a73e8',side:'right',who:'JF'},
+  {day:325,label:'22 Nov',title:'Enfants de Saturne musée',color:'#1a73e8',side:'right',who:'JF'},
+  {day:326,label:'23 Nov',title:'MIQUEL 12h30 104 + petitr cloche',color:'#33b679',side:'right',who:'JF'},
+  {day:326,label:'23 Nov',title:'L\'attitudes Jeannenot 9h',color:'#33b679',side:'right',who:'JF'},
+  {day:326,label:'23 Nov',title:'Parties dirigées bridge',color:'#1a73e8',side:'right',who:'JF'},
+  {day:326,label:'23 Nov',title:'William marino',color:'#1a73e8',side:'right',who:'JF'},
+  {day:327,label:'24 Nov',title:'Allo pneus smh 9h30 308',color:'#33b679',side:'right',who:'JF'},
+  {day:327,label:'24 Nov',title:'Stretching',color:'#1a73e8',side:'right',who:'JF'},
+  {day:327,label:'24 Nov',title:'Dîner douchet',color:'#1a73e8',side:'right',who:'JF'},
+  {day:330,label:'27 Nov',title:'Mini bridge rondeau',color:'#1a73e8',side:'right',who:'JF'},
+  {day:330,label:'27 Nov',title:'Stretching',color:'#1a73e8',side:'right',who:'JF'},
+  {day:330,label:'27 Nov',title:'Art nouveau Bruxelles',color:'#1a73e8',side:'right',who:'JF'},
+  {day:331,label:'28 Nov',title:'Repas Bruno Soler',color:'#33b679',side:'right',who:'JF'},
+  {day:331,label:'28 Nov',title:'Cours bridge',color:'#1a73e8',side:'right',who:'JF'},
+  {day:331,label:'28 Nov',title:'William',color:'#1a73e8',side:'right',who:'JF'},
+  {day:332,label:'29 Nov',title:'Chaudière entre 8h et 12h',color:'#33b679',side:'right',who:'JF'},
+  {day:333,label:'30 Nov',title:'Bourg d\'Oisans 8h du matin depart',color:'#33b679',side:'right',who:'JF'},
+  {day:333,label:'30 Nov',title:'Parties dirigées bridge',color:'#1a73e8',side:'right',who:'JF'},
+  {day:334,label:'1 Dec',title:'Stretching',color:'#1a73e8',side:'right',who:'JF'},
+  {day:335,label:'2 Dec',title:'Coupe du monde de snowboard 2 Alpes Noah',color:'#1a73e8',side:'right',who:'JF'},
+  {day:337,label:'4 Dec',title:'Mini bridge rondeau',color:'#1a73e8',side:'right',who:'JF'},
+  {day:337,label:'4 Dec',title:'Stretching',color:'#1a73e8',side:'right',who:'JF'},
+  {day:338,label:'5 Dec',title:'Cours bridge',color:'#1a73e8',side:'right',who:'JF'},
+  {day:340,label:'7 Dec',title:'Parties dirigées bridge',color:'#1a73e8',side:'right',who:'JF'},
+  {day:341,label:'8 Dec',title:'L\'attitudes 17h',color:'#1a73e8',side:'right',who:'JF'},
+  {day:341,label:'8 Dec',title:'CGOS smh',color:'#0b8043',side:'right',who:'JF'},
+  {day:341,label:'8 Dec',title:'Stretching',color:'#1a73e8',side:'right',who:'JF'},
+  {day:344,label:'11 Dec',title:'Mini bridge rondeau',color:'#1a73e8',side:'right',who:'JF'},
+  {day:344,label:'11 Dec',title:'Stretching',color:'#1a73e8',side:'right',who:'JF'},
+  {day:345,label:'12 Dec',title:'Dessange',color:'#1a73e8',side:'right',who:'JF'},
+  {day:345,label:'12 Dec',title:'Cours bridge',color:'#1a73e8',side:'right',who:'JF'},
+  {day:346,label:'13 Dec',title:'Sophie',color:'#1a73e8',side:'right',who:'JF'},
+  {day:347,label:'14 Dec',title:'Parties dirigées bridge',color:'#1a73e8',side:'right',who:'JF'},
+  {day:347,label:'14 Dec',title:'William',color:'#1a73e8',side:'right',who:'JF'},
+  {day:348,label:'15 Dec',title:'Latitudes 16h',color:'#1a73e8',side:'right',who:'JF'},
+  {day:348,label:'15 Dec',title:'Stretching',color:'#1a73e8',side:'right',who:'JF'},
+  {day:348,label:'15 Dec',title:'Choix carrelage orée du parc',color:'#1a73e8',side:'right',who:'JF'},
+  {day:348,label:'15 Dec',title:'Choix sanitaire orée du parc',color:'#1a73e8',side:'right',who:'JF'},
+  {day:348,label:'15 Dec',title:'Olivier',color:'#1a73e8',side:'right',who:'JF'},
+  {day:349,label:'16 Dec',title:'Expo Pauline',color:'#1a73e8',side:'right',who:'JF'},
+  {day:349,label:'16 Dec',title:'Bridge tournoi',color:'#1a73e8',side:'right',who:'JF'},
+  {day:350,label:'17 Dec',title:'Dîner Annie',color:'#1a73e8',side:'right',who:'JF'},
+  {day:351,label:'18 Dec',title:'Mini bridge rondeau',color:'#1a73e8',side:'right',who:'JF'},
+  {day:351,label:'18 Dec',title:'Stretching',color:'#1a73e8',side:'right',who:'JF'},
+  {day:352,label:'19 Dec',title:'Bridge tournoi de Noël gâteau',color:'#1a73e8',side:'right',who:'JF'},
+  {day:353,label:'20 Dec',title:'Créer à en mourir musée',color:'#1a73e8',side:'right',who:'JF'},
+  {day:354,label:'21 Dec',title:'Parties dirigées bridge',color:'#1a73e8',side:'right',who:'JF'},
+  {day:355,label:'22 Dec',title:'Stretching',color:'#1a73e8',side:'right',who:'JF'},
+  {day:355,label:'22 Dec',title:'Dîner Joubert',color:'#1a73e8',side:'right',who:'JF'},
+  {day:358,label:'25 Dec',title:'Mini bridge rondeau',color:'#1a73e8',side:'right',who:'JF'},
+  {day:358,label:'25 Dec',title:'Noah',color:'#1a73e8',side:'right',who:'JF'},
+  {day:358,label:'25 Dec',title:'Stretching',color:'#1a73e8',side:'right',who:'JF'},
+  {day:359,label:'26 Dec',title:'Cours bridge',color:'#1a73e8',side:'right',who:'JF'},
+  {day:361,label:'28 Dec',title:'Saint Tropez',color:'#33b679',side:'right',who:'JF'},
+  {day:361,label:'28 Dec',title:'Parties dirigées bridge',color:'#1a73e8',side:'right',who:'JF'},
+  {day:362,label:'29 Dec',title:'Stretching',color:'#1a73e8',side:'right',who:'JF'},
+  {day:365,label:'1 Jan',title:'Mini bridge rondeau',color:'#1a73e8',side:'right',who:'JF'},
+  {day:365,label:'1 Jan',title:'Stretching',color:'#1a73e8',side:'right',who:'JF'},
+  {day:366,label:'2 Jan',title:'Cours bridge',color:'#1a73e8',side:'right',who:'JF'},
+  {day:368,label:'4 Jan',title:'Parties dirigées bridge',color:'#1a73e8',side:'right',who:'JF'},
+  {day:369,label:'5 Jan',title:'CGOS 38',color:'#33b679',side:'right',who:'JF'},
+  {day:369,label:'5 Jan',title:'salle des vente Régine',color:'#33b679',side:'right',who:'JF'},
+  {day:369,label:'5 Jan',title:'Stretching',color:'#1a73e8',side:'right',who:'JF'},
+  {day:372,label:'8 Jan',title:'Dépôt demande passeport',color:'#33b679',side:'right',who:'JF'},
+  {day:372,label:'8 Jan',title:'Mini bridge rondeau',color:'#1a73e8',side:'right',who:'JF'},
+  {day:372,label:'8 Jan',title:'Stretching',color:'#1a73e8',side:'right',who:'JF'},
+  {day:373,label:'9 Jan',title:'Cours bridge',color:'#1a73e8',side:'right',who:'JF'},
+  {day:374,label:'10 Jan',title:'Catherine',color:'#1a73e8',side:'right',who:'JF'},
+  {day:375,label:'11 Jan',title:'Parties dirigées bridge',color:'#1a73e8',side:'right',who:'JF'},
+  {day:375,label:'11 Jan',title:'Voeux Meylan ayguinards',color:'#1a73e8',side:'right',who:'JF'},
+  {day:376,label:'12 Jan',title:'Jeannenot 15h30',color:'#1a73e8',side:'right',who:'JF'},
+  {day:376,label:'12 Jan',title:'Stretching',color:'#1a73e8',side:'right',who:'JF'},
+  {day:377,label:'13 Jan',title:'Livraison table',color:'#33b679',side:'right',who:'JF'},
+  {day:378,label:'14 Jan',title:'Anniversaire Julie',color:'#33b679',side:'right',who:'JF'},
+  {day:379,label:'15 Jan',title:'William 17h',color:'#33b679',side:'right',who:'JF'},
+  {day:379,label:'15 Jan',title:'Mini bridge rondeau',color:'#1a73e8',side:'right',who:'JF'},
+  {day:379,label:'15 Jan',title:'Stretching',color:'#1a73e8',side:'right',who:'JF'},
+  {day:380,label:'16 Jan',title:'William',color:'#1a73e8',side:'right',who:'JF'},
+  {day:380,label:'16 Jan',title:'Cours bridge',color:'#1a73e8',side:'right',who:'JF'},
+  {day:381,label:'17 Jan',title:'Abattage du cypres',color:'#33b679',side:'right',who:'JF'},
+  {day:381,label:'17 Jan',title:'Étendard marginal musée',color:'#1a73e8',side:'right',who:'JF'},
+  {day:382,label:'18 Jan',title:'Parties dirigées bridge',color:'#1a73e8',side:'right',who:'JF'},
+  {day:383,label:'19 Jan',title:'Jeannot 16h et repas du soir',color:'#33b679',side:'right',who:'JF'},
+  {day:383,label:'19 Jan',title:'Stretching',color:'#1a73e8',side:'right',who:'JF'},
+  {day:383,label:'19 Jan',title:'Simultané des élèves',color:'#1a73e8',side:'right',who:'JF'},
+  {day:384,label:'20 Jan',title:'Soirée latitudes',color:'#33b679',side:'right',who:'JF'},
+  {day:384,label:'20 Jan',title:'Jeannenot 9h00',color:'#1a73e8',side:'right',who:'JF'},
+  {day:384,label:'20 Jan',title:'Noah et Arthur',color:'#1a73e8',side:'right',who:'JF'},
+  {day:385,label:'21 Jan',title:'Goûter richard ?',color:'#1a73e8',side:'right',who:'JF'},
+  {day:386,label:'22 Jan',title:'Mini bridge rondeau',color:'#1a73e8',side:'right',who:'JF'},
+  {day:386,label:'22 Jan',title:'Stretching',color:'#1a73e8',side:'right',who:'JF'},
+  {day:387,label:'23 Jan',title:'Cours bridge',color:'#1a73e8',side:'right',who:'JF'},
+  {day:388,label:'24 Jan',title:'Olivier',color:'#1a73e8',side:'right',who:'JF'},
+  {day:389,label:'25 Jan',title:'Pleiniere cité dode',color:'#33b679',side:'right',who:'JF'},
+  {day:389,label:'25 Jan',title:'Parties dirigées bridge',color:'#1a73e8',side:'right',who:'JF'},
+  {day:389,label:'25 Jan',title:'Richard',color:'#1a73e8',side:'right',who:'JF'},
+  {day:390,label:'26 Jan',title:'Stretching',color:'#1a73e8',side:'right',who:'JF'},
+  {day:390,label:'26 Jan',title:'Cirque Medrano',color:'#33b679',side:'right',who:'JF'},
+  {day:391,label:'27 Jan',title:'Laurent VCL',color:'#33b679',side:'right',who:'JF'},
+  {day:392,label:'28 Jan',title:'Papapy place de Gordes',color:'#1a73e8',side:'right',who:'JF'},
+  {day:393,label:'29 Jan',title:'Mini bridge rondeau',color:'#1a73e8',side:'right',who:'JF'},
+  {day:393,label:'29 Jan',title:'Stretching',color:'#1a73e8',side:'right',who:'JF'},
+  {day:394,label:'30 Jan',title:'Cours bridge',color:'#1a73e8',side:'right',who:'JF'},
+  {day:394,label:'30 Jan',title:'MGA ca',color:'#1a73e8',side:'right',who:'JF'},
+  {day:396,label:'1 Feb',title:'Parties dirigées bridge',color:'#1a73e8',side:'right',who:'JF'},
+  {day:397,label:'2 Feb',title:'Stretching',color:'#1a73e8',side:'right',who:'JF'},
+  {day:398,label:'3 Feb',title:'Soul kitchen',color:'#1a73e8',side:'right',who:'JF'},
+  {day:400,label:'5 Feb',title:'Mini bridge rondeau',color:'#1a73e8',side:'right',who:'JF'},
+  {day:400,label:'5 Feb',title:'Stretching',color:'#1a73e8',side:'right',who:'JF'},
+  {day:400,label:'5 Feb',title:'École Nancy',color:'#1a73e8',side:'right',who:'JF'},
+  {day:401,label:'6 Feb',title:'Cours bridge',color:'#1a73e8',side:'right',who:'JF'},
+  {day:403,label:'8 Feb',title:'Chercher bois  Frederic 14h 30',color:'#33b679',side:'right',who:'JF'},
+  {day:403,label:'8 Feb',title:'Parties dirigées bridge',color:'#1a73e8',side:'right',who:'JF'},
+  {day:404,label:'9 Feb',title:'Joubert midi',color:'#33b679',side:'right',who:'JF'},
+  {day:404,label:'9 Feb',title:'Cgos38',color:'#33b679',side:'right',who:'JF'},
+  {day:404,label:'9 Feb',title:'Fantin Latour',color:'#33b679',side:'right',who:'JF'},
+  {day:404,label:'9 Feb',title:'Stretching',color:'#1a73e8',side:'right',who:'JF'},
+  {day:405,label:'10 Feb',title:'Mobalpa Lucille',color:'#1a73e8',side:'right',who:'JF'},
+  {day:407,label:'12 Feb',title:'Apporter compta 14 h30',color:'#33b679',side:'right',who:'JF'},
+  {day:407,label:'12 Feb',title:'Mini bridge rondeau',color:'#1a73e8',side:'right',who:'JF'},
+  {day:407,label:'12 Feb',title:'Stretching',color:'#1a73e8',side:'right',who:'JF'},
+  {day:408,label:'13 Feb',title:'Cours bridge',color:'#1a73e8',side:'right',who:'JF'},
+  {day:409,label:'14 Feb',title:'Saint Valentin',color:'#33b679',side:'right',who:'JF'},
+  {day:409,label:'14 Feb',title:'Catherine',color:'#1a73e8',side:'right',who:'JF'},
+  {day:410,label:'15 Feb',title:'Formation RESTREINTE!! dode delpont est ',color:'#f4511e',side:'right',who:'JF'},
+  {day:410,label:'15 Feb',title:'Parties dirigées bridge',color:'#1a73e8',side:'right',who:'JF'},
+  {day:410,label:'15 Feb',title:'William',color:'#1a73e8',side:'right',who:'JF'},
+  {day:410,label:'15 Feb',title:'Chez Sidney',color:'#33b679',side:'right',who:'JF'},
+  {day:411,label:'16 Feb',title:'Stretching',color:'#1a73e8',side:'right',who:'JF'},
+  {day:411,label:'16 Feb',title:'',color:'#1a73e8',side:'right',who:'JF'},
+  {day:412,label:'17 Feb',title:'Vacances Fevrier',color:'#33b679',side:'right',who:'JF'},
+  {day:413,label:'18 Feb',title:'Buffet Richard',color:'#1a73e8',side:'right',who:'JF'},
+  {day:414,label:'19 Feb',title:'Badge mairie Anne Sophie Bonat',color:'#1a73e8',side:'right',who:'JF'},
+  {day:414,label:'19 Feb',title:'Stretching',color:'#1a73e8',side:'right',who:'JF'},
+  {day:416,label:'21 Feb',title:'Anniversaire  Sophie',color:'#1a73e8',side:'right',who:'JF'},
+  {day:416,label:'21 Feb',title:'William',color:'#1a73e8',side:'right',who:'JF'},
+  {day:417,label:'22 Feb',title:'Parties dirigées bridge',color:'#1a73e8',side:'right',who:'JF'},
+  {day:417,label:'22 Feb',title:'Repas engelstein',color:'#33b679',side:'right',who:'JF'},
+  {day:418,label:'23 Feb',title:'Stretching',color:'#1a73e8',side:'right',who:'JF'},
+  {day:418,label:'23 Feb',title:'Tuto paies Catherine',color:'#1a73e8',side:'right',who:'JF'},
+  {day:418,label:'23 Feb',title:'William',color:'#1a73e8',side:'right',who:'JF'},
+  {day:418,label:'23 Feb',title:'Anniversaire Arthur',color:'#1a73e8',side:'right',who:'JF'},
+  {day:419,label:'24 Feb',title:'Vacances Vaujanys',color:'#0b8043',side:'right',who:'JF'},
+  {day:421,label:'26 Feb',title:'Stretching',color:'#1a73e8',side:'right',who:'JF'},
+  {day:424,label:'29 Feb',title:'Dîner Catherine Vaujany',color:'#1a73e8',side:'right',who:'JF'},
+  {day:425,label:'1 Mar',title:'Stretching',color:'#1a73e8',side:'right',who:'JF'},
+  {day:428,label:'4 Mar',title:'Mini bridge rondeau',color:'#1a73e8',side:'right',who:'JF'},
+  {day:428,label:'4 Mar',title:'Bridge isabelle',color:'#1a73e8',side:'right',who:'JF'},
+  {day:428,label:'4 Mar',title:'Stretching',color:'#1a73e8',side:'right',who:'JF'},
+  {day:429,label:'5 Mar',title:'Dessange',color:'#1a73e8',side:'right',who:'JF'},
+  {day:429,label:'5 Mar',title:'Cours bridge',color:'#1a73e8',side:'right',who:'JF'},
+  {day:430,label:'6 Mar',title:'Bridge Nathalie',color:'#1a73e8',side:'right',who:'JF'},
+  {day:431,label:'7 Mar',title:'Parties dirigées bridge',color:'#1a73e8',side:'right',who:'JF'},
+  {day:431,label:'7 Mar',title:'Bridge Nathalie',color:'#1a73e8',side:'right',who:'JF'},
+  {day:431,label:'7 Mar',title:'William',color:'#1a73e8',side:'right',who:'JF'},
+  {day:432,label:'8 Mar',title:'Cgos38',color:'#33b679',side:'right',who:'JF'},
+  {day:432,label:'8 Mar',title:'Stretching',color:'#1a73e8',side:'right',who:'JF'},
+  {day:432,label:'8 Mar',title:'animation EHPAD',color:'#33b679',side:'right',who:'JF'},
+  {day:432,label:'8 Mar',title:'Dîner Éric et Véro',color:'#1a73e8',side:'right',who:'JF'},
+  {day:433,label:'9 Mar',title:'Soirée CHEZ Marie philippe',color:'#33b679',side:'right',who:'JF'},
+  {day:433,label:'9 Mar',title:'Sophie goûter anniversaire',color:'#1a73e8',side:'right',who:'JF'},
+  {day:435,label:'11 Mar',title:'Mini bridge rondeau',color:'#1a73e8',side:'right',who:'JF'},
+  {day:435,label:'11 Mar',title:'Stretching',color:'#1a73e8',side:'right',who:'JF'},
+  {day:435,label:'11 Mar',title:'Sophie',color:'#1a73e8',side:'right',who:'JF'},
+  {day:435,label:'11 Mar',title:'Appel Jean Jacques et Paolo',color:'#1a73e8',side:'right',who:'JF'},
+  {day:436,label:'12 Mar',title:'Cours bridge',color:'#1a73e8',side:'right',who:'JF'},
+  {day:437,label:'13 Mar',title:'Répet 16h30a la maison',color:'#33b679',side:'right',who:'JF'},
+  {day:437,label:'13 Mar',title:'Bridge Nathalie',color:'#1a73e8',side:'right',who:'JF'},
+  {day:437,label:'13 Mar',title:'Laurent voile',color:'#1a73e8',side:'right',who:'JF'},
+  {day:437,label:'13 Mar',title:'Mercredi 16h30 a la maison',color:'#1a73e8',side:'right',who:'JF'},
+  {day:438,label:'14 Mar',title:'Parties dirigées bridge',color:'#1a73e8',side:'right',who:'JF'},
+  {day:438,label:'14 Mar',title:'Jules flandrin',color:'#1a73e8',side:'right',who:'JF'},
+  {day:438,label:'14 Mar',title:'Laurent vcl',color:'#1a73e8',side:'right',who:'JF'},
+  {day:438,label:'14 Mar',title:'William',color:'#1a73e8',side:'right',who:'JF'},
+  {day:439,label:'15 Mar',title:'Stretching',color:'#1a73e8',side:'right',who:'JF'},
+  {day:439,label:'15 Mar',title:'William',color:'#1a73e8',side:'right',who:'JF'},
+  {day:440,label:'16 Mar',title:'Tournoi espérance Meylan',color:'#1a73e8',side:'right',who:'JF'},
+  {day:442,label:'18 Mar',title:'Mini bridge rondeau',color:'#1a73e8',side:'right',who:'JF'},
+  {day:442,label:'18 Mar',title:'Stretching',color:'#1a73e8',side:'right',who:'JF'},
+  {day:442,label:'18 Mar',title:'Baroque Portugal',color:'#1a73e8',side:'right',who:'JF'},
+  {day:443,label:'19 Mar',title:'Cours bridge',color:'#1a73e8',side:'right',who:'JF'},
+  {day:444,label:'20 Mar',title:'AG moulin blanc',color:'#1a73e8',side:'right',who:'JF'},
+  {day:444,label:'20 Mar',title:'Vasconcelos',color:'#1a73e8',side:'right',who:'JF'},
+  {day:445,label:'21 Mar',title:'Parties dirigées bridge',color:'#1a73e8',side:'right',who:'JF'},
+  {day:445,label:'21 Mar',title:'William',color:'#1a73e8',side:'right',who:'JF'},
+  {day:446,label:'22 Mar',title:'Stretching',color:'#1a73e8',side:'right',who:'JF'},
+  {day:446,label:'22 Mar',title:'Bridge Gilles',color:'#1a73e8',side:'right',who:'JF'},
+  {day:446,label:'22 Mar',title:'Laurent Vcl',color:'#1a73e8',side:'right',who:'JF'},
+  {day:447,label:'23 Mar',title:'SOIRÉE MARIE PHILIPPE CHAMBERY',color:'#33b679',side:'right',who:'JF'},
+  {day:449,label:'25 Mar',title:'Mini bridge rondeau',color:'#1a73e8',side:'right',who:'JF'},
+  {day:449,label:'25 Mar',title:'Stretching',color:'#1a73e8',side:'right',who:'JF'},
+  {day:449,label:'25 Mar',title:'Sophie',color:'#1a73e8',side:'right',who:'JF'},
+  {day:449,label:'25 Mar',title:'Aspect méconnu art nouveau',color:'#1a73e8',side:'right',who:'JF'},
+  {day:450,label:'26 Mar',title:'Cours bridge',color:'#1a73e8',side:'right',who:'JF'},
+  {day:452,label:'28 Mar',title:'Parties dirigées bridge',color:'#1a73e8',side:'right',who:'JF'},
+  {day:452,label:'28 Mar',title:'Damien Toyota',color:'#1a73e8',side:'right',who:'JF'},
+  {day:452,label:'28 Mar',title:'William',color:'#1a73e8',side:'right',who:'JF'},
+  {day:453,label:'29 Mar',title:'Stretching',color:'#1a73e8',side:'right',who:'JF'},
+  {day:456,label:'1 Apr',title:'Mini bridge rondeau',color:'#1a73e8',side:'right',who:'JF'},
+  {day:456,label:'1 Apr',title:'Claude bridge',color:'#1a73e8',side:'right',who:'JF'},
+  {day:456,label:'1 Apr',title:'Stretching',color:'#1a73e8',side:'right',who:'JF'},
+  {day:457,label:'2 Apr',title:'Cours bridge',color:'#1a73e8',side:'right',who:'JF'},
+  {day:459,label:'4 Apr',title:'Dode formation restreinte esteoule est p',color:'#f4511e',side:'right',who:'JF'},
+  {day:459,label:'4 Apr',title:'Parties dirigées bridge',color:'#1a73e8',side:'right',who:'JF'},
+  {day:459,label:'4 Apr',title:'William',color:'#1a73e8',side:'right',who:'JF'},
+  {day:460,label:'5 Apr',title:'Cgos38',color:'#33b679',side:'right',who:'JF'},
+  {day:460,label:'5 Apr',title:'Stretching',color:'#1a73e8',side:'right',who:'JF'},
+  {day:460,label:'5 Apr',title:'William',color:'#1a73e8',side:'right',who:'JF'},
+  {day:460,label:'5 Apr',title:'Dîner',color:'#1a73e8',side:'right',who:'JF'},
+  {day:461,label:'6 Apr',title:'Bourg d\'Oisans',color:'#1a73e8',side:'right',who:'JF'},
+  {day:462,label:'7 Apr',title:'Arthur',color:'#1a73e8',side:'right',who:'JF'},
+  {day:464,label:'9 Apr',title:'Hello Asso Thibault passuelo',color:'#1a73e8',side:'right',who:'JF'},
+  {day:465,label:'10 Apr',title:'Piscine Montbonnot Noah',color:'#1a73e8',side:'right',who:'JF'},
+  {day:466,label:'11 Apr',title:'Parties dirigées bridge',color:'#1a73e8',side:'right',who:'JF'},
+  {day:466,label:'11 Apr',title:'William',color:'#1a73e8',side:'right',who:'JF'},
+  {day:467,label:'12 Apr',title:'Stretching',color:'#1a73e8',side:'right',who:'JF'},
+  {day:467,label:'12 Apr',title:'Bridge tournoi élèves',color:'#1a73e8',side:'right',who:'JF'},
+  {day:468,label:'13 Apr',title:'vacances Paques',color:'#f6bf26',side:'right',who:'JF'},
+  {day:470,label:'15 Apr',title:'Ophtalmologue cataracte',color:'#1a73e8',side:'right',who:'JF'},
+  {day:470,label:'15 Apr',title:'Bridge touvet',color:'#1a73e8',side:'right',who:'JF'},
+  {day:470,label:'15 Apr',title:'Stretching',color:'#1a73e8',side:'right',who:'JF'},
+  {day:470,label:'15 Apr',title:'Sophie',color:'#1a73e8',side:'right',who:'JF'},
+  {day:471,label:'16 Apr',title:'Saint Tropez',color:'#1a73e8',side:'right',who:'JF'},
+  {day:471,label:'16 Apr',title:'Cours bridge',color:'#1a73e8',side:'right',who:'JF'},
+  {day:473,label:'18 Apr',title:'Parties dirigées bridge',color:'#1a73e8',side:'right',who:'JF'},
+  {day:473,label:'18 Apr',title:'William',color:'#1a73e8',side:'right',who:'JF'},
+  {day:474,label:'19 Apr',title:'Stretching',color:'#1a73e8',side:'right',who:'JF'},
+  {day:475,label:'20 Apr',title:'Dominique et Danièle',color:'#1a73e8',side:'right',who:'JF'},
+  {day:475,label:'20 Apr',title:'Apéro',color:'#1a73e8',side:'right',who:'JF'},
+  {day:477,label:'22 Apr',title:'Mini bridge rondeau',color:'#1a73e8',side:'right',who:'JF'},
+  {day:477,label:'22 Apr',title:'Stretching',color:'#1a73e8',side:'right',who:'JF'},
+  {day:478,label:'23 Apr',title:'RV anesthésie',color:'#1a73e8',side:'right',who:'JF'},
+  {day:479,label:'24 Apr',title:'Noah a la maison',color:'#1a73e8',side:'right',who:'JF'},
+  {day:479,label:'24 Apr',title:'Aller chercher Noah à BdO',color:'#1a73e8',side:'right',who:'JF'},
+  {day:480,label:'25 Apr',title:'Pleiniere cité dode',color:'#33b679',side:'right',who:'JF'},
+  {day:480,label:'25 Apr',title:'Parties dirigées bridge',color:'#1a73e8',side:'right',who:'JF'},
+  {day:480,label:'25 Apr',title:'William',color:'#1a73e8',side:'right',who:'JF'},
+  {day:481,label:'26 Apr',title:'Stretching',color:'#1a73e8',side:'right',who:'JF'},
+  {day:481,label:'26 Apr',title:'Bridge touvet',color:'#1a73e8',side:'right',who:'JF'},
+  {day:483,label:'28 Apr',title:'Espérance 2',color:'#1a73e8',side:'right',who:'JF'},
+  {day:484,label:'29 Apr',title:'Boulangerie doyen gosse',color:'#1a73e8',side:'right',who:'JF'},
+  {day:484,label:'29 Apr',title:'Bridge scolaire',color:'#1a73e8',side:'right',who:'JF'},
+  {day:484,label:'29 Apr',title:'Mini bridge rondeau',color:'#1a73e8',side:'right',who:'JF'},
+  {day:484,label:'29 Apr',title:'Stretching',color:'#1a73e8',side:'right',who:'JF'},
+  {day:484,label:'29 Apr',title:'Dîner MGA',color:'#1a73e8',side:'right',who:'JF'},
+  {day:485,label:'30 Apr',title:'Visio Hello Asso',color:'#1a73e8',side:'right',who:'JF'},
+  {day:485,label:'30 Apr',title:'Clinique Belledonne',color:'#1a73e8',side:'right',who:'JF'},
+  {day:485,label:'30 Apr',title:'Cours bridge',color:'#1a73e8',side:'right',who:'JF'},
+  {day:486,label:'1 May',title:'Dr Albinet',color:'#1a73e8',side:'right',who:'JF'},
+  {day:486,label:'1 May',title:'Dej Isabelle et Frédéric, dessert',color:'#1a73e8',side:'right',who:'JF'},
+  {day:487,label:'2 May',title:'Parties dirigées bridge',color:'#1a73e8',side:'right',who:'JF'},
+  {day:487,label:'2 May',title:'William',color:'#1a73e8',side:'right',who:'JF'},
+  {day:488,label:'3 May',title:'Cgos38',color:'#33b679',side:'right',who:'JF'},
+  {day:488,label:'3 May',title:'Stretching',color:'#1a73e8',side:'right',who:'JF'},
+  {day:489,label:'4 May',title:'Sète vero + Bertrand',color:'#1a73e8',side:'right',who:'JF'},
+  {day:491,label:'6 May',title:'Mini bridge rondeau',color:'#1a73e8',side:'right',who:'JF'},
+  {day:491,label:'6 May',title:'Dr Miquel 104cloche',color:'#1a73e8',side:'right',who:'JF'},
+  {day:491,label:'6 May',title:'Stretching',color:'#1a73e8',side:'right',who:'JF'},
+  {day:491,label:'6 May',title:'Sophie dort à la maison',color:'#33b679',side:'right',who:'JF'},
+  {day:492,label:'7 May',title:'Dessange Jérôme',color:'#1a73e8',side:'right',who:'JF'},
+  {day:492,label:'7 May',title:'Cours bridge',color:'#1a73e8',side:'right',who:'JF'},
+  {day:492,label:'7 May',title:'Train Paris',color:'#1a73e8',side:'right',who:'JF'},
+  {day:493,label:'8 May',title:'Paris',color:'#1a73e8',side:'right',who:'JF'},
+  {day:493,label:'8 May',title:'Musée Cluny',color:'#1a73e8',side:'right',who:'JF'},
+  {day:493,label:'8 May',title:'Notre dame virtuelle',color:'#1a73e8',side:'right',who:'JF'},
+  {day:494,label:'9 May',title:'Mexica musée 37 quai Branly',color:'#1a73e8',side:'right',who:'JF'},
+  {day:494,label:'9 May',title:'Hôtel de la marine 2 place de la concord',color:'#1a73e8',side:'right',who:'JF'},
+  {day:495,label:'10 May',title:'Musée du Louvre',color:'#1a73e8',side:'right',who:'JF'},
+  {day:496,label:'11 May',title:'Musée arts décoratifs 107 rue de Rivoli',color:'#1a73e8',side:'right',who:'JF'},
+  {day:497,label:'12 May',title:'Train Grenoble',color:'#1a73e8',side:'right',who:'JF'},
+  {day:498,label:'13 May',title:'Bridge scolaire',color:'#8e24aa',side:'right',who:'JF'},
+  {day:498,label:'13 May',title:'Mini bridge rondeau',color:'#1a73e8',side:'right',who:'JF'},
+  {day:498,label:'13 May',title:'Bridge Le Touvet',color:'#1a73e8',side:'right',who:'JF'},
+  {day:498,label:'13 May',title:'Stretching',color:'#1a73e8',side:'right',who:'JF'},
+  {day:499,label:'14 May',title:'Championnats bridge',color:'#1a73e8',side:'right',who:'JF'},
+  {day:501,label:'16 May',title:'Parties dirigées bridge',color:'#1a73e8',side:'right',who:'JF'},
+  {day:501,label:'16 May',title:'Bridge Meylan Jean Yves Delacoux',color:'#1a73e8',side:'right',who:'JF'},
+  {day:501,label:'16 May',title:'William',color:'#1a73e8',side:'right',who:'JF'},
+  {day:502,label:'17 May',title:'Stretching',color:'#1a73e8',side:'right',who:'JF'},
+  {day:502,label:'17 May',title:'Déjeuner Olivier Dominique et Claude',color:'#1a73e8',side:'right',who:'JF'},
+  {day:503,label:'18 May',title:'Espérance bridge Chambéry',color:'#1a73e8',side:'right',who:'JF'},
+  {day:504,label:'19 May',title:'Déjeuner anniversaire Jean François et T',color:'#1a73e8',side:'right',who:'JF'},
+  {day:505,label:'20 May',title:'Stretching',color:'#1a73e8',side:'right',who:'JF'},
+  {day:506,label:'21 May',title:'Cours bridge',color:'#1a73e8',side:'right',who:'JF'},
+  {day:507,label:'22 May',title:'Nettoyage printemps club de bridge',color:'#f6bf26',side:'right',who:'JF'},
+  {day:507,label:'22 May',title:'Sophie',color:'#1a73e8',side:'right',who:'JF'},
+  {day:508,label:'23 May',title:'Plénière cité dode',color:'#33b679',side:'right',who:'JF'},
+  {day:508,label:'23 May',title:'Parties dirigées bridge',color:'#1a73e8',side:'right',who:'JF'},
+  {day:508,label:'23 May',title:'William',color:'#1a73e8',side:'right',who:'JF'},
+  {day:509,label:'24 May',title:'Stretching',color:'#1a73e8',side:'right',who:'JF'},
+  {day:509,label:'24 May',title:'Laurent zoom',color:'#1a73e8',side:'right',who:'JF'},
+  {day:509,label:'24 May',title:'Déjeuner Lucille et Pauline',color:'#1a73e8',side:'right',who:'JF'},
+  {day:509,label:'24 May',title:'Dîner Aline, Vittini, Alibeu',color:'#1a73e8',side:'right',who:'JF'},
+  {day:510,label:'25 May',title:'Espérance 2',color:'#1a73e8',side:'right',who:'JF'},
+  {day:511,label:'26 May',title:'Bridge interclubs',color:'#1a73e8',side:'right',who:'JF'},
+  {day:512,label:'27 May',title:'Bridge scolaire',color:'#1a73e8',side:'right',who:'JF'},
+  {day:512,label:'27 May',title:'Mini bridge rondeau',color:'#1a73e8',side:'right',who:'JF'},
+  {day:512,label:'27 May',title:'Stretching',color:'#1a73e8',side:'right',who:'JF'},
+  {day:512,label:'27 May',title:'Sophie',color:'#1a73e8',side:'right',who:'JF'},
+  {day:513,label:'28 May',title:'Savino clés',color:'#1a73e8',side:'right',who:'JF'},
+  {day:513,label:'28 May',title:'Déclaration impôts Richard',color:'#1a73e8',side:'right',who:'JF'},
+  {day:513,label:'28 May',title:'Cours bridge',color:'#1a73e8',side:'right',who:'JF'},
+  {day:513,label:'28 May',title:'Concert Tanguy',color:'#1a73e8',side:'right',who:'JF'},
+  {day:514,label:'29 May',title:'Clinique Belledonne',color:'#1a73e8',side:'right',who:'JF'},
+  {day:515,label:'30 May',title:'Parties dirigées bridge',color:'#1a73e8',side:'right',who:'JF'},
+  {day:515,label:'30 May',title:'William',color:'#1a73e8',side:'right',who:'JF'},
+  {day:515,label:'30 May',title:'Fête des voisins moulin blanc',color:'#1a73e8',side:'right',who:'JF'},
+  {day:516,label:'31 May',title:'Stretching',color:'#1a73e8',side:'right',who:'JF'},
+  {day:519,label:'3 Jun',title:'Opération Richard hôpital Sud',color:'#f6bf26',side:'right',who:'JF'},
+  {day:519,label:'3 Jun',title:'Bridge scolaire',color:'#1a73e8',side:'right',who:'JF'},
+  {day:519,label:'3 Jun',title:'Stretching',color:'#1a73e8',side:'right',who:'JF'},
+  {day:520,label:'4 Jun',title:'Fête école de bridge',color:'#1a73e8',side:'right',who:'JF'},
+  {day:520,label:'4 Jun',title:'William',color:'#1a73e8',side:'right',who:'JF'},
+  {day:521,label:'5 Jun',title:'Dr Miquel',color:'#1a73e8',side:'right',who:'JF'},
+  {day:522,label:'6 Jun',title:'Parties dirigées bridge',color:'#1a73e8',side:'right',who:'JF'},
+  {day:522,label:'6 Jun',title:'William',color:'#1a73e8',side:'right',who:'JF'},
+  {day:523,label:'7 Jun',title:'Cgos38',color:'#33b679',side:'right',who:'JF'},
+  {day:523,label:'7 Jun',title:'Mr38 retraite',color:'#33b679',side:'right',who:'JF'},
+  {day:523,label:'7 Jun',title:'Stretching',color:'#1a73e8',side:'right',who:'JF'},
+  {day:523,label:'7 Jun',title:'Blanc turachus',color:'#1a73e8',side:'right',who:'JF'},
+  {day:523,label:'7 Jun',title:'Dîner MR38',color:'#1a73e8',side:'right',who:'JF'},
+  {day:524,label:'8 Jun',title:'Dessange',color:'#1a73e8',side:'right',who:'JF'},
+  {day:525,label:'9 Jun',title:'Soirée Sidney',color:'#33b679',side:'right',who:'JF'},
+  {day:525,label:'9 Jun',title:'2 rue  menon Béatrice',color:'#1a73e8',side:'right',who:'JF'},
+  {day:525,label:'9 Jun',title:'Miro',color:'#1a73e8',side:'right',who:'JF'},
+  {day:526,label:'10 Jun',title:'Stretching',color:'#1a73e8',side:'right',who:'JF'},
+  {day:527,label:'11 Jun',title:'Parties dirigées bridge',color:'#1a73e8',side:'right',who:'JF'},
+  {day:529,label:'13 Jun',title:'William',color:'#1a73e8',side:'right',who:'JF'},
+  {day:530,label:'14 Jun',title:'Covid jf',color:'#d50000',side:'right',who:'JF'},
+  {day:530,label:'14 Jun',title:'Mariage Eduardo et margarita Gênes',color:'#1a73e8',side:'right',who:'JF'},
+  {day:530,label:'14 Jun',title:'Stretching',color:'#1a73e8',side:'right',who:'JF'},
+  {day:532,label:'16 Jun',title:'Françoise, JF ize',color:'#1a73e8',side:'right',who:'JF'},
+  {day:533,label:'17 Jun',title:'Stretching',color:'#1a73e8',side:'right',who:'JF'},
+  {day:536,label:'20 Jun',title:'Pleiniere cité dode',color:'#33b679',side:'right',who:'JF'},
+  {day:536,label:'20 Jun',title:'William',color:'#1a73e8',side:'right',who:'JF'},
+  {day:536,label:'20 Jun',title:'AG MGA',color:'#1a73e8',side:'right',who:'JF'},
+  {day:537,label:'21 Jun',title:'Moulin blanc Frédéric',color:'#8e24aa',side:'right',who:'JF'},
+  {day:537,label:'21 Jun',title:'Vercors',color:'#1a73e8',side:'right',who:'JF'},
+  {day:537,label:'21 Jun',title:'Stretching',color:'#1a73e8',side:'right',who:'JF'},
+  {day:537,label:'21 Jun',title:'Garage',color:'#7986cb',side:'right',who:'JF'},
+  {day:540,label:'24 Jun',title:'Stretching',color:'#1a73e8',side:'right',who:'JF'},
+  {day:543,label:'27 Jun',title:'William',color:'#1a73e8',side:'right',who:'JF'},
+  {day:544,label:'28 Jun',title:'Stretching',color:'#1a73e8',side:'right',who:'JF'},
+  {day:545,label:'29 Jun',title:'Sophie',color:'#1a73e8',side:'right',who:'JF'},
+  {day:546,label:'30 Jun',title:'Prendre RV dentiste Ndiaye pour dernier ',color:'#1a73e8',side:'right',who:'JF'},
+  {day:547,label:'1 Jul',title:'Bridge scolaire',color:'#1a73e8',side:'right',who:'JF'},
+  {day:547,label:'1 Jul',title:'Dr jf Miquel Jean François',color:'#33b679',side:'right',who:'JF'},
+  {day:547,label:'1 Jul',title:'Ccas Mme  Viola',color:'#1a73e8',side:'right',who:'JF'},
+  {day:548,label:'2 Jul',title:'Victoria',color:'#1a73e8',side:'right',who:'JF'},
+  {day:548,label:'2 Jul',title:'Pizza',color:'#1a73e8',side:'right',who:'JF'},
+  {day:548,label:'2 Jul',title:'Charles Bossi',color:'#1a73e8',side:'right',who:'JF'},
+  {day:548,label:'2 Jul',title:'Dîner Charles et Marie Hélène',color:'#1a73e8',side:'right',who:'JF'},
+  {day:549,label:'3 Jul',title:'Walliby William Victoria',color:'#1a73e8',side:'right',who:'JF'},
+  {day:549,label:'3 Jul',title:'Dîner MGA',color:'#1a73e8',side:'right',who:'JF'},
+  {day:550,label:'4 Jul',title:'Scolaire',color:'#1a73e8',side:'right',who:'JF'},
+  {day:550,label:'4 Jul',title:'Dr albinet',color:'#1a73e8',side:'right',who:'JF'},
+  {day:551,label:'5 Jul',title:'Cgos38',color:'#33b679',side:'right',who:'JF'},
+  {day:551,label:'5 Jul',title:'Visite orée du parc',color:'#1a73e8',side:'right',who:'JF'},
+  {day:551,label:'5 Jul',title:'Déjeuner Pauline',color:'#1a73e8',side:'right',who:'JF'},
+  {day:551,label:'5 Jul',title:'Bourg d oisans',color:'#1a73e8',side:'right',who:'JF'},
+  {day:552,label:'6 Jul',title:'Erwann',color:'#1a73e8',side:'right',who:'JF'},
+  {day:556,label:'10 Jul',title:'Laurent',color:'#1a73e8',side:'right',who:'JF'},
+  {day:557,label:'11 Jul',title:'Noah',color:'#1a73e8',side:'right',who:'JF'},
+  {day:562,label:'16 Jul',title:'Yannick natation',color:'#1a73e8',side:'right',who:'JF'},
+  {day:564,label:'18 Jul',title:'Yannick Noah',color:'#1a73e8',side:'right',who:'JF'},
+  {day:565,label:'19 Jul',title:'Yannick Noah',color:'#1a73e8',side:'right',who:'JF'},
+  {day:566,label:'20 Jul',title:'Célia Arthur Noah',color:'#1a73e8',side:'right',who:'JF'},
+  {day:572,label:'26 Jul',title:'Dîner Biolay',color:'#1a73e8',side:'right',who:'JF'},
+  {day:574,label:'28 Jul',title:'Déjeuner Dominique',color:'#1a73e8',side:'right',who:'JF'},
+  {day:580,label:'3 Aug',title:'Mariage Michel ROUX',color:'#33b679',side:'right',who:'JF'},
+  {day:580,label:'3 Aug',title:'Dessange',color:'#1a73e8',side:'right',who:'JF'},
+  {day:588,label:'11 Aug',title:'Déjeuner Philippe pascal',color:'#1a73e8',side:'right',who:'JF'},
+  {day:590,label:'13 Aug',title:'Polnareff à la Citadelle',color:'#1a73e8',side:'right',who:'JF'},
+  {day:594,label:'17 Aug',title:'GDM Megaron',color:'#1a73e8',side:'right',who:'JF'},
+  {day:594,label:'17 Aug',title:'Trajet aéroport',color:'#1a73e8',side:'right',who:'JF'},
+  {day:594,label:'17 Aug',title:'V7 5151 Marseille Heraklio',color:'#1a73e8',side:'right',who:'JF'},
+  {day:601,label:'24 Aug',title:'Flight to Marseille (A3 424)',color:'#1a73e8',side:'right',who:'JF'},
+  {day:601,label:'24 Aug',title:'V7 5150 Heraklio Marseille',color:'#1a73e8',side:'right',who:'JF'},
+  {day:602,label:'25 Aug',title:'Victoria et William',color:'#1a73e8',side:'right',who:'JF'},
+  {day:602,label:'25 Aug',title:'Train to SAINT RAPHAEL',color:'#1a73e8',side:'right',who:'JF'},
+  {day:611,label:'3 Sep',title:'Bridge',color:'#1a73e8',side:'right',who:'JF'},
+  {day:613,label:'5 Sep',title:'William',color:'#1a73e8',side:'right',who:'JF'},
+  {day:614,label:'6 Sep',title:'Cgos38',color:'#33b679',side:'right',who:'JF'},
+  {day:614,label:'6 Sep',title:'Bridge Caroline',color:'#1a73e8',side:'right',who:'JF'},
+  {day:614,label:'6 Sep',title:'Rando  🎹 estivale',color:'#1a73e8',side:'right',who:'JF'},
+  {day:615,label:'7 Sep',title:'Forum des associations',color:'#039be5',side:'right',who:'JF'},
+  {day:617,label:'9 Sep',title:'Visite 2bis charmeyran',color:'#1a73e8',side:'right',who:'JF'},
+  {day:617,label:'9 Sep',title:'Visite Manhattan',color:'#1a73e8',side:'right',who:'JF'},
+  {day:618,label:'10 Sep',title:'Plombier',color:'#1a73e8',side:'right',who:'JF'},
+  {day:618,label:'10 Sep',title:'Parties dirigées',color:'#1a73e8',side:'right',who:'JF'},
+  {day:618,label:'10 Sep',title:'Gym Ht Meylan',color:'#1a73e8',side:'right',who:'JF'},
+  {day:619,label:'11 Sep',title:'William',color:'#1a73e8',side:'right',who:'JF'},
+  {day:619,label:'11 Sep',title:'Récup Horizons polaire bleu ciel',color:'#1a73e8',side:'right',who:'JF'},
+  {day:620,label:'12 Sep',title:'Bridge initiateurs',color:'#1a73e8',side:'right',who:'JF'},
+  {day:620,label:'12 Sep',title:'Afdas',color:'#1a73e8',side:'right',who:'JF'},
+  {day:620,label:'12 Sep',title:'Nicky',color:'#1a73e8',side:'right',who:'JF'},
+  {day:620,label:'12 Sep',title:'Boxe LGM',color:'#1a73e8',side:'right',who:'JF'},
+  {day:621,label:'13 Sep',title:'Stretching Ht Meylan',color:'#1a73e8',side:'right',who:'JF'},
+  {day:621,label:'13 Sep',title:'Révision bridge 1/3',color:'#1a73e8',side:'right',who:'JF'},
+  {day:621,label:'13 Sep',title:'Charmant Som',color:'#1a73e8',side:'right',who:'JF'},
+  {day:621,label:'13 Sep',title:'21 allée des frênes, Esmeralda',color:'#1a73e8',side:'right',who:'JF'},
+  {day:622,label:'14 Sep',title:'Révision bridge  2/3',color:'#1a73e8',side:'right',who:'JF'},
+  {day:622,label:'14 Sep',title:'Visite 22 avec Plaine fleurie',color:'#1a73e8',side:'right',who:'JF'},
+  {day:623,label:'15 Sep',title:'Marche jeanne',color:'#1a73e8',side:'right',who:'JF'},
+  {day:625,label:'17 Sep',title:'Parties dirigées',color:'#1a73e8',side:'right',who:'JF'},
+  {day:627,label:'19 Sep',title:'Révision bridge 3/3',color:'#1a73e8',side:'right',who:'JF'},
+  {day:627,label:'19 Sep',title:'Bridge Rondeau',color:'#1a73e8',side:'right',who:'JF'},
+  {day:628,label:'20 Sep',title:'Stay at Hotel Garden Napoli',color:'#1a73e8',side:'right',who:'JF'},
+  {day:628,label:'20 Sep',title:'Stretching Ht Meylan',color:'#1a73e8',side:'right',who:'JF'},
+  {day:628,label:'20 Sep',title:'Vol Nice Naples',color:'#1a73e8',side:'right',who:'JF'},
+  {day:629,label:'21 Sep',title:'Croisière îles Pontines',color:'#1a73e8',side:'right',who:'JF'},
+  {day:631,label:'23 Sep',title:'Stage de rentrée',color:'#1a73e8',side:'right',who:'JF'},
+  {day:632,label:'24 Sep',title:'Parties dirigées',color:'#1a73e8',side:'right',who:'JF'},
+  {day:634,label:'26 Sep',title:'Bridge Rondeau',color:'#1a73e8',side:'right',who:'JF'},
+  {day:635,label:'27 Sep',title:'Stretching Ht Meylan',color:'#1a73e8',side:'right',who:'JF'},
+  {day:636,label:'28 Sep',title:'Vol Naples Nice',color:'#1a73e8',side:'right',who:'JF'},
+  {day:637,label:'29 Sep',title:'Voiles',color:'#1a73e8',side:'right',who:'JF'},
+  {day:637,label:'29 Sep',title:'Voiles Saint Tropez',color:'#f6bf26',side:'right',who:'JF'},
+  {day:638,label:'30 Sep',title:'Réservé  à Bloquer',color:'#1a73e8',side:'right',who:'JF'},
+  {day:639,label:'1 Oct',title:'Restreint cité dode !!',color:'#33b679',side:'right',who:'JF'},
+  {day:639,label:'1 Oct',title:'Gym Haut Meylan',color:'#1a73e8',side:'right',who:'JF'},
+  {day:639,label:'1 Oct',title:'Cours bridge',color:'#1a73e8',side:'right',who:'JF'},
+  {day:640,label:'2 Oct',title:'Notaire Meylan',color:'#1a73e8',side:'right',who:'JF'},
+  {day:641,label:'3 Oct',title:'Parties dirigees',color:'#1a73e8',side:'right',who:'JF'},
+  {day:641,label:'3 Oct',title:'Bridge Rondeau',color:'#1a73e8',side:'right',who:'JF'},
+  {day:642,label:'4 Oct',title:'Cgos38',color:'#33b679',side:'right',who:'JF'},
+  {day:642,label:'4 Oct',title:'Stretching Ht Meylan',color:'#1a73e8',side:'right',who:'JF'},
+  {day:645,label:'7 Oct',title:'Webinaire Afdas',color:'#1a73e8',side:'right',who:'JF'},
+  {day:645,label:'7 Oct',title:'Ccas Mairie Mga',color:'#1a73e8',side:'right',who:'JF'},
+  {day:646,label:'8 Oct',title:'William',color:'#1a73e8',side:'right',who:'JF'},
+  {day:646,label:'8 Oct',title:'Gym Haut Meylan',color:'#1a73e8',side:'right',who:'JF'},
+  {day:646,label:'8 Oct',title:'Dessange',color:'#1a73e8',side:'right',who:'JF'},
+  {day:646,label:'8 Oct',title:'Cours bridge',color:'#1a73e8',side:'right',who:'JF'},
+  {day:647,label:'9 Oct',title:'Banque postale Mme Ozturk',color:'#1a73e8',side:'right',who:'JF'},
+  {day:648,label:'10 Oct',title:'Parties dirigees',color:'#1a73e8',side:'right',who:'JF'},
+  {day:648,label:'10 Oct',title:'Bridge Rondeau',color:'#1a73e8',side:'right',who:'JF'},
+  {day:648,label:'10 Oct',title:'Jeanne café du musée',color:'#1a73e8',side:'right',who:'JF'},
+  {day:649,label:'11 Oct',title:'Stretching Ht Meylan',color:'#1a73e8',side:'right',who:'JF'},
+  {day:652,label:'14 Oct',title:'Bridge Caroline Touvet',color:'#1a73e8',side:'right',who:'JF'},
+  {day:653,label:'15 Oct',title:'Gym Haut Meylan',color:'#1a73e8',side:'right',who:'JF'},
+  {day:653,label:'15 Oct',title:'Cours bridge',color:'#1a73e8',side:'right',who:'JF'},
+  {day:654,label:'16 Oct',title:'William',color:'#1a73e8',side:'right',who:'JF'},
+  {day:654,label:'16 Oct',title:'Déj Lucille et William',color:'#1a73e8',side:'right',who:'JF'},
+  {day:655,label:'17 Oct',title:'Parties dirigees',color:'#1a73e8',side:'right',who:'JF'},
+  {day:655,label:'17 Oct',title:'Bridge Rondeau',color:'#1a73e8',side:'right',who:'JF'},
+  {day:656,label:'18 Oct',title:'Plombier',color:'#1a73e8',side:'right',who:'JF'},
+  {day:656,label:'18 Oct',title:'Stretching Ht Meylan',color:'#1a73e8',side:'right',who:'JF'},
+  {day:656,label:'18 Oct',title:'Tournoi bridge',color:'#1a73e8',side:'right',who:'JF'},
+  {day:656,label:'18 Oct',title:'Dîner  engelstein',color:'#1a73e8',side:'right',who:'JF'},
+  {day:657,label:'19 Oct',title:'Lucille St Tropez',color:'#33b679',side:'right',who:'JF'},
+  {day:657,label:'19 Oct',title:'Congés Toussaint',color:'#f6bf26',side:'right',who:'JF'},
+  {day:657,label:'19 Oct',title:'Dîner  Dominique & Claude,  Véronique & ',color:'#1a73e8',side:'right',who:'JF'},
+  {day:659,label:'21 Oct',title:'Ccas Mga',color:'#1a73e8',side:'right',who:'JF'},
+  {day:660,label:'22 Oct',title:'Gym Haut Meylan',color:'#1a73e8',side:'right',who:'JF'},
+  {day:662,label:'24 Oct',title:'Parties dirigees',color:'#1a73e8',side:'right',who:'JF'},
+  {day:662,label:'24 Oct',title:'Volets rue Menon',color:'#1a73e8',side:'right',who:'JF'},
+  {day:662,label:'24 Oct',title:'Rue Menon Eric Rossetti',color:'#1a73e8',side:'right',who:'JF'},
+  {day:663,label:'25 Oct',title:'Stretching Ht Meylan',color:'#1a73e8',side:'right',who:'JF'},
+  {day:663,label:'25 Oct',title:'Déjeuner Pauline',color:'#1a73e8',side:'right',who:'JF'},
+  {day:664,label:'26 Oct',title:'Déjeuner Julie',color:'#1a73e8',side:'right',who:'JF'},
+  {day:668,label:'30 Oct',title:'Dîner philippe',color:'#1a73e8',side:'right',who:'JF'},
+  {day:670,label:'1 Nov',title:'Bridge club St Tropez Dominique',color:'#1a73e8',side:'right',who:'JF'},
+  {day:674,label:'5 Nov',title:'Gym Haut Meylan',color:'#1a73e8',side:'right',who:'JF'},
+  {day:674,label:'5 Nov',title:'Vaccin Covid grippe',color:'#1a73e8',side:'right',who:'JF'},
+  {day:674,label:'5 Nov',title:'Cours bridge',color:'#1a73e8',side:'right',who:'JF'},
+  {day:675,label:'6 Nov',title:'Bq palatine',color:'#1a73e8',side:'right',who:'JF'},
+  {day:675,label:'6 Nov',title:'Visite appartement Montbonnot',color:'#1a73e8',side:'right',who:'JF'},
+  {day:675,label:'6 Nov',title:'Réunion MGA',color:'#1a73e8',side:'right',who:'JF'},
+  {day:676,label:'7 Nov',title:'Plénière cité dode',color:'#33b679',side:'right',who:'JF'},
+  {day:676,label:'7 Nov',title:'Parties dirigees',color:'#1a73e8',side:'right',who:'JF'},
+  {day:676,label:'7 Nov',title:'Bridge Rondeau',color:'#1a73e8',side:'right',who:'JF'},
+  {day:677,label:'8 Nov',title:'Cgos38',color:'#33b679',side:'right',who:'JF'},
+  {day:677,label:'8 Nov',title:'Stretching Ht Meylan',color:'#1a73e8',side:'right',who:'JF'},
+  {day:678,label:'9 Nov',title:'Noah et Arthur',color:'#1a73e8',side:'right',who:'JF'},
+  {day:681,label:'12 Nov',title:'Gym Haut Meylan',color:'#1a73e8',side:'right',who:'JF'},
+  {day:681,label:'12 Nov',title:'Cours bridge',color:'#1a73e8',side:'right',who:'JF'},
+  {day:682,label:'13 Nov',title:'Portrait Chicago',color:'#1a73e8',side:'right',who:'JF'},
+  {day:683,label:'14 Nov',title:'Servelite entre 8 et 13 h',color:'#33b679',side:'right',who:'JF'},
+  {day:683,label:'14 Nov',title:'Parties dirigees',color:'#1a73e8',side:'right',who:'JF'},
+  {day:683,label:'14 Nov',title:'Bridge Rondeau',color:'#1a73e8',side:'right',who:'JF'},
+  {day:683,label:'14 Nov',title:'William  boxe',color:'#1a73e8',side:'right',who:'JF'},
+  {day:684,label:'15 Nov',title:'Stretching Ht Meylan',color:'#1a73e8',side:'right',who:'JF'},
+  {day:684,label:'15 Nov',title:'Bridge Gilles',color:'#1a73e8',side:'right',who:'JF'},
+  {day:688,label:'19 Nov',title:'Gym Haut Meylan',color:'#1a73e8',side:'right',who:'JF'},
+  {day:688,label:'19 Nov',title:'Cours bridge',color:'#1a73e8',side:'right',who:'JF'},
+  {day:690,label:'21 Nov',title:'scenic controle',color:'#3f51b5',side:'right',who:'JF'},
+  {day:690,label:'21 Nov',title:'Parties dirigees',color:'#1a73e8',side:'right',who:'JF'},
+  {day:690,label:'21 Nov',title:'Bridge Rondeau',color:'#1a73e8',side:'right',who:'JF'},
+  {day:690,label:'21 Nov',title:'William',color:'#1a73e8',side:'right',who:'JF'},
+  {day:691,label:'22 Nov',title:'Stretching Ht Meylan',color:'#1a73e8',side:'right',who:'JF'},
+  {day:691,label:'22 Nov',title:'Tournoi des écoles',color:'#1a73e8',side:'right',who:'JF'},
+  {day:692,label:'23 Nov',title:'Challenge Bridge',color:'#1a73e8',side:'right',who:'JF'},
+  {day:692,label:'23 Nov',title:'Dîner Olivier',color:'#1a73e8',side:'right',who:'JF'},
+  {day:694,label:'25 Nov',title:'Bridge Caroline le Touvet',color:'#1a73e8',side:'right',who:'JF'},
+  {day:695,label:'26 Nov',title:'Gym Haut Meylan',color:'#1a73e8',side:'right',who:'JF'},
+  {day:695,label:'26 Nov',title:'Cours bridge',color:'#1a73e8',side:'right',who:'JF'},
+  {day:696,label:'27 Nov',title:'Familles d\'artistes',color:'#1a73e8',side:'right',who:'JF'},
+  {day:697,label:'28 Nov',title:'Bridge Rondeau',color:'#1a73e8',side:'right',who:'JF'},
+  {day:698,label:'29 Nov',title:'Stretching Ht Meylan',color:'#1a73e8',side:'right',who:'JF'},
+  {day:698,label:'29 Nov',title:'Parties dirigees',color:'#1a73e8',side:'right',who:'JF'},
+  {day:699,label:'30 Nov',title:'Pizza chardon bleu',color:'#1a73e8',side:'right',who:'JF'},
+  {day:699,label:'30 Nov',title:'Coiffeur',color:'#1a73e8',side:'right',who:'JF'},
+  {day:699,label:'30 Nov',title:'Fête d\'hiver',color:'#1a73e8',side:'right',who:'JF'},
+  {day:702,label:'3 Dec',title:'Gym Haut Meylan',color:'#1a73e8',side:'right',who:'JF'},
+  {day:702,label:'3 Dec',title:'Cours bridge',color:'#1a73e8',side:'right',who:'JF'},
+  {day:703,label:'4 Dec',title:'Récupérer Victoria',color:'#1a73e8',side:'right',who:'JF'},
+  {day:704,label:'5 Dec',title:'William',color:'#1a73e8',side:'right',who:'JF'},
+  {day:704,label:'5 Dec',title:'Parties dirigees',color:'#1a73e8',side:'right',who:'JF'},
+  {day:704,label:'5 Dec',title:'Repas MR38',color:'#1a73e8',side:'right',who:'JF'},
+  {day:704,label:'5 Dec',title:'Bridge Rondeau',color:'#1a73e8',side:'right',who:'JF'},
+  {day:704,label:'5 Dec',title:'Mairie Catherine',color:'#1a73e8',side:'right',who:'JF'},
+  {day:705,label:'6 Dec',title:'Cgos38',color:'#33b679',side:'right',who:'JF'},
+  {day:705,label:'6 Dec',title:'Musique Ehpad vigny',color:'#3f51b5',side:'right',who:'JF'},
+  {day:705,label:'6 Dec',title:'Stretching Ht Meylan',color:'#1a73e8',side:'right',who:'JF'},
+  {day:706,label:'7 Dec',title:'Challenge Bridge  Gilles',color:'#1a73e8',side:'right',who:'JF'},
+  {day:709,label:'10 Dec',title:'Plénière cité dode',color:'#33b679',side:'right',who:'JF'},
+  {day:709,label:'10 Dec',title:'Gym Haut Meylan',color:'#1a73e8',side:'right',who:'JF'},
+  {day:709,label:'10 Dec',title:'Dej Pauline',color:'#1a73e8',side:'right',who:'JF'},
+  {day:709,label:'10 Dec',title:'Cours bridge',color:'#1a73e8',side:'right',who:'JF'},
+  {day:710,label:'11 Dec',title:'B Louvre Beyssac',color:'#1a73e8',side:'right',who:'JF'},
+  {day:711,label:'12 Dec',title:'Yamaha vente 18h30',color:'#33b679',side:'right',who:'JF'},
+  {day:711,label:'12 Dec',title:'Parties dirigees',color:'#1a73e8',side:'right',who:'JF'},
+  {day:711,label:'12 Dec',title:'Ehpad tullins',color:'#1a73e8',side:'right',who:'JF'},
+  {day:711,label:'12 Dec',title:'Bridge Rondeau',color:'#1a73e8',side:'right',who:'JF'},
+  {day:712,label:'13 Dec',title:'Stretching Ht Meylan',color:'#1a73e8',side:'right',who:'JF'},
+  {day:712,label:'13 Dec',title:'Tournoi des écoles',color:'#1a73e8',side:'right',who:'JF'},
+  {day:712,label:'13 Dec',title:'Volets rue Menon',color:'#1a73e8',side:'right',who:'JF'},
+  {day:713,label:'14 Dec',title:'Dessange',color:'#1a73e8',side:'right',who:'JF'},
+  {day:713,label:'14 Dec',title:'Sophie et Félix',color:'#1a73e8',side:'right',who:'JF'},
+  {day:715,label:'16 Dec',title:'Seraphine',color:'#1a73e8',side:'right',who:'JF'},
+  {day:716,label:'17 Dec',title:'Gym Haut Meylan',color:'#1a73e8',side:'right',who:'JF'},
+  {day:716,label:'17 Dec',title:'Cours bridge',color:'#1a73e8',side:'right',who:'JF'},
+  {day:718,label:'19 Dec',title:'Parties dirigees',color:'#1a73e8',side:'right',who:'JF'},
+  {day:718,label:'19 Dec',title:'Bridge Rondeau',color:'#1a73e8',side:'right',who:'JF'},
+  {day:719,label:'20 Dec',title:'Stretching Ht Meylan',color:'#1a73e8',side:'right',who:'JF'},
+  {day:719,label:'20 Dec',title:'Tournoi Noël',color:'#1a73e8',side:'right',who:'JF'},
+  {day:719,label:'20 Dec',title:'Animation Noël bridge',color:'#1a73e8',side:'right',who:'JF'},
+  {day:720,label:'21 Dec',title:'Congés fin d\'année',color:'#f6bf26',side:'right',who:'JF'},
+  {day:732,label:'2 Jan',title:'Déjeuner Annie, Dominique,  Andrée',color:'#1a73e8',side:'right',who:'JF'},
+  {day:736,label:'6 Jan',title:'Bridge le Touvet',color:'#1a73e8',side:'right',who:'JF'},
+  {day:737,label:'7 Jan',title:'Gym Haut Meylan',color:'#1a73e8',side:'right',who:'JF'},
+  {day:737,label:'7 Jan',title:'Jean Louis  station BP',color:'#1a73e8',side:'right',who:'JF'},
+  {day:737,label:'7 Jan',title:'Cours bridge',color:'#1a73e8',side:'right',who:'JF'},
+  {day:738,label:'8 Jan',title:'vaccin',color:'#33b679',side:'right',who:'JF'},
+  {day:739,label:'9 Jan',title:'Déjeuner MR38 charniers',color:'#8e24aa',side:'right',who:'JF'},
+  {day:739,label:'9 Jan',title:'Parties dirigees',color:'#1a73e8',side:'right',who:'JF'},
+  {day:739,label:'9 Jan',title:'Bridge Rondeau',color:'#1a73e8',side:'right',who:'JF'},
+  {day:740,label:'10 Jan',title:'CGOS 38',color:'#33b679',side:'right',who:'JF'},
+  {day:740,label:'10 Jan',title:'Anniversaire Felix',color:'#33b679',side:'right',who:'JF'},
+  {day:740,label:'10 Jan',title:'Cugnot arbres  fruitiers',color:'#8e24aa',side:'right',who:'JF'},
+  {day:740,label:'10 Jan',title:'Stretching Ht Meylan',color:'#1a73e8',side:'right',who:'JF'},
+  {day:741,label:'11 Jan',title:'Dîner Catherine,  Roux...',color:'#8e24aa',side:'right',who:'JF'},
+  {day:742,label:'12 Jan',title:'Célia,  BdO',color:'#1a73e8',side:'right',who:'JF'},
+  {day:744,label:'14 Jan',title:'CM PLENIERE',color:'#33b679',side:'right',who:'JF'},
+  {day:744,label:'14 Jan',title:'Gym Haut Meylan',color:'#1a73e8',side:'right',who:'JF'},
+  {day:744,label:'14 Jan',title:'Cours bridge',color:'#1a73e8',side:'right',who:'JF'},
+  {day:745,label:'15 Jan',title:'Silène Guyomard Mairie, MGA',color:'#1a73e8',side:'right',who:'JF'},
+  {day:745,label:'15 Jan',title:'Lionel Balducci rue Menon',color:'#1a73e8',side:'right',who:'JF'},
+  {day:746,label:'16 Jan',title:'Parties dirigees',color:'#1a73e8',side:'right',who:'JF'},
+  {day:746,label:'16 Jan',title:'Bridge Rondeau',color:'#1a73e8',side:'right',who:'JF'},
+  {day:746,label:'16 Jan',title:'William',color:'#1a73e8',side:'right',who:'JF'},
+  {day:747,label:'17 Jan',title:'Stretching Ht Meylan',color:'#1a73e8',side:'right',who:'JF'},
+  {day:747,label:'17 Jan',title:'repas avec Francois Desvalles',color:'#33b679',side:'right',who:'JF'},
+  {day:748,label:'18 Jan',title:'Challenge Bridge par paire',color:'#1a73e8',side:'right',who:'JF'},
+  {day:749,label:'19 Jan',title:'Permanence bureau vote',color:'#1a73e8',side:'right',who:'JF'},
+  {day:749,label:'19 Jan',title:'Déjeuner anniversaire Julie',color:'#1a73e8',side:'right',who:'JF'},
+  {day:751,label:'21 Jan',title:'Gym Haut Meylan',color:'#1a73e8',side:'right',who:'JF'},
+  {day:751,label:'21 Jan',title:'Déjeuner Lucille Pauline',color:'#1a73e8',side:'right',who:'JF'},
+  {day:751,label:'21 Jan',title:'Cours bridge',color:'#1a73e8',side:'right',who:'JF'},
+  {day:752,label:'22 Jan',title:'BNP',color:'#1a73e8',side:'right',who:'JF'},
+  {day:752,label:'22 Jan',title:'Chien de traineau',color:'#1a73e8',side:'right',who:'JF'},
+  {day:752,label:'22 Jan',title:'Fol azil Chimere',color:'#8e24aa',side:'right',who:'JF'},
+  {day:752,label:'22 Jan',title:'Tournoi des écoles',color:'#1a73e8',side:'right',who:'JF'},
+  {day:753,label:'23 Jan',title:'Parties dirigees',color:'#1a73e8',side:'right',who:'JF'},
+  {day:753,label:'23 Jan',title:'Bridge Rondeau',color:'#1a73e8',side:'right',who:'JF'},
+  {day:753,label:'23 Jan',title:'William',color:'#1a73e8',side:'right',who:'JF'},
+  {day:753,label:'23 Jan',title:'Rendez vous boîte aux lettres',color:'#1a73e8',side:'right',who:'JF'},
+  {day:753,label:'23 Jan',title:'Jean Pierre Barbier Summum',color:'#1a73e8',side:'right',who:'JF'},
+  {day:754,label:'24 Jan',title:'Stretching Ht Meylan',color:'#1a73e8',side:'right',who:'JF'},
+  {day:754,label:'24 Jan',title:'Tournoi des écoles',color:'#1a73e8',side:'right',who:'JF'},
+  {day:754,label:'24 Jan',title:'Vœux mairie  Catherine',color:'#1a73e8',side:'right',who:'JF'},
+  {day:755,label:'25 Jan',title:'Anniversaire Audrey',color:'#33b679',side:'right',who:'JF'},
+  {day:755,label:'25 Jan',title:'Dîner Catherine Ouvrard',color:'#1a73e8',side:'right',who:'JF'},
+  {day:757,label:'27 Jan',title:'Bassens',color:'#8e24aa',side:'right',who:'JF'},
+  {day:758,label:'28 Jan',title:'C médical  restreint  ddtts',color:'#33b679',side:'right',who:'JF'},
+  {day:758,label:'28 Jan',title:'Gym Haut Meylan',color:'#1a73e8',side:'right',who:'JF'},
+  {day:758,label:'28 Jan',title:'Cours bridge',color:'#1a73e8',side:'right',who:'JF'},
+  {day:759,label:'29 Jan',title:'Rivaux et ennemis  Legat',color:'#1a73e8',side:'right',who:'JF'},
+  {day:760,label:'30 Jan',title:'Parties dirigees',color:'#1a73e8',side:'right',who:'JF'},
+  {day:760,label:'30 Jan',title:'Laurent gare de Grenoble',color:'#1a73e8',side:'right',who:'JF'},
+  {day:760,label:'30 Jan',title:'Bridge Rondeau',color:'#1a73e8',side:'right',who:'JF'},
+  {day:760,label:'30 Jan',title:'William',color:'#1a73e8',side:'right',who:'JF'},
+  {day:761,label:'31 Jan',title:'Stretching Ht Meylan',color:'#1a73e8',side:'right',who:'JF'},
+  {day:762,label:'1 Feb',title:'Souhil maison 14h',color:'#0b8043',side:'right',who:'JF'},
+  {day:762,label:'1 Feb',title:'Dîner Annie Laurent',color:'#33b679',side:'right',who:'JF'},
+  {day:764,label:'3 Feb',title:'Bureau MGA',color:'#1a73e8',side:'right',who:'JF'},
+  {day:765,label:'4 Feb',title:'Gym Haut Meylan',color:'#1a73e8',side:'right',who:'JF'},
+  {day:765,label:'4 Feb',title:'Cours bridge',color:'#1a73e8',side:'right',who:'JF'},
+  {day:766,label:'5 Feb',title:'Tech&fest',color:'#f4511e',side:'right',who:'JF'},
+  {day:767,label:'6 Feb',title:'Parties dirigees',color:'#1a73e8',side:'right',who:'JF'},
+  {day:767,label:'6 Feb',title:'Bridge Rondeau',color:'#1a73e8',side:'right',who:'JF'},
+  {day:767,label:'6 Feb',title:'William',color:'#1a73e8',side:'right',who:'JF'},
+  {day:768,label:'7 Feb',title:'CGOS 38',color:'#33b679',side:'right',who:'JF'},
+  {day:768,label:'7 Feb',title:'Stretching Ht Meylan',color:'#1a73e8',side:'right',who:'JF'},
+  {day:769,label:'8 Feb',title:'Dîner Bruno Soller',color:'#1a73e8',side:'right',who:'JF'},
+  {day:771,label:'10 Feb',title:'Cantine William',color:'#1a73e8',side:'right',who:'JF'},
+  {day:771,label:'10 Feb',title:'Bridge Le Touvet',color:'#1a73e8',side:'right',who:'JF'},
+  {day:772,label:'11 Feb',title:'Gym Haut Meylan',color:'#1a73e8',side:'right',who:'JF'},
+  {day:772,label:'11 Feb',title:'Cours bridge',color:'#1a73e8',side:'right',who:'JF'},
+  {day:772,label:'11 Feb',title:'Remerciements assesseurs',color:'#1a73e8',side:'right',who:'JF'},
+  {day:773,label:'12 Feb',title:'Jeannenot 17h30',color:'#33b679',side:'right',who:'JF'},
+  {day:773,label:'12 Feb',title:'Victoria',color:'#1a73e8',side:'right',who:'JF'},
+  {day:774,label:'13 Feb',title:'Parties dirigees',color:'#1a73e8',side:'right',who:'JF'},
+  {day:774,label:'13 Feb',title:'Bridge Rondeau',color:'#1a73e8',side:'right',who:'JF'},
+  {day:774,label:'13 Feb',title:'Jérôme dessange',color:'#1a73e8',side:'right',who:'JF'},
+  {day:774,label:'13 Feb',title:'William',color:'#1a73e8',side:'right',who:'JF'},
+  {day:775,label:'14 Feb',title:'Saint Valentin',color:'#33b679',side:'right',who:'JF'},
+  {day:775,label:'14 Feb',title:'Stretching Ht Meylan',color:'#1a73e8',side:'right',who:'JF'},
+  {day:776,label:'15 Feb',title:'Challenge  Bridge',color:'#f4511e',side:'right',who:'JF'},
+  {day:778,label:'17 Feb',title:'Jeanne musée évêché',color:'#1a73e8',side:'right',who:'JF'},
+  {day:778,label:'17 Feb',title:'Eric rue Menon',color:'#1a73e8',side:'right',who:'JF'},
+  {day:778,label:'17 Feb',title:'À table...du règne de Louis  XIV',color:'#1a73e8',side:'right',who:'JF'},
+  {day:779,label:'18 Feb',title:'Gym Haut Meylan',color:'#1a73e8',side:'right',who:'JF'},
+  {day:779,label:'18 Feb',title:'Cours bridge',color:'#1a73e8',side:'right',who:'JF'},
+  {day:781,label:'20 Feb',title:'Parties dirigees',color:'#1a73e8',side:'right',who:'JF'},
+  {day:781,label:'20 Feb',title:'Bridge Rondeau',color:'#1a73e8',side:'right',who:'JF'},
+  {day:781,label:'20 Feb',title:'William',color:'#1a73e8',side:'right',who:'JF'},
+  {day:782,label:'21 Feb',title:'Anniversaire  Sophie',color:'#1a73e8',side:'right',who:'JF'},
+  {day:782,label:'21 Feb',title:'Stretching Ht Meylan',color:'#1a73e8',side:'right',who:'JF'},
+  {day:782,label:'21 Feb',title:'Tournoi bridge',color:'#1a73e8',side:'right',who:'JF'},
+  {day:783,label:'22 Feb',title:'Congés hiver',color:'#f6bf26',side:'right',who:'JF'},
+  {day:784,label:'23 Feb',title:'Annie Laurent',color:'#1a73e8',side:'right',who:'JF'},
+  {day:784,label:'23 Feb',title:'Anniversaire Arthur',color:'#1a73e8',side:'right',who:'JF'},
+  {day:788,label:'27 Feb',title:'Parties dirigees',color:'#1a73e8',side:'right',who:'JF'},
+  {day:790,label:'1 Mar',title:'Ski avec les enfants 2Alpes',color:'#3f51b5',side:'right',who:'JF'},
+  {day:796,label:'7 Mar',title:'CGOS 38 annulé',color:'#33b679',side:'right',who:'JF'},
+  {day:796,label:'7 Mar',title:'Stretching Ht Meylan',color:'#1a73e8',side:'right',who:'JF'},
+  {day:799,label:'10 Mar',title:'Fibre entre 8 et 11h',color:'#33b679',side:'right',who:'JF'},
+  {day:800,label:'11 Mar',title:'CM RESTREINT',color:'#33b679',side:'right',who:'JF'},
+  {day:800,label:'11 Mar',title:'beatles  20h',color:'#8e24aa',side:'right',who:'JF'},
+  {day:800,label:'11 Mar',title:'Gym Haut Meylan',color:'#1a73e8',side:'right',who:'JF'},
+  {day:800,label:'11 Mar',title:'Cours bridge',color:'#1a73e8',side:'right',who:'JF'},
+  {day:801,label:'12 Mar',title:'Thé Jeanne',color:'#1a73e8',side:'right',who:'JF'},
+  {day:801,label:'12 Mar',title:'Métamorphose du kitsch',color:'#1a73e8',side:'right',who:'JF'},
+  {day:802,label:'13 Mar',title:'CM PLENIERE',color:'#33b679',side:'right',who:'JF'},
+  {day:802,label:'13 Mar',title:'Parties dirigees',color:'#1a73e8',side:'right',who:'JF'},
+  {day:802,label:'13 Mar',title:'Bridge Rondeau',color:'#1a73e8',side:'right',who:'JF'},
+  {day:802,label:'13 Mar',title:'William',color:'#1a73e8',side:'right',who:'JF'},
+  {day:803,label:'14 Mar',title:'Visite La Gallee',color:'#1a73e8',side:'right',who:'JF'},
+  {day:803,label:'14 Mar',title:'Boucher Rochemaure',color:'#1a73e8',side:'right',who:'JF'},
+  {day:803,label:'14 Mar',title:'Saint tropez',color:'#1a73e8',side:'right',who:'JF'},
+  {day:804,label:'15 Mar',title:'Vente en ligne Drouot',color:'#1a73e8',side:'right',who:'JF'},
+  {day:804,label:'15 Mar',title:'Apéritif JJ Biolay',color:'#1a73e8',side:'right',who:'JF'},
+  {day:806,label:'17 Mar',title:'AG Moulin blanc',color:'#1a73e8',side:'right',who:'JF'},
+  {day:807,label:'18 Mar',title:'Gym Haut Meylan',color:'#1a73e8',side:'right',who:'JF'},
+  {day:807,label:'18 Mar',title:'Cours bridge',color:'#1a73e8',side:'right',who:'JF'},
+  {day:808,label:'19 Mar',title:'Déjeuner Olivier',color:'#1a73e8',side:'right',who:'JF'},
+  {day:809,label:'20 Mar',title:'Soirée liban vert',color:'#33b679',side:'right',who:'JF'},
+  {day:809,label:'20 Mar',title:'Parties dirigees',color:'#1a73e8',side:'right',who:'JF'},
+  {day:809,label:'20 Mar',title:'Bridge Rondeau',color:'#1a73e8',side:'right',who:'JF'},
+  {day:810,label:'21 Mar',title:'Simultané des élèves',color:'#1a73e8',side:'right',who:'JF'},
+  {day:810,label:'21 Mar',title:'Sophie  Félix',color:'#1a73e8',side:'right',who:'JF'},
+  {day:811,label:'22 Mar',title:'Tournoi bridge espérance',color:'#1a73e8',side:'right',who:'JF'},
+  {day:814,label:'25 Mar',title:'Cours bridge',color:'#1a73e8',side:'right',who:'JF'},
+  {day:814,label:'25 Mar',title:'Paris',color:'#1a73e8',side:'right',who:'JF'},
+  {day:817,label:'28 Mar',title:'Moral BNP bastille',color:'#1a73e8',side:'right',who:'JF'},
+  {day:817,label:'28 Mar',title:'Musée Orsay',color:'#1a73e8',side:'right',who:'JF'},
+  {day:817,label:'28 Mar',title:'Théâtre Sablons',color:'#1a73e8',side:'right',who:'JF'},
+  {day:820,label:'31 Mar',title:'Contrôle technique scenic',color:'#33b679',side:'right',who:'JF'},
+  {day:820,label:'31 Mar',title:'Carrosserie Richard',color:'#f6bf26',side:'right',who:'JF'},
+  {day:820,label:'31 Mar',title:'AG orée du parc  40 avenue du vercors',color:'#1a73e8',side:'right',who:'JF'},
+  {day:821,label:'1 Apr',title:'Gym Haut Meylan',color:'#1a73e8',side:'right',who:'JF'},
+  {day:821,label:'1 Apr',title:'Cours bridge',color:'#1a73e8',side:'right',who:'JF'},
+  {day:823,label:'3 Apr',title:'Parties dirigees',color:'#1a73e8',side:'right',who:'JF'},
+  {day:823,label:'3 Apr',title:'Bridge Rondeau',color:'#1a73e8',side:'right',who:'JF'},
+  {day:823,label:'3 Apr',title:'William',color:'#1a73e8',side:'right',who:'JF'},
+  {day:824,label:'4 Apr',title:'CGOS 38',color:'#33b679',side:'right',who:'JF'},
+  {day:824,label:'4 Apr',title:'Stretching Ht Meylan',color:'#1a73e8',side:'right',who:'JF'},
+  {day:827,label:'7 Apr',title:'Changement pneu 10h',color:'#33b679',side:'right',who:'JF'},
+  {day:827,label:'7 Apr',title:'Bureau MGA',color:'#1a73e8',side:'right',who:'JF'},
+  {day:828,label:'8 Apr',title:'Gym Haut Meylan',color:'#1a73e8',side:'right',who:'JF'},
+  {day:828,label:'8 Apr',title:'Cours bridge',color:'#1a73e8',side:'right',who:'JF'},
+  {day:829,label:'9 Apr',title:'Président association Meylan',color:'#1a73e8',side:'right',who:'JF'},
+  {day:830,label:'10 Apr',title:'CM PLENIERE',color:'#33b679',side:'right',who:'JF'},
+  {day:830,label:'10 Apr',title:'Parties dirigees',color:'#1a73e8',side:'right',who:'JF'},
+  {day:830,label:'10 Apr',title:'Bridge Rondeau',color:'#1a73e8',side:'right',who:'JF'},
+  {day:830,label:'10 Apr',title:'William',color:'#1a73e8',side:'right',who:'JF'},
+  {day:831,label:'11 Apr',title:'Jc ricaux 19h30',color:'#33b679',side:'right',who:'JF'},
+  {day:831,label:'11 Apr',title:'Stretching Ht Meylan',color:'#1a73e8',side:'right',who:'JF'},
+  {day:835,label:'15 Apr',title:'comite restreint dode',color:'#33b679',side:'right',who:'JF'},
+  {day:835,label:'15 Apr',title:'Gym Haut Meylan',color:'#1a73e8',side:'right',who:'JF'},
+  {day:835,label:'15 Apr',title:'Cours bridge',color:'#1a73e8',side:'right',who:'JF'},
+  {day:837,label:'17 Apr',title:'Repas cabinet 12h table ronde',color:'#33b679',side:'right',who:'JF'},
+  {day:837,label:'17 Apr',title:'Parties dirigees',color:'#1a73e8',side:'right',who:'JF'},
+  {day:837,label:'17 Apr',title:'Bridge Rondeau',color:'#1a73e8',side:'right',who:'JF'},
+  {day:837,label:'17 Apr',title:'William',color:'#1a73e8',side:'right',who:'JF'},
+  {day:838,label:'18 Apr',title:'Stretching Ht Meylan',color:'#1a73e8',side:'right',who:'JF'},
+  {day:839,label:'19 Apr',title:'Congés printemps',color:'#f6bf26',side:'right',who:'JF'},
+  {day:842,label:'22 Apr',title:'Gym Haut Meylan',color:'#1a73e8',side:'right',who:'JF'},
+  {day:843,label:'23 Apr',title:'Remise des clés Orée du Parc',color:'#d50000',side:'right',who:'JF'},
+  {day:843,label:'23 Apr',title:'reunion syndic notre dame',color:'#1a73e8',side:'right',who:'JF'},
+  {day:846,label:'26 Apr',title:'Julie et Ludo Saint Tropez',color:'#1a73e8',side:'right',who:'JF'},
+  {day:852,label:'2 May',title:'Stretching Ht Meylan',color:'#1a73e8',side:'right',who:'JF'},
+  {day:855,label:'5 May',title:'Fibre installation entre 8 et 11h',color:'#33b679',side:'right',who:'JF'},
+  {day:855,label:'5 May',title:'reunion syndic douchet',color:'#1a73e8',side:'right',who:'JF'},
+  {day:856,label:'6 May',title:'Cours bridge',color:'#1a73e8',side:'right',who:'JF'},
+  {day:856,label:'6 May',title:'Gym Haut Meylan',color:'#1a73e8',side:'right',who:'JF'},
+  {day:857,label:'7 May',title:'CGOS 38 a velo',color:'#33b679',side:'right',who:'JF'},
+  {day:858,label:'8 May',title:'Anniversaire Dominique',color:'#1a73e8',side:'right',who:'JF'},
+  {day:859,label:'9 May',title:'Stretching Ht Meylan',color:'#1a73e8',side:'right',who:'JF'},
+  {day:862,label:'12 May',title:'Tournoi bridge',color:'#1a73e8',side:'right',who:'JF'},
+  {day:863,label:'13 May',title:'Gym Haut Meylan',color:'#1a73e8',side:'right',who:'JF'},
+  {day:863,label:'13 May',title:'Cours bridge',color:'#1a73e8',side:'right',who:'JF'},
+  {day:865,label:'15 May',title:'Fibre cabinet 8h',color:'#33b679',side:'right',who:'JF'},
+  {day:865,label:'15 May',title:'Parties dirigees',color:'#1a73e8',side:'right',who:'JF'},
+  {day:865,label:'15 May',title:'Bridge Rondeau',color:'#1a73e8',side:'right',who:'JF'},
+  {day:865,label:'15 May',title:'William',color:'#1a73e8',side:'right',who:'JF'},
+  {day:866,label:'16 May',title:'Stretching Ht Meylan',color:'#1a73e8',side:'right',who:'JF'},
+  {day:867,label:'17 May',title:'Mamie Nicole',color:'#1a73e8',side:'right',who:'JF'},
+  {day:867,label:'17 May',title:'Rue Menon',color:'#1a73e8',side:'right',who:'JF'},
+  {day:870,label:'20 May',title:'Gym Haut Meylan',color:'#1a73e8',side:'right',who:'JF'},
+  {day:870,label:'20 May',title:'Cours bridge',color:'#1a73e8',side:'right',who:'JF'},
+  {day:872,label:'22 May',title:'William',color:'#1a73e8',side:'right',who:'JF'},
+  {day:873,label:'23 May',title:'La Gallee Savasse',color:'#1a73e8',side:'right',who:'JF'},
+  {day:874,label:'24 May',title:'Anniversaire Jean François',color:'#8e24aa',side:'right',who:'JF'},
+  {day:874,label:'24 May',title:'Marie blachere',color:'#1a73e8',side:'right',who:'JF'},
+  {day:874,label:'24 May',title:'Boucherie  Rochemaure',color:'#1a73e8',side:'right',who:'JF'},
+  {day:876,label:'26 May',title:'Anniversaire Tanguy',color:'#8e24aa',side:'right',who:'JF'},
+  {day:877,label:'27 May',title:'CM RESTREINT',color:'#33b679',side:'right',who:'JF'},
+  {day:877,label:'27 May',title:'Gym Haut Meylan',color:'#1a73e8',side:'right',who:'JF'},
+  {day:877,label:'27 May',title:'Cours bridge',color:'#1a73e8',side:'right',who:'JF'},
+  {day:877,label:'27 May',title:'Zénith immo',color:'#1a73e8',side:'right',who:'JF'},
+  {day:878,label:'28 May',title:'Chauffe eau rue Menon',color:'#1a73e8',side:'right',who:'JF'},
+  {day:878,label:'28 May',title:'Serrurier',color:'#1a73e8',side:'right',who:'JF'},
+  {day:878,label:'28 May',title:'Tournoi real bridge',color:'#1a73e8',side:'right',who:'JF'},
+  {day:879,label:'29 May',title:'Challenge/ 2',color:'#f4511e',side:'right',who:'JF'},
+  {day:880,label:'30 May',title:'Stretching Ht Meylan',color:'#1a73e8',side:'right',who:'JF'},
+  {day:880,label:'30 May',title:'PFI',color:'#1a73e8',side:'right',who:'JF'},
+  {day:880,label:'30 May',title:'Moral BNP',color:'#1a73e8',side:'right',who:'JF'},
+  {day:881,label:'31 May',title:'Nathalie Extravagance',color:'#1a73e8',side:'right',who:'JF'},
+  {day:881,label:'31 May',title:'Marie Philippe Deloche',color:'#1a73e8',side:'right',who:'JF'},
+  {day:882,label:'1 Jun',title:'Anniversaire Antoine',color:'#8e24aa',side:'right',who:'JF'},
+  {day:882,label:'1 Jun',title:'Rue Menon',color:'#1a73e8',side:'right',who:'JF'},
+  {day:883,label:'2 Jun',title:'Fabienne',color:'#1a73e8',side:'right',who:'JF'},
+  {day:884,label:'3 Jun',title:'Anniversaire William',color:'#8e24aa',side:'right',who:'JF'},
+  {day:884,label:'3 Jun',title:'Chaudiere journee',color:'#33b679',side:'right',who:'JF'},
+  {day:884,label:'3 Jun',title:'Gym Haut Meylan',color:'#1a73e8',side:'right',who:'JF'},
+  {day:884,label:'3 Jun',title:'Blanc turachus',color:'#1a73e8',side:'right',who:'JF'},
+  {day:885,label:'4 Jun',title:'Chaudiere matin',color:'#33b679',side:'right',who:'JF'},
+  {day:885,label:'4 Jun',title:'Fête école bridge',color:'#1a73e8',side:'right',who:'JF'},
+  {day:885,label:'4 Jun',title:'Thierry haut meylan',color:'#1a73e8',side:'right',who:'JF'},
+  {day:886,label:'5 Jun',title:'Bridge Rondeau',color:'#1a73e8',side:'right',who:'JF'},
+  {day:886,label:'5 Jun',title:'William',color:'#1a73e8',side:'right',who:'JF'},
+  {day:887,label:'6 Jun',title:'CGOS 38',color:'#33b679',side:'right',who:'JF'},
+  {day:887,label:'6 Jun',title:'14h cgos',color:'#1a73e8',side:'right',who:'JF'},
+  {day:887,label:'6 Jun',title:'Stretching Ht Meylan',color:'#1a73e8',side:'right',who:'JF'},
+  {day:887,label:'6 Jun',title:'Velo cdg jean louis',color:'#1a73e8',side:'right',who:'JF'},
+  {day:888,label:'7 Jun',title:'Déjeuner anniversaire William',color:'#1a73e8',side:'right',who:'JF'},
+  {day:889,label:'8 Jun',title:'Challenge/ 4 1605A',color:'#f4511e',side:'right',who:'JF'},
+  {day:891,label:'10 Jun',title:'Gym Haut Meylan',color:'#1a73e8',side:'right',who:'JF'},
+  {day:891,label:'10 Jun',title:'Tournoi taxi',color:'#1a73e8',side:'right',who:'JF'},
+  {day:892,label:'11 Jun',title:'Moral',color:'#1a73e8',side:'right',who:'JF'},
+  {day:893,label:'12 Jun',title:'CM PLENIERE',color:'#33b679',side:'right',who:'JF'},
+  {day:893,label:'12 Jun',title:'Tournoi de fin d\'année',color:'#1a73e8',side:'right',who:'JF'},
+  {day:894,label:'13 Jun',title:'Anniversaire Pauline',color:'#8e24aa',side:'right',who:'JF'},
+  {day:894,label:'13 Jun',title:'Stretching Ht Meylan',color:'#1a73e8',side:'right',who:'JF'},
+  {day:894,label:'13 Jun',title:'Orange 13h 30',color:'#1a73e8',side:'right',who:'JF'},
+  {day:894,label:'13 Jun',title:'Dîner Éric et Véronique',color:'#1a73e8',side:'right',who:'JF'},
+  {day:897,label:'16 Jun',title:'Bridge Gilles',color:'#1a73e8',side:'right',who:'JF'},
+  {day:898,label:'17 Jun',title:'Gym Haut Meylan',color:'#1a73e8',side:'right',who:'JF'},
+  {day:898,label:'17 Jun',title:'Bridge lud',color:'#1a73e8',side:'right',who:'JF'},
+  {day:900,label:'19 Jun',title:'Parties dirigees',color:'#1a73e8',side:'right',who:'JF'},
+  {day:900,label:'19 Jun',title:'Bridge Rondeau',color:'#1a73e8',side:'right',who:'JF'},
+  {day:900,label:'19 Jun',title:'William',color:'#1a73e8',side:'right',who:'JF'},
+  {day:900,label:'19 Jun',title:'AG MGA',color:'#8e24aa',side:'right',who:'JF'},
+  {day:901,label:'20 Jun',title:'Stretching Ht Meylan',color:'#1a73e8',side:'right',who:'JF'},
+  {day:901,label:'20 Jun',title:'Vaccin zona',color:'#1a73e8',side:'right',who:'JF'},
+  {day:904,label:'23 Jun',title:'Appeler Roumieux gyneco Keldoc',color:'#1a73e8',side:'right',who:'JF'},
+  {day:904,label:'23 Jun',title:'Bridge Ludo',color:'#1a73e8',side:'right',who:'JF'},
+  {day:904,label:'23 Jun',title:'6 jeux pour Ludo',color:'#1a73e8',side:'right',who:'JF'},
+  {day:904,label:'23 Jun',title:'Bridge Gilles',color:'#1a73e8',side:'right',who:'JF'},
+  {day:905,label:'24 Jun',title:'Gym Haut Meylan',color:'#1a73e8',side:'right',who:'JF'},
+  {day:906,label:'25 Jun',title:'Tournoi élèves bridge',color:'#1a73e8',side:'right',who:'JF'},
+  {day:907,label:'26 Jun',title:'Daniel',color:'#1a73e8',side:'right',who:'JF'},
+  {day:907,label:'26 Jun',title:'Tournoi élèves',color:'#1a73e8',side:'right',who:'JF'},
+  {day:907,label:'26 Jun',title:'William',color:'#1a73e8',side:'right',who:'JF'},
+  {day:908,label:'27 Jun',title:'Stretching Ht Meylan',color:'#1a73e8',side:'right',who:'JF'},
+  {day:908,label:'27 Jun',title:'Bridge Ludo',color:'#1a73e8',side:'right',who:'JF'},
+  {day:908,label:'27 Jun',title:'Départ Daniel',color:'#1a73e8',side:'right',who:'JF'},
+  {day:908,label:'27 Jun',title:'Jeanne chavant corenc',color:'#1a73e8',side:'right',who:'JF'},
+  {day:908,label:'27 Jun',title:'Crémaillère Lucille',color:'#1a73e8',side:'right',who:'JF'},
+  {day:909,label:'28 Jun',title:'William',color:'#1a73e8',side:'right',who:'JF'},
+  {day:910,label:'29 Jun',title:'Dîner Jean François Roux',color:'#1a73e8',side:'right',who:'JF'},
+  {day:911,label:'30 Jun',title:'Blue d gym ccas',color:'#1a73e8',side:'right',who:'JF'},
+  {day:911,label:'30 Jun',title:'Dîner mga',color:'#1a73e8',side:'right',who:'JF'},
+  {day:914,label:'3 Jul',title:'CM PLENIERE',color:'#33b679',side:'right',who:'JF'},
+  {day:915,label:'4 Jul',title:'CGOS 38',color:'#33b679',side:'right',who:'JF'},
+  {day:916,label:'5 Jul',title:'Festival Avignon',color:'#1a73e8',side:'right',who:'JF'},
+  {day:916,label:'5 Jul',title:'Congés d\'été',color:'#f6bf26',side:'right',who:'JF'},
+  {day:916,label:'5 Jul',title:'La nuit du 14 chez Léonie,  théâtre des ',color:'#1a73e8',side:'right',who:'JF'},
+  {day:916,label:'5 Jul',title:'La méthode Sherlock, la Luna',color:'#1a73e8',side:'right',who:'JF'},
+  {day:916,label:'5 Jul',title:'Reservation at Maison de la Tour',color:'#1a73e8',side:'right',who:'JF'},
+  {day:917,label:'6 Jul',title:'Le barbier de Séville',color:'#1a73e8',side:'right',who:'JF'},
+  {day:917,label:'6 Jul',title:'La tête en friche, les Corps Saints',color:'#1a73e8',side:'right',who:'JF'},
+  {day:917,label:'6 Jul',title:'L\'homme et le pêcheur, petit chien',color:'#1a73e8',side:'right',who:'JF'},
+  {day:917,label:'6 Jul',title:'Love, L\'inde, la vie de Mrs Cole Porter',color:'#1a73e8',side:'right',who:'JF'},
+  {day:918,label:'7 Jul',title:'Contre-temps,  corps saints',color:'#1a73e8',side:'right',who:'JF'},
+  {day:918,label:'7 Jul',title:'Le roi se meurt, la factory',color:'#1a73e8',side:'right',who:'JF'},
+  {day:918,label:'7 Jul',title:'Mercutio, Rouge gorge',color:'#1a73e8',side:'right',who:'JF'},
+  {day:918,label:'7 Jul',title:'Le cri du papillon, chapelle des italien',color:'#1a73e8',side:'right',who:'JF'},
+  {day:919,label:'8 Jul',title:'Cher Marcel, la Luna',color:'#1a73e8',side:'right',who:'JF'},
+  {day:919,label:'8 Jul',title:'Avignon TGV',color:'#1a73e8',side:'right',who:'JF'},
+  {day:920,label:'9 Jul',title:'Noah St Tropez',color:'#1a73e8',side:'right',who:'JF'},
+  {day:920,label:'9 Jul',title:'Train Noah Nano',color:'#1a73e8',side:'right',who:'JF'},
+  {day:930,label:'19 Jul',title:'Célia Noah Arthur',color:'#1a73e8',side:'right',who:'JF'},
+  {day:932,label:'21 Jul',title:'Tanguy et Sophie',color:'#f4511e',side:'right',who:'JF'},
+  {day:939,label:'28 Jul',title:'Messe janot Anselmi',color:'#1a73e8',side:'right',who:'JF'},
+  {day:939,label:'28 Jul',title:'Bridge Dominique grimaud',color:'#1a73e8',side:'right',who:'JF'},
+  {day:939,label:'28 Jul',title:'Concert Brad Mehldau',color:'#1a73e8',side:'right',who:'JF'},
+  {day:940,label:'29 Jul',title:'Annie',color:'#1a73e8',side:'right',who:'JF'},
+  {day:940,label:'29 Jul',title:'Dîner place des Lices',color:'#1a73e8',side:'right',who:'JF'},
+  {day:941,label:'30 Jul',title:'Bridge Catherine grimaud',color:'#1a73e8',side:'right',who:'JF'},
+  {day:941,label:'30 Jul',title:'Apéritif dîner Tomasella',color:'#1a73e8',side:'right',who:'JF'},
+  {day:942,label:'31 Jul',title:'Philippe Forest',color:'#1a73e8',side:'right',who:'JF'},
+  {day:944,label:'2 Aug',title:'Aix en Provence',color:'#1a73e8',side:'right',who:'JF'},
+  {day:945,label:'3 Aug',title:'Lucille et William Carnon',color:'#1a73e8',side:'right',who:'JF'},
+  {day:947,label:'5 Aug',title:'Marché,  pêche pour Annie',color:'#1a73e8',side:'right',who:'JF'},
+  {day:947,label:'5 Aug',title:'Philippe et Pascal',color:'#1a73e8',side:'right',who:'JF'},
+  {day:948,label:'6 Aug',title:'Francoise Ledoux',color:'#1a73e8',side:'right',who:'JF'},
+  {day:949,label:'7 Aug',title:'Annie  album',color:'#1a73e8',side:'right',who:'JF'},
+  {day:964,label:'22 Aug',title:'Annie',color:'#1a73e8',side:'right',who:'JF'},
+  {day:965,label:'23 Aug',title:'Café Biolay',color:'#1a73e8',side:'right',who:'JF'},
+  {day:966,label:'24 Aug',title:'Déjeuner Dominique',color:'#1a73e8',side:'right',who:'JF'},
+  {day:966,label:'24 Aug',title:'Charly Marion',color:'#1a73e8',side:'right',who:'JF'},
+  {day:967,label:'25 Aug',title:'Syndic  Gassin Paolo',color:'#1a73e8',side:'right',who:'JF'},
+  {day:968,label:'26 Aug',title:'Cécile et Jean François',color:'#1a73e8',side:'right',who:'JF'},
+  {day:969,label:'27 Aug',title:'Chez Camille',color:'#1a73e8',side:'right',who:'JF'},
+  {day:972,label:'30 Aug',title:'Rappel vaccin zona',color:'#1a73e8',side:'right',who:'JF'},
+  {day:975,label:'2 Sep',title:'Passeport',color:'#1a73e8',side:'right',who:'JF'},
+  {day:975,label:'2 Sep',title:'Perillat Lucie  34 bd Mal Foch',color:'#1a73e8',side:'right',who:'JF'},
+  {day:976,label:'3 Sep',title:'Psycho Maupertuis',color:'#1a73e8',side:'right',who:'JF'},
+  {day:977,label:'4 Sep',title:'Bridge Daniel',color:'#1a73e8',side:'right',who:'JF'},
+  {day:978,label:'5 Sep',title:'CGOS 38',color:'#33b679',side:'right',who:'JF'},
+  {day:979,label:'6 Sep',title:'Regards croisés  folazil',color:'#f6bf26',side:'right',who:'JF'},
+  {day:979,label:'6 Sep',title:'Sophie et Félix',color:'#33b679',side:'right',who:'JF'},
+  {day:984,label:'11 Sep',title:'CM RESTREINT',color:'#33b679',side:'right',who:'JF'},
+  {day:993,label:'20 Sep',title:'Atelier Meylan Métropole Granier',color:'#1a73e8',side:'right',who:'JF'},
+  {day:995,label:'22 Sep',title:'Victoria',color:'#1a73e8',side:'right',who:'JF'},
+  {day:999,label:'26 Sep',title:'Baptême Éléonore  Milan',color:'#d50000',side:'right',who:'JF'},
+  {day:1004,label:'1 Oct',title:'Repet Sidney',color:'#1a73e8',side:'right',who:'JF'},
+  {day:1004,label:'1 Oct',title:'Chez moi',color:'#1a73e8',side:'right',who:'JF'},
+  {day:1005,label:'2 Oct',title:'Autodauph 8h30 + permis + cheque',color:'#1a73e8',side:'right',who:'JF'},
+  {day:1006,label:'3 Oct',title:'CGOS 38',color:'#33b679',side:'right',who:'JF'},
+  {day:1010,label:'7 Oct',title:'Cugnot jardin',color:'#1a73e8',side:'right',who:'JF'},
+  {day:1012,label:'9 Oct',title:'CM PLENIERE',color:'#33b679',side:'right',who:'JF'},
+  {day:1018,label:'15 Oct',title:'17h repet',color:'#1a73e8',side:'right',who:'JF'},
+  {day:1019,label:'16 Oct',title:'comite restreint dode',color:'#33b679',side:'right',who:'JF'},
+  {day:1020,label:'17 Oct',title:'Maître Causse',color:'#1a73e8',side:'right',who:'JF'},
+  {day:1023,label:'20 Oct',title:'Olivier Grizard Asptt, Catherine',color:'#1a73e8',side:'right',who:'JF'},
+  {day:1023,label:'20 Oct',title:'Bridge Gilles',color:'#1a73e8',side:'right',who:'JF'},
+  {day:1024,label:'21 Oct',title:'Anniversaire 🎂 Lucille',color:'#1a73e8',side:'right',who:'JF'},
+  {day:1027,label:'24 Oct',title:'Présentation MGA  Asptt',color:'#1a73e8',side:'right',who:'JF'},
+  {day:1029,label:'26 Oct',title:'Saint Tropez',color:'#f6bf26',side:'right',who:'JF'},
+  {day:1039,label:'5 Nov',title:'16h repet',color:'#1a73e8',side:'right',who:'JF'},
+  {day:1041,label:'7 Nov',title:'CGOS 38',color:'#33b679',side:'right',who:'JF'},
+  {day:1042,label:'8 Nov',title:'Challenge / 4',color:'#8e24aa',side:'right',who:'JF'},
+  {day:1047,label:'13 Nov',title:'CM PLENIERE',color:'#33b679',side:'right',who:'JF'},
+  {day:1049,label:'15 Nov',title:'Challenge / 2',color:'#8e24aa',side:'right',who:'JF'},
+  {day:1052,label:'18 Nov',title:'DR ROUMIEUX',color:'#1a73e8',side:'right',who:'JF'},
+  {day:1053,label:'19 Nov',title:'zona rappel jf',color:'#1a73e8',side:'right',who:'JF'},
+  {day:1059,label:'25 Nov',title:'CM RESTREINT',color:'#33b679',side:'right',who:'JF'},
+  {day:1060,label:'26 Nov',title:'Repet latitudes 15h',color:'#1a73e8',side:'right',who:'JF'},
+  {day:1061,label:'27 Nov',title:'So0hie Crampagne 18h30',color:'#f4511e',side:'right',who:'JF'},
+  {day:1062,label:'28 Nov',title:'Paris',color:'#f4511e',side:'right',who:'JF'},
+  {day:1062,label:'28 Nov',title:'Moral BNP bastille',color:'#f4511e',side:'right',who:'JF'},
+  {day:1067,label:'3 Dec',title:'Concert 3 decembre',color:'#1a73e8',side:'right',who:'JF'},
+  {day:1069,label:'5 Dec',title:'CGOS 38',color:'#33b679',side:'right',who:'JF'},
+  {day:1069,label:'5 Dec',title:'Vaccin grippe covidc11h 20',color:'#f4511e',side:'right',who:'JF'},
+  {day:1070,label:'6 Dec',title:'Alibeu repas',color:'#8e24aa',side:'right',who:'JF'},
+  {day:1076,label:'12 Dec',title:'Soirée bridge club Grenoble',color:'#f4511e',side:'right',who:'JF'},
+  {day:1077,label:'13 Dec',title:'Cross des enfants malades',color:'#f4511e',side:'right',who:'JF'},
+  {day:1079,label:'15 Dec',title:'Rdv logiciel Maiia  video 14h',color:'#0b8043',side:'right',who:'JF'},
+  {day:1101,label:'6 Jan',title:'reunion valence cm',color:'#0b8043',side:'right',who:'JF'},
+  {day:1102,label:'7 Jan',title:'leconte',color:'#1a73e8',side:'right',who:'JF'},
+  {day:1104,label:'9 Jan',title:'CM CGOS',color:'#0b8043',side:'right',who:'JF'},
+  {day:1105,label:'10 Jan',title:'Anniversaire Felix',color:'#33b679',side:'right',who:'JF'},
+  {day:1107,label:'12 Jan',title:'Bureau MGA',color:'#1a73e8',side:'right',who:'JF'},
+  {day:1108,label:'13 Jan',title:'parmigi 17h30',color:'#1a73e8',side:'right',who:'JF'},
+  {day:1108,label:'13 Jan',title:'Cgos 38 consult 8h45',color:'#7986cb',side:'right',who:'JF'},
+  {day:1109,label:'14 Jan',title:'Ddets 9h00 13h30',color:'#7986cb',side:'right',who:'JF'},
+  {day:1110,label:'15 Jan',title:'Valence 14h30 ddets kamel laib',color:'#0b8043',side:'right',who:'JF'},
+  {day:1115,label:'20 Jan',title:'COMITE PLENIERE Marie Reynoard',color:'#f4511e',side:'right',who:'JF'},
+  {day:1118,label:'23 Jan',title:'la Grosse bouffe',color:'#f6bf26',side:'right',who:'JF'},
+  {day:1120,label:'25 Jan',title:'Anniversaire Audrey',color:'#33b679',side:'right',who:'JF'},
+  {day:1122,label:'27 Jan',title:'Cgos 38 consultation',color:'#7986cb',side:'right',who:'JF'},
+  {day:1125,label:'30 Jan',title:'Musique chez les handicaps jl delpont 15',color:'#0b8043',side:'right',who:'JF'},
+  {day:1129,label:'3 Feb',title:'Cgos 38 consultation',color:'#7986cb',side:'right',who:'JF'},
+  {day:1130,label:'4 Feb',title:'UGA UGA UGA Expertises',color:'#33b679',side:'right',who:'JF'},
+  {day:1131,label:'5 Feb',title:'Valence 9h valence 9h',color:'#0b8043',side:'right',who:'JF'},
+  {day:1132,label:'6 Feb',title:'CM CGOS',color:'#0b8043',side:'right',who:'JF'},
+  {day:1143,label:'17 Feb',title:'DDETS pleniere',color:'#e67c73',side:'right',who:'JF'},
+  {day:1144,label:'18 Feb',title:'DDets expertises',color:'#33b679',side:'right',who:'JF'},
+  {day:1147,label:'21 Feb',title:'Anniversaire  Sophie',color:'#1a73e8',side:'right',who:'JF'},
+  {day:1149,label:'23 Feb',title:'Anniversaire Arthur',color:'#1a73e8',side:'right',who:'JF'},
+  {day:1150,label:'24 Feb',title:'Cgos 38 consultation',color:'#7986cb',side:'right',who:'JF'},
+  {day:1152,label:'26 Feb',title:'Repas 16 place notre dame 13 à 14h',color:'#8e24aa',side:'right',who:'JF'},
+  {day:1157,label:'3 Mar',title:'Cgos 38 consultation',color:'#7986cb',side:'right',who:'JF'},
+  {day:1158,label:'4 Mar',title:'Rendez-vous chez Dr Marie Lapassat',color:'#33b679',side:'right',who:'JF'},
+  {day:1159,label:'5 Mar',title:'Valence expertises 9h',color:'#0b8043',side:'right',who:'JF'},
+  {day:1160,label:'6 Mar',title:'CM CGOS',color:'#0b8043',side:'right',who:'JF'},
+  {day:1164,label:'10 Mar',title:'Cgos 38 consultation',color:'#7986cb',side:'right',who:'JF'},
+  {day:1171,label:'17 Mar',title:'Cgos 38 consultation',color:'#7986cb',side:'right',who:'JF'},
+  {day:1172,label:'18 Mar',title:'DDTES expertises',color:'#33b679',side:'right',who:'JF'},
+  {day:1178,label:'24 Mar',title:'Cgos 38 consultation',color:'#7986cb',side:'right',who:'JF'},
+  {day:1185,label:'31 Mar',title:'CDG38 Expertises',color:'#1a73e8',side:'right',who:'JF'},
+  {day:1188,label:'3 Apr',title:'CM CGOS',color:'#0b8043',side:'right',who:'JF'},
+  {day:1192,label:'7 Apr',title:'CDG38 Expertises',color:'#1a73e8',side:'right',who:'JF'},
+  {day:1206,label:'21 Apr',title:'CDG38 Expertises',color:'#1a73e8',side:'right',who:'JF'},
+  {day:1207,label:'22 Apr',title:'Hélène 13h30 au 13',color:'#0b8043',side:'right',who:'JF'},
+  {day:1207,label:'22 Apr',title:'Réunion médecin agréé cgos',color:'#1a73e8',side:'right',who:'JF'},
+  {day:1208,label:'23 Apr',title:'COMITE PLENIERE Marie Reynoard',color:'#e67c73',side:'right',who:'JF'},
+  {day:1213,label:'28 Apr',title:'CDG38 Expertises',color:'#1a73e8',side:'right',who:'JF'},
+  {day:1214,label:'29 Apr',title:'COMITE MEDICAL EXPERTISES',color:'#33b679',side:'right',who:'JF'},
+  {day:1217,label:'2 May',title:'Randonnée Dieulefit',color:'#1a73e8',side:'right',who:'JF'},
+  {day:1218,label:'3 May',title:'Randonnée Dieulefit',color:'#1a73e8',side:'right',who:'JF'},
+  {day:1220,label:'5 May',title:'CDG38 Expertises',color:'#1a73e8',side:'right',who:'JF'},
+  {day:1222,label:'7 May',title:'CM CGOS',color:'#0b8043',side:'right',who:'JF'},
+  {day:1227,label:'12 May',title:'CDG38 Expertises',color:'#1a73e8',side:'right',who:'JF'},
+  {day:1234,label:'19 May',title:'COMITE RESTREINT Marie Reynoard',color:'#e67c73',side:'right',who:'JF'},
+  {day:1235,label:'20 May',title:'Cm ddets expertise',color:'#0b8043',side:'right',who:'JF'},
+  {day:1237,label:'22 May',title:'Valence expertises 9h',color:'#0b8043',side:'right',who:'JF'},
+  {day:1251,label:'5 Jun',title:'CM CGOS',color:'#0b8043',side:'right',who:'JF'},
+  {day:1251,label:'5 Jun',title:'AG mga +30 ans',color:'#1a73e8',side:'right',who:'JF'},
+  {day:1255,label:'9 Jun',title:'CDG38 Expertises',color:'#1a73e8',side:'right',who:'JF'},
+  {day:1258,label:'12 Jun',title:'valence expertises',color:'#1a73e8',side:'right',who:'JF'},
+  {day:1262,label:'16 Jun',title:'CDG38 Expertises',color:'#1a73e8',side:'right',who:'JF'},
+  {day:1269,label:'23 Jun',title:'CDG38 Expertises',color:'#1a73e8',side:'right',who:'JF'},
+  {day:1270,label:'24 Jun',title:'Ddets cm expertises',color:'#0b8043',side:'right',who:'JF'},
+  {day:1276,label:'30 Jun',title:'COMITE RESTREINT Marie Reynoard',color:'#e67c73',side:'right',who:'JF'},
+  {day:1279,label:'3 Jul',title:'CM CGOS',color:'#0b8043',side:'right',who:'JF'},
+  {day:1342,label:'4 Sep',title:'CM CGOS',color:'#0b8043',side:'right',who:'JF'},
+  {day:1347,label:'9 Sep',title:'Uga 9h',color:'#33b679',side:'right',who:'JF'},
+  {day:1355,label:'17 Sep',title:'COMITE PLENIERE Marie Reynoard',color:'#e67c73',side:'right',who:'JF'},
+  {day:1370,label:'2 Oct',title:'CM CGOS',color:'#0b8043',side:'right',who:'JF'},
+  {day:1388,label:'20 Oct',title:'COMITE RESTREINT Marie Reynoard',color:'#e67c73',side:'right',who:'JF'},
+  {day:1405,label:'6 Nov',title:'CM CGOS',color:'#0b8043',side:'right',who:'JF'},
+  {day:1430,label:'1 Dec',title:'COMITE RESTREINT Marie Reynoard',color:'#e67c73',side:'right',who:'JF'},
+  {day:1432,label:'3 Dec',title:'CM CGOS',color:'#0b8043',side:'right',who:'JF'},
+  {day:1470,label:'10 Jan',title:'Anniversaire Felix',color:'#33b679',side:'right',who:'JF'},
+  {day:1485,label:'25 Jan',title:'Anniversaire Audrey',color:'#33b679',side:'right',who:'JF'},
+  {day:1512,label:'21 Feb',title:'Anniversaire Sophie',color:'#1a73e8',side:'right',who:'JF'},
+  {day:1514,label:'23 Feb',title:'Anniversaire Arthur',color:'#1a73e8',side:'right',who:'JF'}
+];
+const EVT_ANNE=[
+  {day:486,label:'1 May',title:'RDV chez Dr Yves ROZAND',color:'#e67c73',side:'left',who:'Anne'},
+  {day:977,label:'4 Sep',title:'Hexagone mi plaine',color:'#e67c73',side:'left',who:'Anne'},
+  {day:977,label:'4 Sep',title:'Trottinette échiquier Romain',color:'#e67c73',side:'left',who:'Anne'},
+  {day:989,label:'16 Sep',title:'Parties dirigées Agnès',color:'#e67c73',side:'left',who:'Anne'},
+  {day:989,label:'16 Sep',title:'William,  dîner Lucille',color:'#e67c73',side:'left',who:'Anne'},
+  {day:990,label:'17 Sep',title:'Déjeuner Roselyne',color:'#e67c73',side:'left',who:'Anne'},
+  {day:991,label:'18 Sep',title:'Dessange',color:'#e67c73',side:'left',who:'Anne'},
+  {day:991,label:'18 Sep',title:'Bridge Rondeau',color:'#e67c73',side:'left',who:'Anne'},
+  {day:991,label:'18 Sep',title:'Stretching Laurine',color:'#e67c73',side:'left',who:'Anne'},
+  {day:992,label:'19 Sep',title:'Dr Drumuids',color:'#e67c73',side:'left',who:'Anne'},
+  {day:995,label:'22 Sep',title:'Stage rentrée bridge',color:'#e67c73',side:'left',who:'Anne'},
+  {day:996,label:'23 Sep',title:'Stage de rentrée bridge',color:'#e67c73',side:'left',who:'Anne'},
+  {day:996,label:'23 Sep',title:'Kiné Gentil 2b allée Mitailleres SERVIET',color:'#e67c73',side:'left',who:'Anne'},
+  {day:996,label:'23 Sep',title:'William',color:'#e67c73',side:'left',who:'Anne'},
+  {day:996,label:'23 Sep',title:'Célia,  Noah,  Arthur',color:'#e67c73',side:'left',who:'Anne'},
+  {day:997,label:'24 Sep',title:'Stage de rentrée bridge',color:'#e67c73',side:'left',who:'Anne'},
+  {day:998,label:'25 Sep',title:'Bridge Rondeau',color:'#e67c73',side:'left',who:'Anne'},
+  {day:998,label:'25 Sep',title:'Stretching Laurine',color:'#e67c73',side:'left',who:'Anne'},
+  {day:1003,label:'30 Sep',title:'Gym stretching Hélène',color:'#e67c73',side:'left',who:'Anne'},
+  {day:1003,label:'30 Sep',title:'Kiné Gentil',color:'#e67c73',side:'left',who:'Anne'},
+  {day:1003,label:'30 Sep',title:'Attestation médicale Hélène',color:'#e67c73',side:'left',who:'Anne'},
+  {day:1005,label:'2 Oct',title:'Cours bridge',color:'#e67c73',side:'left',who:'Anne'},
+  {day:1005,label:'2 Oct',title:'Bridge Rondeau',color:'#e67c73',side:'left',who:'Anne'},
+  {day:1005,label:'2 Oct',title:'Stretching Laurine',color:'#e67c73',side:'left',who:'Anne'},
+  {day:1006,label:'3 Oct',title:'Parties dirigées',color:'#e67c73',side:'left',who:'Anne'},
+  {day:1006,label:'3 Oct',title:'Déjeuner Olivier',color:'#e67c73',side:'left',who:'Anne'},
+  {day:1009,label:'6 Oct',title:'Gentil',color:'#e67c73',side:'left',who:'Anne'},
+  {day:1009,label:'6 Oct',title:'Léonard de Vinci',color:'#e67c73',side:'left',who:'Anne'},
+  {day:1009,label:'6 Oct',title:'Dîner Annie et JF',color:'#e67c73',side:'left',who:'Anne'},
+  {day:1010,label:'7 Oct',title:'Gym stretching Hélène',color:'#e67c73',side:'left',who:'Anne'},
+  {day:1011,label:'8 Oct',title:'Leaderfit',color:'#e67c73',side:'left',who:'Anne'},
+  {day:1012,label:'9 Oct',title:'Cours bridge',color:'#e67c73',side:'left',who:'Anne'},
+  {day:1012,label:'9 Oct',title:'Bridge Rondeau',color:'#e67c73',side:'left',who:'Anne'},
+  {day:1012,label:'9 Oct',title:'Stretching Laurine',color:'#e67c73',side:'left',who:'Anne'},
+  {day:1013,label:'10 Oct',title:'Parties dirigées',color:'#e67c73',side:'left',who:'Anne'},
+  {day:1013,label:'10 Oct',title:'Lucille',color:'#e67c73',side:'left',who:'Anne'},
+  {day:1016,label:'13 Oct',title:'Bureau MGA',color:'#e67c73',side:'left',who:'Anne'},
+  {day:1017,label:'14 Oct',title:'Gym stretching Hélène',color:'#e67c73',side:'left',who:'Anne'},
+  {day:1017,label:'14 Oct',title:'Tournoi Gilles',color:'#e67c73',side:'left',who:'Anne'},
+  {day:1017,label:'14 Oct',title:'Victoria soirée dîner',color:'#e67c73',side:'left',who:'Anne'},
+  {day:1018,label:'15 Oct',title:'5 artistes artistes contemporain',color:'#e67c73',side:'left',who:'Anne'},
+  {day:1019,label:'16 Oct',title:'Cours bridge',color:'#e67c73',side:'left',who:'Anne'},
+  {day:1019,label:'16 Oct',title:'Bridge Rondeau',color:'#e67c73',side:'left',who:'Anne'},
+  {day:1019,label:'16 Oct',title:'Stretching Laurine',color:'#e67c73',side:'left',who:'Anne'},
+  {day:1020,label:'17 Oct',title:'Parties dirigées',color:'#e67c73',side:'left',who:'Anne'},
+  {day:1024,label:'21 Oct',title:'Gym stretching Hélène',color:'#e67c73',side:'left',who:'Anne'},
+  {day:1026,label:'23 Oct',title:'Stretching Laurine',color:'#e67c73',side:'left',who:'Anne'},
+  {day:1031,label:'28 Oct',title:'Defi auto',color:'#e67c73',side:'left',who:'Anne'},
+  {day:1034,label:'31 Oct',title:'Le sens des choses',color:'#e67c73',side:'left',who:'Anne'},
+  {day:1034,label:'31 Oct',title:'Empathie',color:'#e67c73',side:'left',who:'Anne'},
+  {day:1034,label:'31 Oct',title:'Réunion Moulin blanc',color:'#e67c73',side:'left',who:'Anne'},
+  {day:1038,label:'4 Nov',title:'Gym stretching Hélène',color:'#e67c73',side:'left',who:'Anne'},
+  {day:1040,label:'6 Nov',title:'Cours bridge',color:'#e67c73',side:'left',who:'Anne'},
+  {day:1040,label:'6 Nov',title:'Bridge Rondeau',color:'#e67c73',side:'left',who:'Anne'},
+  {day:1040,label:'6 Nov',title:'Toyota Crolles',color:'#e67c73',side:'left',who:'Anne'},
+  {day:1040,label:'6 Nov',title:'Stretching Laurine',color:'#e67c73',side:'left',who:'Anne'},
+  {day:1041,label:'7 Nov',title:'Parties dirigées',color:'#e67c73',side:'left',who:'Anne'},
+  {day:1043,label:'9 Nov',title:'Dîner Olivier',color:'#e67c73',side:'left',who:'Anne'},
+  {day:1046,label:'12 Nov',title:'Jérôme dessange',color:'#e67c73',side:'left',who:'Anne'},
+  {day:1046,label:'12 Nov',title:'William Hogarth',color:'#e67c73',side:'left',who:'Anne'},
+  {day:1047,label:'13 Nov',title:'Cours bridge',color:'#e67c73',side:'left',who:'Anne'},
+  {day:1047,label:'13 Nov',title:'Bridge Rondeau',color:'#e67c73',side:'left',who:'Anne'},
+  {day:1047,label:'13 Nov',title:'Stretching Laurine',color:'#e67c73',side:'left',who:'Anne'},
+  {day:1047,label:'13 Nov',title:'Réunion association Mairie Catherine',color:'#e67c73',side:'left',who:'Anne'},
+  {day:1048,label:'14 Nov',title:'Parties dirigées',color:'#e67c73',side:'left',who:'Anne'},
+  {day:1048,label:'14 Nov',title:'Gymnase aiguinards',color:'#e67c73',side:'left',who:'Anne'},
+  {day:1049,label:'15 Nov',title:'Dîner alibeu',color:'#e67c73',side:'left',who:'Anne'},
+  {day:1050,label:'16 Nov',title:'Noah et Arthur',color:'#e67c73',side:'left',who:'Anne'},
+  {day:1051,label:'17 Nov',title:'Gymnase',color:'#e67c73',side:'left',who:'Anne'},
+  {day:1051,label:'17 Nov',title:'William buclos',color:'#e67c73',side:'left',who:'Anne'},
+  {day:1052,label:'18 Nov',title:'Gym stretching Hélène',color:'#e67c73',side:'left',who:'Anne'},
+  {day:1053,label:'19 Nov',title:'Bigallet',color:'#e67c73',side:'left',who:'Anne'},
+  {day:1054,label:'20 Nov',title:'Cours bridge',color:'#e67c73',side:'left',who:'Anne'},
+  {day:1054,label:'20 Nov',title:'Bridge Rondeau',color:'#e67c73',side:'left',who:'Anne'},
+  {day:1054,label:'20 Nov',title:'Bilan Cardin',color:'#e67c73',side:'left',who:'Anne'},
+  {day:1055,label:'21 Nov',title:'Parties dirigées',color:'#e67c73',side:'left',who:'Anne'},
+  {day:1055,label:'21 Nov',title:'Vaccin grippe covid',color:'#e67c73',side:'left',who:'Anne'},
+  {day:1057,label:'23 Nov',title:'Dîner Annie Laurent',color:'#e67c73',side:'left',who:'Anne'},
+  {day:1058,label:'24 Nov',title:'Déjeuner Isabelle et Frédéric',color:'#e67c73',side:'left',who:'Anne'},
+  {day:1059,label:'25 Nov',title:'Gym stretching Hélène',color:'#e67c73',side:'left',who:'Anne'},
+  {day:1061,label:'27 Nov',title:'Cours bridge',color:'#e67c73',side:'left',who:'Anne'},
+  {day:1061,label:'27 Nov',title:'Bridge Rondeau',color:'#e67c73',side:'left',who:'Anne'},
+  {day:1061,label:'27 Nov',title:'Stretching Laurine',color:'#e67c73',side:'left',who:'Anne'},
+  {day:1062,label:'28 Nov',title:'Jeff 2 alpes',color:'#e67c73',side:'left',who:'Anne'},
+  {day:1062,label:'28 Nov',title:'Le bourgeois gentilhommière',color:'#e67c73',side:'left',who:'Anne'},
+  {day:1063,label:'29 Nov',title:'Oliver twist lucernaire',color:'#e67c73',side:'left',who:'Anne'},
+  {day:1063,label:'29 Nov',title:'Georges de Latour',color:'#e67c73',side:'left',who:'Anne'},
+  {day:1063,label:'29 Nov',title:'Dîner Édith et Bruno',color:'#e67c73',side:'left',who:'Anne'},
+  {day:1064,label:'30 Nov',title:'Versailles',color:'#e67c73',side:'left',who:'Anne'},
+  {day:1065,label:'1 Dec',title:'Train',color:'#e67c73',side:'left',who:'Anne'},
+  {day:1065,label:'1 Dec',title:'Réaménagement Notre Dame',color:'#e67c73',side:'left',who:'Anne'},
+  {day:1066,label:'2 Dec',title:'Gym stretching Hélène',color:'#e67c73',side:'left',who:'Anne'},
+  {day:1068,label:'4 Dec',title:'Cours bridge',color:'#e67c73',side:'left',who:'Anne'},
+  {day:1068,label:'4 Dec',title:'Bridge Rondeau',color:'#e67c73',side:'left',who:'Anne'},
+  {day:1068,label:'4 Dec',title:'Stretching Laurine',color:'#e67c73',side:'left',who:'Anne'},
+  {day:1068,label:'4 Dec',title:'Transfert lests Aiguinards',color:'#e67c73',side:'left',who:'Anne'},
+  {day:1069,label:'5 Dec',title:'Cinema William Victoria',color:'#e67c73',side:'left',who:'Anne'},
+  {day:1069,label:'5 Dec',title:'Parties dirigées',color:'#e67c73',side:'left',who:'Anne'},
+  {day:1071,label:'7 Dec',title:'Annie Poizat',color:'#e67c73',side:'left',who:'Anne'},
+  {day:1072,label:'8 Dec',title:'Ehpad Tullins',color:'#e67c73',side:'left',who:'Anne'},
+  {day:1072,label:'8 Dec',title:'Comptable 345 rue  Lavoisier',color:'#e67c73',side:'left',who:'Anne'},
+  {day:1072,label:'8 Dec',title:'Laurine gymnase Buclos',color:'#e67c73',side:'left',who:'Anne'},
+  {day:1073,label:'9 Dec',title:'Gym stretching Hélène',color:'#e67c73',side:'left',who:'Anne'},
+  {day:1073,label:'9 Dec',title:'Bridge Nathalie',color:'#e67c73',side:'left',who:'Anne'},
+  {day:1074,label:'10 Dec',title:'Thé Jeanne',color:'#e67c73',side:'left',who:'Anne'},
+  {day:1074,label:'10 Dec',title:'Reynolds à Gainsborough',color:'#e67c73',side:'left',who:'Anne'},
+  {day:1075,label:'11 Dec',title:'Cours bridge',color:'#e67c73',side:'left',who:'Anne'},
+  {day:1075,label:'11 Dec',title:'Bridge Rondeau',color:'#e67c73',side:'left',who:'Anne'},
+  {day:1075,label:'11 Dec',title:'Stretching Laurine',color:'#e67c73',side:'left',who:'Anne'},
+  {day:1075,label:'11 Dec',title:'Maison des solidarités  Mairie',color:'#e67c73',side:'left',who:'Anne'},
+  {day:1076,label:'12 Dec',title:'Tournoi Noël',color:'#e67c73',side:'left',who:'Anne'},
+  {day:1077,label:'13 Dec',title:'Challenge/ 2',color:'#e67c73',side:'left',who:'Anne'},
+  {day:1080,label:'16 Dec',title:'Relancer baechler',color:'#e67c73',side:'left',who:'Anne'},
+  {day:1080,label:'16 Dec',title:'Gym stretching Hélène',color:'#e67c73',side:'left',who:'Anne'},
+  {day:1080,label:'16 Dec',title:'William',color:'#e67c73',side:'left',who:'Anne'},
+  {day:1082,label:'18 Dec',title:'Cours bridge',color:'#e67c73',side:'left',who:'Anne'},
+  {day:1082,label:'18 Dec',title:'Bridge Rondeau',color:'#e67c73',side:'left',who:'Anne'},
+  {day:1082,label:'18 Dec',title:'Stretching Laurine',color:'#e67c73',side:'left',who:'Anne'},
+  {day:1082,label:'18 Dec',title:'Remerciements Cardin Mairie',color:'#e67c73',side:'left',who:'Anne'},
+  {day:1083,label:'19 Dec',title:'Parties dirigées',color:'#e67c73',side:'left',who:'Anne'},
+  {day:1085,label:'21 Dec',title:'Noah et Arthur',color:'#e67c73',side:'left',who:'Anne'},
+  {day:1088,label:'24 Dec',title:'Repas Noël',color:'#e67c73',side:'left',who:'Anne'},
+  {day:1090,label:'26 Dec',title:'Dessange',color:'#e67c73',side:'left',who:'Anne'},
+  {day:1100,label:'5 Jan',title:'AG Îlot vert',color:'#e67c73',side:'left',who:'Anne'},
+  {day:1101,label:'6 Jan',title:'Gym stretching Hélène',color:'#e67c73',side:'left',who:'Anne'},
+  {day:1103,label:'8 Jan',title:'Cours bridge',color:'#e67c73',side:'left',who:'Anne'},
+  {day:1103,label:'8 Jan',title:'Bridge Rondeau',color:'#e67c73',side:'left',who:'Anne'},
+  {day:1103,label:'8 Jan',title:'Stretching Laurine',color:'#e67c73',side:'left',who:'Anne'},
+  {day:1104,label:'9 Jan',title:'Parties dirigées',color:'#e67c73',side:'left',who:'Anne'},
+  {day:1104,label:'9 Jan',title:'St Vincent de Mercuze',color:'#e67c73',side:'left',who:'Anne'},
+  {day:1107,label:'12 Jan',title:'Tournoi Gilles',color:'#e67c73',side:'left',who:'Anne'},
+  {day:1108,label:'13 Jan',title:'Gym stretching Hélène',color:'#e67c73',side:'left',who:'Anne'},
+  {day:1108,label:'13 Jan',title:'Tournoi bridge',color:'#e67c73',side:'left',who:'Anne'},
+  {day:1109,label:'14 Jan',title:'Constable à Turner',color:'#e67c73',side:'left',who:'Anne'},
+  {day:1110,label:'15 Jan',title:'Cours bridge',color:'#e67c73',side:'left',who:'Anne'},
+  {day:1110,label:'15 Jan',title:'Bridge Rondeau',color:'#e67c73',side:'left',who:'Anne'},
+  {day:1110,label:'15 Jan',title:'Rv tel Cea Laurine',color:'#e67c73',side:'left',who:'Anne'},
+  {day:1110,label:'15 Jan',title:'Stretching Laurine',color:'#e67c73',side:'left',who:'Anne'},
+  {day:1111,label:'16 Jan',title:'Déjeuner Olivier',color:'#e67c73',side:'left',who:'Anne'},
+  {day:1111,label:'16 Jan',title:'Vœux Mairie de Meylan gymnase Aiguinards',color:'#e67c73',side:'left',who:'Anne'},
+  {day:1112,label:'17 Jan',title:'Challenge/4',color:'#e67c73',side:'left',who:'Anne'},
+  {day:1113,label:'18 Jan',title:'Dîner Agnès',color:'#e67c73',side:'left',who:'Anne'},
+  {day:1114,label:'19 Jan',title:'Chagall un cirque plein ciel',color:'#e67c73',side:'left',who:'Anne'},
+  {day:1115,label:'20 Jan',title:'Gym stretching Hélène',color:'#e67c73',side:'left',who:'Anne'},
+  {day:1115,label:'20 Jan',title:'Jean Marie Anselmi',color:'#e67c73',side:'left',who:'Anne'},
+  {day:1116,label:'21 Jan',title:'Livraison lit',color:'#e67c73',side:'left',who:'Anne'},
+  {day:1117,label:'22 Jan',title:'Cours bridge',color:'#e67c73',side:'left',who:'Anne'},
+  {day:1117,label:'22 Jan',title:'Bridge Rondeau',color:'#e67c73',side:'left',who:'Anne'},
+  {day:1117,label:'22 Jan',title:'Stretching Laurine',color:'#e67c73',side:'left',who:'Anne'},
+  {day:1118,label:'23 Jan',title:'St Vincent tournante Olivier',color:'#e67c73',side:'left',who:'Anne'},
+  {day:1118,label:'23 Jan',title:'Parties dirigées',color:'#e67c73',side:'left',who:'Anne'},
+  {day:1119,label:'24 Jan',title:'Train Châlons chagny',color:'#e67c73',side:'left',who:'Anne'},
+  {day:1121,label:'26 Jan',title:'Dîner Annie Poizat',color:'#e67c73',side:'left',who:'Anne'},
+  {day:1122,label:'27 Jan',title:'Gym stretching Hélène',color:'#e67c73',side:'left',who:'Anne'},
+  {day:1123,label:'28 Jan',title:'William',color:'#e67c73',side:'left',who:'Anne'},
+  {day:1124,label:'29 Jan',title:'Cours bridge',color:'#e67c73',side:'left',who:'Anne'},
+  {day:1124,label:'29 Jan',title:'Bridge Rondeau',color:'#e67c73',side:'left',who:'Anne'},
+  {day:1124,label:'29 Jan',title:'William collège',color:'#e67c73',side:'left',who:'Anne'},
+  {day:1124,label:'29 Jan',title:'Stretching Laurine',color:'#e67c73',side:'left',who:'Anne'},
+  {day:1124,label:'29 Jan',title:'Dîner Mas',color:'#e67c73',side:'left',who:'Anne'},
+  {day:1125,label:'30 Jan',title:'Parties dirigées',color:'#e67c73',side:'left',who:'Anne'},
+  {day:1126,label:'31 Jan',title:'Déjeuner Douchet',color:'#e67c73',side:'left',who:'Anne'},
+  {day:1127,label:'1 Feb',title:'Anniversaire Julie et Charlie',color:'#e67c73',side:'left',who:'Anne'},
+  {day:1128,label:'2 Feb',title:'GUYOMARD avec Claire',color:'#e67c73',side:'left',who:'Anne'},
+  {day:1128,label:'2 Feb',title:'Fra Angelico',color:'#e67c73',side:'left',who:'Anne'},
+  {day:1129,label:'3 Feb',title:'Gym stretching Hélène',color:'#e67c73',side:'left',who:'Anne'},
+  {day:1131,label:'5 Feb',title:'Cours bridge',color:'#e67c73',side:'left',who:'Anne'},
+  {day:1131,label:'5 Feb',title:'Bridge Rondeau',color:'#e67c73',side:'left',who:'Anne'},
+  {day:1131,label:'5 Feb',title:'Stretching Laurine',color:'#e67c73',side:'left',who:'Anne'},
+  {day:1132,label:'6 Feb',title:'Parties dirigées',color:'#e67c73',side:'left',who:'Anne'},
+  {day:1133,label:'7 Feb',title:'Alpina lodge 2 Alpes',color:'#e67c73',side:'left',who:'Anne'},
+  {day:1134,label:'8 Feb',title:'Rv tel  Jean Baptiste',color:'#e67c73',side:'left',who:'Anne'},
+  {day:1135,label:'9 Feb',title:'AG Moulin blanc',color:'#e67c73',side:'left',who:'Anne'},
+  {day:1135,label:'9 Feb',title:'Rubanbelle',color:'#e67c73',side:'left',who:'Anne'},
+  {day:1142,label:'16 Feb',title:'D audigier',color:'#e67c73',side:'left',who:'Anne'},
+  {day:1143,label:'17 Feb',title:'Dîner anniversaire enfants',color:'#e67c73',side:'left',who:'Anne'},
+  {day:1145,label:'19 Feb',title:'Déjeuner Pierre Engelstein',color:'#e67c73',side:'left',who:'Anne'},
+  {day:1145,label:'19 Feb',title:'Bridge Gilles',color:'#e67c73',side:'left',who:'Anne'},
+  {day:1147,label:'21 Feb',title:'Interclubs bridge',color:'#e67c73',side:'left',who:'Anne'},
+  {day:1149,label:'23 Feb',title:'Baby-sitting Félix Sophie',color:'#e67c73',side:'left',who:'Anne'},
+  {day:1150,label:'24 Feb',title:'Gym stretching Hélène',color:'#e67c73',side:'left',who:'Anne'},
+  {day:1152,label:'26 Feb',title:'Cours bridge',color:'#e67c73',side:'left',who:'Anne'},
+  {day:1152,label:'26 Feb',title:'Bridge Rondeau',color:'#e67c73',side:'left',who:'Anne'},
+  {day:1152,label:'26 Feb',title:'Claude Bertrand',color:'#e67c73',side:'left',who:'Anne'},
+  {day:1152,label:'26 Feb',title:'Stretching Laurine',color:'#e67c73',side:'left',who:'Anne'},
+  {day:1153,label:'27 Feb',title:'Parties dirigées',color:'#e67c73',side:'left',who:'Anne'},
+  {day:1153,label:'27 Feb',title:'Marie Philippe',color:'#e67c73',side:'left',who:'Anne'},
+  {day:1156,label:'2 Mar',title:'GUYOMARD Solène',color:'#e67c73',side:'left',who:'Anne'},
+  {day:1156,label:'2 Mar',title:'Le familistère de Guise',color:'#e67c73',side:'left',who:'Anne'},
+  {day:1157,label:'3 Mar',title:'Gym stretching Hélène',color:'#e67c73',side:'left',who:'Anne'},
+  {day:1157,label:'3 Mar',title:'Bridge Xavier',color:'#e67c73',side:'left',who:'Anne'},
+  {day:1159,label:'5 Mar',title:'Cours bridge',color:'#e67c73',side:'left',who:'Anne'},
+  {day:1159,label:'5 Mar',title:'Bridge Rondeau',color:'#e67c73',side:'left',who:'Anne'},
+  {day:1160,label:'6 Mar',title:'Parties dirigées',color:'#e67c73',side:'left',who:'Anne'},
+  {day:1160,label:'6 Mar',title:'William',color:'#e67c73',side:'left',who:'Anne'},
+  {day:1161,label:'7 Mar',title:'Challenge/ 2',color:'#e67c73',side:'left',who:'Anne'},
+  {day:1163,label:'9 Mar',title:'Blue d\'gym ccas Mme Israël',color:'#e67c73',side:'left',who:'Anne'},
+  {day:1163,label:'9 Mar',title:'Yannick stage Buclos',color:'#e67c73',side:'left',who:'Anne'},
+  {day:1164,label:'10 Mar',title:'Gym stretching Hélène',color:'#e67c73',side:'left',who:'Anne'},
+  {day:1165,label:'11 Mar',title:'État des lieux Blanche Monier',color:'#e67c73',side:'left',who:'Anne'},
+  {day:1165,label:'11 Mar',title:'Guillaume',color:'#e67c73',side:'left',who:'Anne'},
+  {day:1166,label:'12 Mar',title:'Cours bridge',color:'#e67c73',side:'left',who:'Anne'},
+  {day:1166,label:'12 Mar',title:'Bridge Rondeau',color:'#e67c73',side:'left',who:'Anne'},
+  {day:1166,label:'12 Mar',title:'Soirée poésie Bélime',color:'#e67c73',side:'left',who:'Anne'},
+  {day:1167,label:'13 Mar',title:'Tournoi Gilles',color:'#e67c73',side:'left',who:'Anne'},
+  {day:1169,label:'15 Mar',title:'Déjeuner isabelle et  Frédéric',color:'#e67c73',side:'left',who:'Anne'},
+  {day:1169,label:'15 Mar',title:'Goûter Annie',color:'#e67c73',side:'left',who:'Anne'},
+  {day:1170,label:'16 Mar',title:'Art textile XIX et XX',color:'#e67c73',side:'left',who:'Anne'},
+  {day:1170,label:'16 Mar',title:'Restaurant Jeanne',color:'#e67c73',side:'left',who:'Anne'},
+  {day:1171,label:'17 Mar',title:'Gym stretching Hélène',color:'#e67c73',side:'left',who:'Anne'},
+  {day:1171,label:'17 Mar',title:'Ste jgr t\'écrivais peinture',color:'#e67c73',side:'left',who:'Anne'},
+  {day:1172,label:'18 Mar',title:'Antoine café',color:'#e67c73',side:'left',who:'Anne'},
+  {day:1173,label:'19 Mar',title:'Cours bridge',color:'#e67c73',side:'left',who:'Anne'},
+  {day:1173,label:'19 Mar',title:'Bridge Rondeau',color:'#e67c73',side:'left',who:'Anne'},
+  {day:1174,label:'20 Mar',title:'Fol azil',color:'#e67c73',side:'left',who:'Anne'},
+  {day:1174,label:'20 Mar',title:'Tournoi Gilles',color:'#e67c73',side:'left',who:'Anne'},
+  {day:1175,label:'21 Mar',title:'Noah et Arthur',color:'#e67c73',side:'left',who:'Anne'},
+  {day:1178,label:'24 Mar',title:'Gym stretching Hélène',color:'#e67c73',side:'left',who:'Anne'},
+  {day:1179,label:'25 Mar',title:'Blanche Monier clés',color:'#e67c73',side:'left',who:'Anne'},
+  {day:1180,label:'26 Mar',title:'Cours bridge',color:'#e67c73',side:'left',who:'Anne'},
+  {day:1180,label:'26 Mar',title:'Bridge Rondeau',color:'#e67c73',side:'left',who:'Anne'},
+  {day:1181,label:'27 Mar',title:'Parties dirigées',color:'#e67c73',side:'left',who:'Anne'},
+  {day:1181,label:'27 Mar',title:'Déjeuner Lucille',color:'#e67c73',side:'left',who:'Anne'},
+  {day:1181,label:'27 Mar',title:'Antoine Monier',color:'#e67c73',side:'left',who:'Anne'},
+  {day:1184,label:'30 Mar',title:'Séances d\'essai Nadine,  Asptt',color:'#e67c73',side:'left',who:'Anne'},
+  {day:1184,label:'30 Mar',title:'Séance essai Yannick',color:'#e67c73',side:'left',who:'Anne'},
+  {day:1185,label:'31 Mar',title:'Gym stretching Hélène',color:'#e67c73',side:'left',who:'Anne'},
+  {day:1186,label:'1 Apr',title:'Prendre Rv gynécologue',color:'#e67c73',side:'left',who:'Anne'},
+  {day:1187,label:'2 Apr',title:'Cours bridge',color:'#e67c73',side:'left',who:'Anne'},
+  {day:1187,label:'2 Apr',title:'Bridge Rondeau',color:'#e67c73',side:'left',who:'Anne'},
+  {day:1188,label:'3 Apr',title:'Yannick maison',color:'#e67c73',side:'left',who:'Anne'},
+  {day:1188,label:'3 Apr',title:'Tournoi Xavier',color:'#e67c73',side:'left',who:'Anne'},
+  {day:1192,label:'7 Apr',title:'Gym stretching Hélène',color:'#e67c73',side:'left',who:'Anne'},
+  {day:1192,label:'7 Apr',title:'Cofidest comptable',color:'#e67c73',side:'left',who:'Anne'},
+  {day:1192,label:'7 Apr',title:'Abou Asptt',color:'#e67c73',side:'left',who:'Anne'},
+  {day:1193,label:'8 Apr',title:'Antoine',color:'#e67c73',side:'left',who:'Anne'},
+  {day:1193,label:'8 Apr',title:'Bureau  Annie Poizat',color:'#e67c73',side:'left',who:'Anne'},
+  {day:1194,label:'9 Apr',title:'Feu vert',color:'#e67c73',side:'left',who:'Anne'},
+  {day:1194,label:'9 Apr',title:'Noah Arthur  BdO',color:'#e67c73',side:'left',who:'Anne'},
+  {day:1195,label:'10 Apr',title:'Récupérer clés Naceira',color:'#e67c73',side:'left',who:'Anne'},
+  {day:1196,label:'11 Apr',title:'Challenge/ 2',color:'#e67c73',side:'left',who:'Anne'},
+  {day:1197,label:'12 Apr',title:'Saint Tropez',color:'#e67c73',side:'left',who:'Anne'},
+  {day:1197,label:'12 Apr',title:'Déjeuner Dominique',color:'#e67c73',side:'left',who:'Anne'},
+  {day:1197,label:'12 Apr',title:'Dîner Philippe',color:'#e67c73',side:'left',who:'Anne'},
+  {day:1198,label:'13 Apr',title:'Tournoi Dominique',color:'#e67c73',side:'left',who:'Anne'},
+  {day:1201,label:'16 Apr',title:'Livraison canapé',color:'#e67c73',side:'left',who:'Anne'},
+  {day:1202,label:'17 Apr',title:'Tournoi Dominique',color:'#e67c73',side:'left',who:'Anne'},
+  {day:1204,label:'19 Apr',title:'Andrée',color:'#e67c73',side:'left',who:'Anne'},
+  {day:1204,label:'19 Apr',title:'Déjeuner Dominique',color:'#e67c73',side:'left',who:'Anne'},
+  {day:1205,label:'20 Apr',title:'AG Saint Eynard',color:'#e67c73',side:'left',who:'Anne'},
+  {day:1205,label:'20 Apr',title:'Réunion MGA Maison',color:'#e67c73',side:'left',who:'Anne'},
+  {day:1206,label:'21 Apr',title:'Gym stretching Hélène',color:'#e67c73',side:'left',who:'Anne'},
+  {day:1207,label:'22 Apr',title:'Mariloo Mairie',color:'#e67c73',side:'left',who:'Anne'},
+  {day:1208,label:'23 Apr',title:'Cours bridge',color:'#e67c73',side:'left',who:'Anne'},
+  {day:1208,label:'23 Apr',title:'Bridge Rondeau',color:'#e67c73',side:'left',who:'Anne'},
+  {day:1209,label:'24 Apr',title:'Tournoi Daniel',color:'#e67c73',side:'left',who:'Anne'},
+  {day:1210,label:'25 Apr',title:'Challenge 4 été',color:'#e67c73',side:'left',who:'Anne'},
+  {day:1213,label:'28 Apr',title:'Gym stretching Hélène',color:'#e67c73',side:'left',who:'Anne'},
+  {day:1214,label:'29 Apr',title:'Bridge',color:'#e67c73',side:'left',who:'Anne'},
+  {day:1215,label:'30 Apr',title:'Célia Saint Tropez',color:'#e67c73',side:'left',who:'Anne'},
+  {day:1215,label:'30 Apr',title:'Cours bridge',color:'#e67c73',side:'left',who:'Anne'},
+  {day:1215,label:'30 Apr',title:'Bridge Rondeau',color:'#e67c73',side:'left',who:'Anne'},
+  {day:1216,label:'1 May',title:'Parties dirigées',color:'#e67c73',side:'left',who:'Anne'},
+  {day:1220,label:'5 May',title:'Gym stretching Hélène',color:'#e67c73',side:'left',who:'Anne'},
+  {day:1222,label:'7 May',title:'Bridge Rondeau',color:'#e67c73',side:'left',who:'Anne'},
+  {day:1223,label:'8 May',title:'Parties dirigées',color:'#e67c73',side:'left',who:'Anne'},
+  {day:1226,label:'11 May',title:'Tournoi christian',color:'#e67c73',side:'left',who:'Anne'},
+  {day:1227,label:'12 May',title:'Gym stretching Hélène',color:'#e67c73',side:'left',who:'Anne'},
+  {day:1228,label:'13 May',title:'Tournoi collège',color:'#e67c73',side:'left',who:'Anne'},
+  {day:1229,label:'14 May',title:'BBQ maison',color:'#e67c73',side:'left',who:'Anne'},
+  {day:1230,label:'15 May',title:'Parties dirigées',color:'#e67c73',side:'left',who:'Anne'},
+  {day:1233,label:'18 May',title:'Tournoi isabelle',color:'#e67c73',side:'left',who:'Anne'},
+  {day:1234,label:'19 May',title:'Gym stretching Hélène',color:'#e67c73',side:'left',who:'Anne'},
+  {day:1236,label:'21 May',title:'Cours bridge',color:'#e67c73',side:'left',who:'Anne'},
+  {day:1236,label:'21 May',title:'Bridge Rondeau',color:'#e67c73',side:'left',who:'Anne'},
+  {day:1237,label:'22 May',title:'Parties dirigées',color:'#e67c73',side:'left',who:'Anne'},
+  {day:1241,label:'26 May',title:'Randonnée sarlat camouin',color:'#e67c73',side:'left',who:'Anne'},
+  {day:1241,label:'26 May',title:'Gym stretching Hélène',color:'#e67c73',side:'left',who:'Anne'},
+  {day:1243,label:'28 May',title:'Bridge Rondeau',color:'#e67c73',side:'left',who:'Anne'},
+  {day:1244,label:'29 May',title:'Parties dirigées',color:'#e67c73',side:'left',who:'Anne'},
+  {day:1248,label:'2 Jun',title:'Gym stretching Hélène',color:'#e67c73',side:'left',who:'Anne'},
+  {day:1250,label:'4 Jun',title:'Cours bridge',color:'#e67c73',side:'left',who:'Anne'},
+  {day:1250,label:'4 Jun',title:'Bridge Rondeau',color:'#e67c73',side:'left',who:'Anne'},
+  {day:1251,label:'5 Jun',title:'Parties dirigées',color:'#e67c73',side:'left',who:'Anne'},
+  {day:1252,label:'6 Jun',title:'Privas Esteoule',color:'#e67c73',side:'left',who:'Anne'},
+  {day:1255,label:'9 Jun',title:'Gym stretching Hélène',color:'#e67c73',side:'left',who:'Anne'},
+  {day:1257,label:'11 Jun',title:'Bridge Rondeau',color:'#e67c73',side:'left',who:'Anne'},
+  {day:1258,label:'12 Jun',title:'Parties dirigées',color:'#e67c73',side:'left',who:'Anne'},
+  {day:1259,label:'13 Jun',title:'Bridge club Seyssins',color:'#e67c73',side:'left',who:'Anne'},
+  {day:1262,label:'16 Jun',title:'Gym stretching Hélène',color:'#e67c73',side:'left',who:'Anne'},
+  {day:1264,label:'18 Jun',title:'Bridge Rondeau',color:'#e67c73',side:'left',who:'Anne'},
+  {day:1265,label:'19 Jun',title:'Parties dirigées',color:'#e67c73',side:'left',who:'Anne'},
+  {day:1265,label:'19 Jun',title:'Châlons',color:'#e67c73',side:'left',who:'Anne'},
+  {day:1269,label:'23 Jun',title:'Gym stretching Hélène',color:'#e67c73',side:'left',who:'Anne'},
+  {day:1271,label:'25 Jun',title:'Bridge Rondeau',color:'#e67c73',side:'left',who:'Anne'},
+  {day:1272,label:'26 Jun',title:'Parties dirigées',color:'#e67c73',side:'left',who:'Anne'},
+  {day:1276,label:'30 Jun',title:'Gym stretching Hélène',color:'#e67c73',side:'left',who:'Anne'},
+  {day:1282,label:'6 Jul',title:'Festival Avignon',color:'#e67c73',side:'left',who:'Anne'},
+  {day:1289,label:'13 Jul',title:'Noah Arthur',color:'#e67c73',side:'left',who:'Anne'},
+  {day:1294,label:'18 Jul',title:'Celia family',color:'#e67c73',side:'left',who:'Anne'},
+  {day:1296,label:'20 Jul',title:'Tangue family',color:'#e67c73',side:'left',who:'Anne'},
+  {day:1511,label:'20 Feb',title:'2 alpes immo',color:'#e67c73',side:'left',who:'Anne'}
+];
+
+const VACANCES_A=[
+  {label:'Noël',start:0,end:2},
+  {label:'Hiver',start:34,end:50},
+  {label:'Printemps',start:97,end:113},
+  {label:'Été',start:188,end:246},
+  {label:'Toussaint',start:293,end:309},
+  {label:'Noël',start:356,end:372},
+  {label:'Hiver',start:405,end:421},
+  {label:'Printemps',start:461,end:477},
+  {label:'Été',start:552,end:610},
+  {label:'Toussaint',start:657,end:673},
+  {label:'Noël',start:720,end:736},
+  {label:'Hiver',start:769,end:785},
+  {label:'Printemps',start:825,end:842},
+  {label:'Été',start:916,end:974},
+  {label:'Toussaint',start:1021,end:1037},
+  {label:'Noël',start:1084,end:1100},
+  {label:'Hiver',start:1133,end:1149},
+  {label:'Printemps',start:1189,end:1205},
+  {label:'Été',start:1280,end:1339},
+  {label:'Toussaint',start:1385,end:1401},
+  {label:'Noël',start:1448,end:1464},
+  {label:'Hiver',start:1497,end:1513},
+  {label:'Printemps',start:1560,end:1576},
+  {label:'Été',start:1644,end:1825}
+];
+const MULTI_EVENTS=[
+  {day1:27,day2:29,title:'Saint Vincent tournante annulée',color:'#f6bf26',side:'right',who:'JF'},
+  {day1:34,day2:42,title:'Balcons de vaujany',color:'#f6bf26',side:'right',who:'JF'},
+  {day1:57,day2:61,title:'Denise matos à Grenoble',color:'#1a73e8',side:'right',who:'JF'},
+  {day1:61,day2:65,title:'St Tropez',color:'#1a73e8',side:'right',who:'JF'},
+  {day1:81,day2:83,title:'week end Gordes',color:'#33b679',side:'right',who:'JF'},
+  {day1:82,day2:85,title:'Stay at Bar des Amis',color:'#1a73e8',side:'right',who:'JF'},
+  {day1:87,day2:89,title:'Noah +Arthur merc18 vendredi12h',color:'#1a73e8',side:'right',who:'JF'},
+  {day1:89,day2:91,title:'Sophie vend18h dim19h',color:'#1a73e8',side:'right',who:'JF'},
+  {day1:96,day2:113,title:'saint tropez',color:'#33b679',side:'right',who:'JF'},
+  {day1:97,day2:113,title:'Paques',color:'#f6bf26',side:'right',who:'JF'},
+  {day1:117,day2:128,title:'Tanguy st tropez',color:'#33b679',side:'right',who:'JF'},
+  {day1:137,day2:141,title:'Ascension',color:'#33b679',side:'right',who:'JF'},
+  {day1:192,day2:196,title:'Avignon',color:'#33b679',side:'right',who:'JF'},
+  {day1:198,day2:208,title:'Celia23 noah 28',color:'#33b679',side:'right',who:'JF'},
+  {day1:202,day2:209,title:'Victoria',color:'#33b679',side:'right',who:'JF'},
+  {day1:225,day2:230,title:'Parid',color:'#33b679',side:'right',who:'JF'},
+  {day1:230,day2:232,title:'Mariage d\'Inès et Antoine',color:'#1a73e8',side:'right',who:'JF'},
+  {day1:231,day2:243,title:'William Saint Tropez',color:'#1a73e8',side:'right',who:'JF'},
+  {day1:255,day2:258,title:'William',color:'#1a73e8',side:'right',who:'JF'},
+  {day1:260,day2:264,title:'Bretagne',color:'#1a73e8',side:'right',who:'JF'},
+  {day1:271,day2:281,title:'Voiles de Saint-Tropez',color:'#33b679',side:'right',who:'JF'},
+  {day1:293,day2:310,title:'Vacances de la Toussaint',color:'#33b679',side:'right',who:'JF'},
+  {day1:293,day2:295,title:'Sophie',color:'#1a73e8',side:'right',who:'JF'},
+  {day1:299,day2:305,title:'croisiere ',color:'#e67c73',side:'right',who:'JF'},
+  {day1:333,day2:339,title:'Bourg d\'Oisans 8h du matin depart',color:'#33b679',side:'right',who:'JF'},
+  {day1:358,day2:360,title:'Noah',color:'#1a73e8',side:'right',who:'JF'},
+  {day1:361,day2:371,title:'Saint Tropez',color:'#33b679',side:'right',who:'JF'},
+  {day1:391,day2:393,title:'Laurent VCL',color:'#33b679',side:'right',who:'JF'},
+  {day1:412,day2:419,title:'Vacances Fevrier',color:'#33b679',side:'right',who:'JF'},
+  {day1:419,day2:428,title:'Vacances Vaujanys',color:'#0b8043',side:'right',who:'JF'},
+  {day1:462,day2:466,title:'Arthur',color:'#1a73e8',side:'right',who:'JF'},
+  {day1:468,day2:484,title:'vacances Paques',color:'#f6bf26',side:'right',who:'JF'},
+  {day1:471,day2:478,title:'Saint Tropez',color:'#1a73e8',side:'right',who:'JF'},
+  {day1:479,day2:483,title:'Noah a la maison',color:'#1a73e8',side:'right',who:'JF'},
+  {day1:489,day2:492,title:'Sète vero + Bertrand',color:'#1a73e8',side:'right',who:'JF'},
+  {day1:493,day2:498,title:'Paris',color:'#1a73e8',side:'right',who:'JF'},
+  {day1:515,day2:518,title:'Fête des voisins moulin blanc',color:'#1a73e8',side:'right',who:'JF'},
+  {day1:519,day2:522,title:'Opération Richard hôpital Sud',color:'#f6bf26',side:'right',who:'JF'},
+  {day1:530,day2:544,title:'Covid jf',color:'#d50000',side:'right',who:'JF'},
+  {day1:530,day2:532,title:'Mariage Eduardo et margarita Gênes',color:'#1a73e8',side:'right',who:'JF'},
+  {day1:532,day2:536,title:'Françoise, JF ize',color:'#1a73e8',side:'right',who:'JF'},
+  {day1:537,day2:547,title:'Moulin blanc Frédéric',color:'#8e24aa',side:'right',who:'JF'},
+  {day1:537,day2:543,title:'Vercors',color:'#1a73e8',side:'right',who:'JF'},
+  {day1:537,day2:539,title:'Garage',color:'#7986cb',side:'right',who:'JF'},
+  {day1:557,day2:566,title:'Noah',color:'#1a73e8',side:'right',who:'JF'},
+  {day1:566,day2:571,title:'Célia Arthur Noah',color:'#1a73e8',side:'right',who:'JF'},
+  {day1:594,day2:602,title:'GDM Megaron',color:'#1a73e8',side:'right',who:'JF'},
+  {day1:602,day2:609,title:'Victoria et William',color:'#1a73e8',side:'right',who:'JF'},
+  {day1:619,day2:622,title:'William',color:'#1a73e8',side:'right',who:'JF'},
+  {day1:623,day2:627,title:'Marche jeanne',color:'#1a73e8',side:'right',who:'JF'},
+  {day1:628,day2:630,title:'Stay at Hotel Garden Napoli',color:'#1a73e8',side:'right',who:'JF'},
+  {day1:629,day2:636,title:'Croisière îles Pontines',color:'#1a73e8',side:'right',who:'JF'},
+  {day1:637,day2:639,title:'Voiles',color:'#1a73e8',side:'right',who:'JF'},
+  {day1:637,day2:645,title:'Voiles Saint Tropez',color:'#f6bf26',side:'right',who:'JF'},
+  {day1:646,day2:648,title:'William',color:'#1a73e8',side:'right',who:'JF'},
+  {day1:657,day2:665,title:'Lucille St Tropez',color:'#33b679',side:'right',who:'JF'},
+  {day1:657,day2:672,title:'Congés Toussaint',color:'#f6bf26',side:'right',who:'JF'},
+  {day1:678,day2:681,title:'Noah et Arthur',color:'#1a73e8',side:'right',who:'JF'},
+  {day1:692,day2:694,title:'Challenge Bridge',color:'#1a73e8',side:'right',who:'JF'},
+  {day1:720,day2:735,title:'Congés fin d\'année',color:'#f6bf26',side:'right',who:'JF'},
+  {day1:742,day2:744,title:'Célia,  BdO',color:'#1a73e8',side:'right',who:'JF'},
+  {day1:766,day2:768,title:'Tech&fest',color:'#f4511e',side:'right',who:'JF'},
+  {day1:776,day2:778,title:'Challenge  Bridge',color:'#f4511e',side:'right',who:'JF'},
+  {day1:783,day2:798,title:'Congés hiver',color:'#f6bf26',side:'right',who:'JF'},
+  {day1:790,day2:798,title:'Ski avec les enfants 2Alpes',color:'#3f51b5',side:'right',who:'JF'},
+  {day1:803,day2:806,title:'Saint tropez',color:'#1a73e8',side:'right',who:'JF'},
+  {day1:810,day2:812,title:'Sophie  Félix',color:'#1a73e8',side:'right',who:'JF'},
+  {day1:814,day2:818,title:'Paris',color:'#1a73e8',side:'right',who:'JF'},
+  {day1:820,day2:825,title:'Carrosserie Richard',color:'#f6bf26',side:'right',who:'JF'},
+  {day1:839,day2:854,title:'Congés printemps',color:'#f6bf26',side:'right',who:'JF'},
+  {day1:846,day2:854,title:'Julie et Ludo Saint Tropez',color:'#1a73e8',side:'right',who:'JF'},
+  {day1:873,day2:876,title:'La Gallee Savasse',color:'#1a73e8',side:'right',who:'JF'},
+  {day1:916,day2:919,title:'Festival Avignon',color:'#1a73e8',side:'right',who:'JF'},
+  {day1:916,day2:973,title:'Congés d\'été',color:'#f6bf26',side:'right',who:'JF'},
+  {day1:920,day2:930,title:'Noah St Tropez',color:'#1a73e8',side:'right',who:'JF'},
+  {day1:930,day2:938,title:'Célia Noah Arthur',color:'#1a73e8',side:'right',who:'JF'},
+  {day1:932,day2:940,title:'Tanguy et Sophie',color:'#f4511e',side:'right',who:'JF'},
+  {day1:968,day2:972,title:'Cécile et Jean François',color:'#1a73e8',side:'right',who:'JF'},
+  {day1:979,day2:981,title:'Regards croisés  folazil',color:'#f6bf26',side:'right',who:'JF'},
+  {day1:979,day2:981,title:'Sophie et Félix',color:'#33b679',side:'right',who:'JF'},
+  {day1:995,day2:998,title:'Victoria',color:'#1a73e8',side:'right',who:'JF'},
+  {day1:999,day2:1003,title:'Baptême Éléonore  Milan',color:'#d50000',side:'right',who:'JF'},
+  {day1:1029,day2:1036,title:'Saint Tropez',color:'#f6bf26',side:'right',who:'JF'},
+  {day1:1042,day2:1044,title:'Challenge / 4',color:'#8e24aa',side:'right',who:'JF'},
+  {day1:1062,day2:1066,title:'Paris',color:'#f4511e',side:'right',who:'JF'},
+  {day1:1085,day2:1090,title:'Noah et Arthur',color:'#e67c73',side:'left',who:'Anne'},
+  {day1:1118,day2:1121,title:'St Vincent tournante Olivier',color:'#e67c73',side:'left',who:'Anne'},
+  {day1:1133,day2:1141,title:'Alpina lodge 2 Alpes',color:'#e67c73',side:'left',who:'Anne'},
+  {day1:1147,day2:1149,title:'Interclubs bridge',color:'#e67c73',side:'left',who:'Anne'},
+  {day1:1160,day2:1162,title:'William',color:'#e67c73',side:'left',who:'Anne'},
+  {day1:1194,day2:1196,title:'Noah Arthur  BdO',color:'#e67c73',side:'left',who:'Anne'},
+  {day1:1197,day2:1205,title:'Saint Tropez',color:'#e67c73',side:'left',who:'Anne'},
+  {day1:1210,day2:1212,title:'Challenge/ 4 été',color:'#e67c73',side:'left',who:'Anne'},
+  {day1:1215,day2:1216,title:'Célia Saint Tropez',color:'#e67c73',side:'left',who:'Anne'},
+  {day1:1241,day2:1248,title:'Randonnée sarlat camouin',color:'#33b679',side:'left',who:'Anne'},
+  {day1:1252,day2:1253,title:'Privas Esteoule',color:'#33b679',side:'left',who:'Anne'},
+  {day1:1265,day2:1267,title:'Châlons',color:'#e67c73',side:'left',who:'Anne'},
+  {day1:1282,day2:1287,title:'Festival Avignon',color:'#f6bf26',side:'left',who:'Anne'},
+  {day1:1289,day2:1294,title:'Noah & Arthur',color:'#33b679',side:'left',who:'Anne'},
+  {day1:1294,day2:1303,title:'Celia family',color:'#e67c73',side:'left',who:'Anne'},
+  {day1:1296,day2:1304,title:'Tangue family',color:'#e67c73',side:'left',who:'Anne'},
+  {day1:1511,day2:1519,title:'2 alpes immo',color:'#1a73e8',side:'left',who:'Anne'}
+];
+const JOURS_FERIES=[
+  {day:0,label:'1 Jan'},{day:99,label:'10 Avr'},{day:120,label:'1 Mai'},
+  {day:127,label:'8 Mai'},{day:137,label:'18 Mai'},{day:148,label:'29 Mai'},
+  {day:194,label:'14 Jul'},{day:226,label:'15 Aoû'},{day:304,label:'1 Nov'},
+  {day:314,label:'11 Nov'},{day:358,label:'25 Déc'},
+  {day:365,label:'1 Jan'},{day:456,label:'1 Avr'},{day:486,label:'1 Mai'},
+  {day:493,label:'8 Mai'},{day:494,label:'9 Mai'},{day:505,label:'20 Mai'},
+  {day:560,label:'14 Jul'},{day:592,label:'15 Aoû'},{day:670,label:'1 Nov'},
+  {day:680,label:'11 Nov'},{day:724,label:'25 Déc'},
+  {day:731,label:'1 Jan'},{day:841,label:'21 Avr'},{day:851,label:'1 Mai'},
+  {day:858,label:'8 Mai'},{day:879,label:'29 Mai'},{day:890,label:'9 Jun'},
+  {day:925,label:'14 Jul'},{day:957,label:'15 Aoû'},{day:1035,label:'1 Nov'},
+  {day:1045,label:'11 Nov'},{day:1089,label:'25 Déc'},
+  {day:1096,label:'1 Jan'},{day:1191,label:'6 Avr'},{day:1216,label:'1 Mai'},
+  {day:1223,label:'8 Mai'},{day:1229,label:'14 Mai'},{day:1240,label:'25 Mai'},
+  {day:1290,label:'14 Jul'},{day:1322,label:'15 Aoû'},{day:1400,label:'1 Nov'},
+  {day:1410,label:'11 Nov'},{day:1454,label:'25 Déc'},
+  {day:1461,label:'1 Jan'},{day:1548,label:'29 Mar'},{day:1581,label:'1 Mai'},
+  {day:1586,label:'6 Mai'},{day:1588,label:'8 Mai'},{day:1597,label:'17 Mai'},
+  {day:1655,label:'14 Jul'},{day:1687,label:'15 Aoû'},{day:1765,label:'1 Nov'},
+  {day:1775,label:'11 Nov'},{day:1819,label:'25 Déc'}
+];
+
+const ALL_EVENTS=[...EVT_JF,...EVT_ANNE].sort((a,b)=>a.day-b.day);
+
+const canvas=document.getElementById('c');
+const ctx=canvas.getContext('2d');
+const wrap=document.getElementById('wrap');
+let W,H;
+
+let camDay=Math.max(0,TODAY_DAY-7), playing=false, speed=3, lastTs=null, pulse=0, zoom=1;
+let scrollY=TODAY_DAY/7*90; // scrollY en pixels, 90px par lane
+const PPD=90;
+
+function resize(){ const r=wrap.getBoundingClientRect(); W=canvas.width=r.width; H=canvas.height=r.height; }
+
+// === ZIGZAG GEOMETRY ===
+function laneH(){ return roadHW()*2.8; }
+function margin(){ return Math.max(35,W*0.07); }
+function roadHW(){ return Math.max(22,Math.min(70,W*0.09))*zoom; }
+
+// Convert absolute day → screen {x, y}
+// Nombre de lanes visibles simultanément
+function lanesPerScreen(){ return Math.max(3, Math.floor((H*0.82) / laneH())); }
+
+function dayToScreen(day){
+  const lh=laneH(), mg=margin(), rw=W-2*mg;
+  const lane=Math.floor(day/7);
+  const pos=(day%7)/7;
+  const dir=(lane%2===0)?1:-1;
+  const x=dir===1 ? mg+pos*rw : (W-mg)-pos*rw;
+  // scrollY contrôle tout : lane 0 à y=H*0.65 quand scrollY=0
+  // scrollY augmente → tout monte (passé descend, futur monte)
+  const y = H*0.65 - lane*lh + scrollY;
+  return{x,y,lane,dir,hw:roadHW()};
+}
+
+function carScreen(){
+  return dayToScreen(camDay);
+}
+
+// Returns screen pos for camDay (the car)
+function carScreen(){
+  const{x,y}=dayToScreen(camDay);
+  return{x,y};
+}
+
+// Edge positions at a given day
+function edgesAt(day){
+  const{x,y,hw}=dayToScreen(day);
+  return{left:x-hw,right:x+hw,hw,x,y};
+}
+
+// Is a screen y within visible area?
+function visible(y){ return y>-60&&y<H+60; }
+
+function isSat(d){ return((TODAY_DOW+d)%7)===6; }
+function isSun(d){ return((TODAY_DOW+d)%7)===0; }
+function isMonday(d){ return((TODAY_DOW+d)%7)===1; }
+
+function shortDate(d){
+  const ms=new Date('2023-01-01T00:00:00Z').getTime()+d*86400000;
+  const dt=new Date(ms);
+  return dt.getDate()+' '+dt.toLocaleString('fr-FR',{month:'short'})+' '+dt.getUTCFullYear();
+}
+
+// ===== DRAW FUNCTIONS =====
+
+function draw(ts){
+  if(!lastTs)lastTs=ts;
+  const dt=Math.min((ts-lastTs)/1000,0.1); lastTs=ts; pulse+=dt*2.5;
+  if(playing){
+    scrollY+=dt*speed*laneH()/7;
+    scrollY=Math.max(0,Math.min(TOTAL_DAYS/7*laneH(),scrollY));
+  }
+  // camDay toujours dérivé de scrollY
+  camDay=Math.max(0,Math.min(TOTAL_DAYS,scrollY*7/laneH()));
+  ctx.clearRect(0,0,W,H);
+
+  drawBackground();
+  drawAllLanes();
+  drawDayMarks();
+  drawVacanceBands();
+  drawWeekendZones();
+  drawJoursFeriesBands();
+  drawMultiEventBands();
+  drawEventBars();
+  drawEventTexts();
+  drawDayDates();
+  drawDayLetters();
+  drawMonthLabels();
+  drawTodayMark();
+  drawPerson();
+  requestAnimationFrame(draw);
+}
+
+function drawBackground(){
+  // Full background: lighter color shows lanes clearly
+  ctx.fillStyle='#c8dba8';
+  ctx.fillRect(0,0,W,H);
+  // Subtle horizontal lines between lanes
+  const lh=laneH(), hw=roadHW();
+  const camLane=Math.floor(camDay/7);
+  const carY=H*0.82;
+  const lps2=lanesPerScreen(),personLane2=Math.floor(camDay/7),batchStart2=personLane2-(personLane2%lps2);
+  for(let ln=batchStart2-1;ln<=batchStart2+lps2+1;ln++){
+    const y=carY-(ln-camLane)*lh;
+    if(y<-20||y>H+20) continue;
+    // grass band between lanes
+    ctx.fillStyle=(ln%2===0)?'#b8d485':'#c0dc90';
+    ctx.fillRect(0,y-lh/2,W,lh);
+    ctx.fillStyle='transparent';
+  }
+  // Sky hint at very top
+  const skyH=Math.min(60,H*0.10);
+  ctx.fillStyle='#87ceeb';
+  ctx.fillRect(0,0,W,skyH);
+}
+
+function drawAllLanes(){
+  const mg=margin(), rw=W-2*mg, lh=laneH(), hw=roadHW();
+  const camLane=Math.floor(camDay/7);
+
+  const lps2=lanesPerScreen(),personLane2=Math.floor(camDay/7),batchStart2=personLane2-(personLane2%lps2);
+  for(let ln=batchStart2-1;ln<=batchStart2+lps2+1;ln++){
+    const{y}=dayToScreen(ln*7);
+    const lps=lanesPerScreen(),personLane=Math.floor(camDay/7),batchStart=personLane-(personLane%lps);
+    if(ln<batchStart||ln>batchStart+lps+1) continue;
+    if(!visible(y)) continue;
+    const dir=(ln%2===0)?1:-1;
+    const isCurrentLane=(ln===camLane);
+
+    // === ROUTE PRINCIPALE : bande d'asphalte bien visible ===
+    // Fond sombre avec bordures nettes
+    ctx.fillStyle='#d4d8de';
+    ctx.fillRect(mg, y-hw, rw, hw*2);
+
+    // Reflet léger au centre
+    const rg=ctx.createLinearGradient(mg,y-hw,mg,y+hw);
+    rg.addColorStop(0,'rgba(0,0,0,0.04)');
+    rg.addColorStop(0.5,'rgba(255,255,255,0.08)');
+    rg.addColorStop(1,'rgba(0,0,0,0.04)');
+    ctx.fillStyle=rg;
+    ctx.fillRect(mg,y-hw,rw,hw*2);
+
+    // Bandes latérales blanches épaisses (marquage routier)
+    ctx.strokeStyle='#5a6070'; ctx.lineWidth=Math.max(2.5,hw*0.12); ctx.setLineDash([]);
+    ctx.beginPath();ctx.moveTo(mg,y-hw+1);ctx.lineTo(W-mg,y-hw+1);ctx.stroke();
+    ctx.beginPath();ctx.moveTo(mg,y+hw-1);ctx.lineTo(W-mg,y+hw-1);ctx.stroke();
+
+    // Liseré jaune intérieur (comme route nationale)
+    ctx.strokeStyle='rgba(150,150,150,0.5)'; ctx.lineWidth=Math.max(1,hw*0.04);
+    ctx.beginPath();ctx.moveTo(mg,y-hw+Math.max(4,hw*0.18));ctx.lineTo(W-mg,y-hw+Math.max(4,hw*0.18));ctx.stroke();
+    ctx.beginPath();ctx.moveTo(mg,y+hw-Math.max(4,hw*0.18));ctx.lineTo(W-mg,y+hw-Math.max(4,hw*0.18));ctx.stroke();
+
+    // Tirets centraux blancs (sens de circulation)
+    const dashLen=Math.max(12,rw/28), gapLen=dashLen*0.8;
+    ctx.strokeStyle='rgba(60,70,90,0.70)'; ctx.lineWidth=Math.max(1.5,hw*0.06);
+    ctx.setLineDash([dashLen,gapLen]);
+    // offset selon direction pour montrer sens de marche
+    ctx.lineDashOffset=dir===1 ? -(camDay%7/7)*( dashLen+gapLen)*3 : (camDay%7/7)*(dashLen+gapLen)*3;
+    ctx.beginPath();ctx.moveTo(mg+4,y);ctx.lineTo(W-mg-4,y);ctx.stroke();
+    ctx.setLineDash([]);
+    ctx.lineDashOffset=0;
+
+    // Surbrillance sur la lane courante
+    if(isCurrentLane){
+      ctx.fillStyle='rgba(251,191,36,0.08)';
+      ctx.fillRect(mg,y-hw,rw,hw*2);
+    }
+
+    // === VIRAGE en bout de lane ===
+    // Relie la fin de cette lane au début de la lane suivante (au-dessus)
+    if(ln>=0 && ln<Math.ceil(TOTAL_DAYS/7)){
+      const nextY=y-lh;
+      if(visible(y)||visible(nextY)){
+        // Centre de l'arc = côté de sortie, entre les deux lanes
+        const arcX = dir===1 ? W-mg : mg;
+        const arcCY = (y+nextY)/2;  // exactement entre les deux
+        const arcR  = lh/2;          // rayon = demi-écart entre lanes
+
+        // Pour LTR (dir=1): on quitte par la droite, l'arc tourne à gauche (anticlockwise en haut)
+        // Angles: départ = PI/2 (bas de l'arc, côté lane courante)
+        //         fin    = -PI/2 = 3PI/2 (haut de l'arc, côté lane suivante)
+        // Pour RTL (dir=-1): symétrique
+        const startA = Math.PI/2;   // pointe vers le bas (lane courante)
+        const endA   = -Math.PI/2;  // pointe vers le haut (lane suivante)
+        const ccw    = dir===1;     // LTR → tourne dans le sens anti-horaire (va vers la gauche en haut)
+
+        // Fond asphalte du virage — remplissage par chemin fermé (pas de lineCap)
+        ctx.setLineDash([]);
+
+        // Remplir avec un anneau — garder arcR-hw > 0
+        const innerR=Math.max(1, arcR-hw);
+        const outerR=arcR+hw;
+        ctx.fillStyle='#d4d8de';
+        ctx.beginPath();
+        ctx.arc(arcX, arcCY, outerR, startA, endA, ccw);
+        ctx.arc(arcX, arcCY, innerR, endA, startA, !ccw);
+        ctx.closePath();
+        ctx.fill();
+
+        // Bordures extérieure et intérieure
+        ctx.strokeStyle='#5a6070';
+        ctx.lineWidth=Math.max(2,hw*0.12);
+        ctx.lineCap='butt';
+        ctx.beginPath();
+        ctx.arc(arcX, arcCY, outerR, startA, endA, ccw);
+        ctx.stroke();
+        if(innerR>1){
+          ctx.beginPath();
+          ctx.arc(arcX, arcCY, innerR, startA, endA, ccw);
+          ctx.stroke();
+        }
+      }
+    }
+  }
+}
+
+function drawDayMarks(){}
+
+function drawWeekendZones(){}
+
+function drawVacanceBands(){
+  // Trait bleu continu le long du bord SUPÉRIEUR de la route pour chaque période de vacances
+  const hw=roadHW();
+  const lw=Math.max(3,hw*0.18);
+
+  VACANCES_A.forEach(v=>{
+    // Dessiner segment par segment jour par jour
+    // Mais connecter les points consécutifs sur la même lane
+    let prevX=null, prevY=null, prevLane=null;
+
+    for(let d=v.start;d<=v.end+1;d++){
+      const{x,y,lane}=dayToScreen(Math.min(d,TOTAL_DAYS));
+      const screenY=y-hw+lw/2; // bord supérieur de la route
+
+      if(!visible(y)){prevX=null;prevY=null;prevLane=null;continue;}
+
+      if(prevX!==null && lane===prevLane){
+        // Même lane: tracer le segment
+        ctx.strokeStyle='rgba(33,150,243,0.90)';
+        ctx.lineWidth=lw;
+        ctx.lineCap='round';
+        ctx.setLineDash([]);
+        ctx.beginPath();
+        ctx.moveTo(prevX,prevY);
+        ctx.lineTo(x,screenY);
+        ctx.stroke();
+      }
+      prevX=x; prevY=screenY; prevLane=lane;
+    }
+  });
+}
+
+function drawJoursFeriesBands(){}
+
+function drawMultiEventBands(){
+  const hw=roadHW();
+  const lw=Math.max(3,hw*0.18);
+  const KEYWORDS=['randon','voyage','vacance','séjour','sejour','trek','ski','montagne',
+    'plage','mer','camp','avignon','festival','tropez','bdo','noah','arthur','célia',
+    'celia','tangue','alpe','sarl','privas','châlons','chalons','dieulefit','gordes',
+    'sicile','lucille','william','balcon','vaujany','stay','bar des amis','sophie',
+    'séjours','paques','toussaint','ascension','interclub','interclubs'];
+
+  function isLeisure(title){
+    return KEYWORDS.some(k=>title.toLowerCase().includes(k));
+  }
+
+  // Helper: draw the arc connecting end of one lane to start of next
+  function drawTurnArc(fromLane){
+    const lh=laneH(), mg=margin(), rw=W-2*mg;
+    const dir=(fromLane%2===0)?1:-1; // direction of fromLane
+    const y1=dayToScreen(fromLane*7+6).y; // last day of fromLane
+    const y2=dayToScreen((fromLane+1)*7).y; // first day of next lane
+
+    if(!visible(y1)&&!visible(y2)) return;
+
+    // Arc center = turn corner, midpoint between the two lane y's
+    const arcX = dir===1 ? W-mg : mg; // corner X
+    const arcCY = (y1+y2)/2;
+    const arcR  = lh/2;
+    const ccw   = dir===1; // same as in drawAllLanes
+
+    // Offset: bottom edge of road = +hw-lw/2
+    const innerR = arcR - hw + lw/2;
+    const outerR = arcR + hw - lw/2;
+    // The red line is at the BOTTOM of the road = outermost arc (furthest from center)
+    // For dir=1 (LTR, turns left): outer = arcR+hw
+    // The red line follows the outer edge of the turn
+    const redR = arcR + hw - lw/2;
+
+    if(redR>0){
+      ctx.strokeStyle='rgba(230,81,0,0.90)';
+      ctx.lineWidth=lw;
+      ctx.lineCap='round';
+      ctx.setLineDash([]);
+      ctx.beginPath();
+      ctx.arc(arcX, arcCY, redR, Math.PI/2, -Math.PI/2, ccw);
+      ctx.stroke();
+    }
+  }
+
+  MULTI_EVENTS.forEach(ev=>{
+    if(!isLeisure(ev.title)) return;
+
+    let prevX=null, prevY=null, prevLane=null;
+
+    for(let d=ev.day1; d<=ev.day2+1; d++){
+      const dd=Math.min(d,TOTAL_DAYS);
+      const{x,y,lane}=dayToScreen(dd);
+      const screenY=y+hw-lw/2;
+
+      if(!visible(y)){prevX=null;prevY=null;prevLane=null;continue;}
+
+      if(prevX!==null){
+        if(lane===prevLane){
+          // Same lane: draw straight segment
+          ctx.strokeStyle='rgba(230,81,0,0.90)';
+          ctx.lineWidth=lw; ctx.lineCap='round'; ctx.setLineDash([]);
+          ctx.beginPath(); ctx.moveTo(prevX,prevY); ctx.lineTo(x,screenY); ctx.stroke();
+        } else {
+          // Lane changed: draw the turn arc for prevLane
+          drawTurnArc(prevLane);
+        }
+      }
+      prevX=x; prevY=screenY; prevLane=lane;
+    }
+  });
+}
+
+function drawEventBars(){}
+
+function isVacance(day){
+  return VACANCES_A.some(v=>day>=v.start&&day<=v.end);
+}
+
+
+const VACANCE_KEYWORDS_GLOBAL=['randon','voyage','vacance','séjour','sejour','trip','trek','ski',
+  'montagne','plage','mer','camp','avignon','festival','saint tropez','tropez','bdo',
+  'noah','arthur','célia','celia','tangue','alpe','sarl','privas','châlons','chalons',
+  'dieulefit','gordes','sicile','lucille'];
+function isLieVacanceGlobal(t){ return VACANCE_KEYWORDS_GLOBAL.some(k=>t.toLowerCase().includes(k)); }
+
+function drawEventTexts(){
+  const hw=roadHW();
+  const byDay={};
+  ALL_EVENTS.forEach(ev=>{
+    if(!(ev.day in byDay)) byDay[ev.day]=[];
+    byDay[ev.day].push(ev);
+  });
+
+  Object.entries(byDay).forEach(([day,evts])=>{
+    const{x,y}=dayToScreen(+day);
+    if(!visible(y)) return;
+    if(hw<14) return;
+
+    const fs=Math.max(7,Math.min(15,hw*0.30));
+    const lineH=Math.max(fs*1.2,fs+3);
+    const allEvts=[...evts.filter(e=>e.side==='left'),...evts.filter(e=>e.side==='right')];
+    if(!allEvts.length) return;
+
+    ctx.font=`bold ${fs}px Arial`;
+    ctx.textAlign='center';
+    ctx.textBaseline='middle';
+
+    let ty=y-hw+fs*0.8;
+    allEvts.forEach(ev=>{
+      if(ty>y+hw-fs*0.5) return;
+      const isJF=ev.side==='right';
+      const baseColor=isJF?'#001a66':'#004400';
+      const color=isLieVacanceGlobal(ev.title)?'#e65100':baseColor;
+      // Découper le titre en mots et les afficher un par un
+      const words=ev.title.split(' ');
+      // Pour JF: calculer d'abord la hauteur du bloc pour dessiner le cadre
+      if(isJF && words.length>0){
+        const blockH=words.length*lineH-lineH*0.2;
+        const maxW=Math.max(...words.map(w=>ctx.measureText(w).width))+6;
+        const frameY=ty-fs*0.6;
+        if(frameY+blockH<=y+hw){
+          ctx.strokeStyle='rgba(0,0,0,0.55)';
+          ctx.lineWidth=1;
+          ctx.setLineDash([]);
+          ctx.strokeRect(x-maxW/2-2, frameY, maxW+4, blockH);
+        }
+      }
+      words.forEach(word=>{
+        if(!word) return;
+        if(ty>y+hw-fs*0.5) return;
+        ctx.fillStyle='rgba(255,255,255,0.65)';
+        ctx.fillText(word,x+0.7,ty+0.7);
+        ctx.fillStyle=color;
+        ctx.fillText(word,x,ty);
+        ty+=lineH;
+      });
+      ty+=lineH*0.3;
+    });
+  });
+}
+
+function drawMonthLabels(){
+  // Affiche mois + année au centre de la bande verte entre les lanes
+  // Positionné entre deux lanes consécutives
+  const lh=laneH(), mg=margin();
+  const ORIGIN_MS=new Date('2023-01-01T00:00:00Z').getTime();
+  const camLane=Math.floor(camDay/7);
+  const _vl=Math.ceil(H/lh)+3;
+  const lps=lanesPerScreen();
+  const batchStart=camLane-(camLane%lps);
+
+  let lastMonth=-1;
+
+  for(let ln=batchStart-_vl; ln<=batchStart+lps+_vl; ln++){
+    if(ln<0) continue;
+    // First day of this lane
+    const firstDay=ln*7;
+    if(firstDay>TOTAL_DAYS) continue;
+
+    const dt=new Date(ORIGIN_MS+firstDay*86400000);
+    const month=dt.getUTCMonth();
+    const year=dt.getUTCFullYear();
+    if(month===lastMonth) continue;
+    lastMonth=month;
+
+    // Position: midpoint between lane ln-1 and lane ln (in the green band)
+    const{y:y1}=dayToScreen(ln*7);       // top of current lane
+    const{y:y0}=dayToScreen((ln-1)*7);   // top of previous lane
+    if(!visible(y1)&&!visible(y0)) continue;
+
+    const yMid=(y0+y1)/2; // center of green gap between lanes
+    if(!visible(yMid)) continue;
+
+    const mois=dt.toLocaleDateString('fr-FR',{month:'long'});
+    const label=mois.charAt(0).toUpperCase()+mois.slice(1)+' '+year;
+
+    const fs=Math.max(10,Math.min(16,lh*0.28));
+    ctx.font=`bold ${fs}px Arial`;
+    ctx.textAlign='center';
+    ctx.textBaseline='middle';
+    // Légère ombre
+    ctx.fillStyle='rgba(255,255,255,0.55)';
+    ctx.fillText(label, W/2+1, yMid+1);
+    ctx.fillStyle='#2d4a1e';
+    ctx.fillText(label, W/2, yMid);
+  }
+}
+
+function drawDayDates(){
+  // Affiche uniquement la date complète chaque samedi, au centre de la route
+  const hw=roadHW();
+  const ORIGIN_MS=new Date('2023-01-01T00:00:00Z').getTime();
+  const camLane=Math.floor(camDay/7);
+  const _vl=Math.ceil(H/laneH())+3;
+
+  for(let d=Math.max(0,Math.floor((camLane-_vl)*7));
+         d<=Math.min(TOTAL_DAYS,Math.ceil((camLane+_vl)*7));d++){
+    if(!isSun(d)) continue; // seulement les dimanches
+    const{x,y}=dayToScreen(d);
+    if(!visible(y)) continue;
+    if(hw<12) continue;
+
+    const dt=new Date(ORIGIN_MS+d*86400000);
+    const dayNum=dt.getDate();
+    const mon=dt.toLocaleDateString('fr-FR',{month:'long'});
+    const year=dt.getUTCFullYear();
+    const txt='Dim. '+dayNum+' '+mon+' '+year;
+
+    const fs=Math.max(9,Math.min(16,hw*0.30));
+    ctx.font=`bold ${fs}px Arial`;
+
+    // Décaler le texte vers le centre de la lane pour éviter les virages
+    const mg2=margin(), rw2=W-2*mg2;
+    const lane2=Math.floor(d/7);
+    const dir2=(lane2%2===0)?1:-1;
+    const turnX=dir2===1?W-mg2:mg2;        // x du virage
+    const centerX=W/2;                      // centre de la lane
+    const distToTurn=Math.abs(x-turnX);
+    const distToCenter=Math.abs(x-centerX);
+    // Si trop près du virage (< 15% de la largeur), décaler vers le centre
+    const threshold=rw2*0.15;
+    let tx=x;
+    if(distToTurn<threshold){
+      // Décaler vers le centre de la moitié de route
+      const shift=(threshold-distToTurn)*0.8;
+      tx=dir2===1 ? x-shift : x+shift;
+    }
+
+    ctx.textAlign='center'; ctx.textBaseline='middle';
+    ctx.fillStyle='rgba(255,255,255,0.75)';
+    ctx.fillText(txt,tx+1,y+1);
+    ctx.fillStyle='#1b5e20';
+    ctx.fillText(txt,tx,y);
+  }
+}
+
+
+function drawDayLetters(){
+  // Affiche les 2 premières lettres du jour en bas de la route, pour chaque jour
+  const hw=roadHW();
+  const ORIGIN_MS=new Date('2023-01-01T00:00:00Z').getTime();
+  const camLane=Math.floor(camDay/7);
+  const _vl=Math.ceil(H/laneH())+3;
+  // Abréviations 2 lettres
+  const LABELS=['Di','Lu','Ma','Me','Je','Ve','Sa']; // 0=Dim,1=Lun,...,6=Sam
+
+  for(let d=Math.max(0,Math.floor((camLane-_vl)*7));
+         d<=Math.min(TOTAL_DAYS,Math.ceil((camLane+_vl)*7));d++){
+    const{x,y}=dayToScreen(d);
+    if(!visible(y)) continue;
+    if(hw<12) continue;
+
+    const jsDay=(TODAY_DOW+d)%7; // 0=Dim,1=Lun,...,6=Sam
+    const lbl=LABELS[jsDay];
+    const isSat2=jsDay===6, isSun2=jsDay===0;
+    const isWE=isSat2||isSun2;
+
+    const fs=Math.max(7,Math.min(11,hw*0.22));
+    const ty=y+hw*0.68; // bas de la route
+    const color=isWE?'#1b5e20':'#000000';
+
+    // Jour (2 lettres) à gauche de x
+    ctx.font=`${isWE?'bold ':' '}${fs}px Arial`;
+    ctx.textAlign='right';
+    ctx.textBaseline='middle';
+    ctx.fillStyle='rgba(255,255,255,0.65)';
+    ctx.fillText(lbl, x-2+0.7, ty+0.7);
+    ctx.fillStyle=color;
+    ctx.fillText(lbl, x-2, ty);
+
+    // Numéro du jour à droite de x
+    const dt2=new Date(new Date('2023-01-01T00:00:00Z').getTime()+d*86400000);
+    const dayNum=dt2.getDate();
+    ctx.font=`${isWE?'bold ':' '}${fs}px Arial`;
+    ctx.textAlign='left';
+    ctx.textBaseline='middle';
+    ctx.fillStyle='rgba(255,255,255,0.65)';
+    ctx.fillText(dayNum, x+2+0.7, ty+0.7);
+    ctx.fillStyle=color;
+    ctx.fillText(dayNum, x+2, ty);
+  }
+}
+
+
+function drawTodayMark(){
+  const{x,y}=dayToScreen(TODAY_DAY);
+  if(!visible(y)) return;
+  const hw=roadHW();
+  ctx.strokeStyle='#1a73e8'; ctx.lineWidth=Math.max(2,hw*0.07); ctx.setLineDash([5,3]);
+  ctx.beginPath();ctx.moveTo(x,y-hw);ctx.lineTo(x,y+hw);ctx.stroke();
+  ctx.setLineDash([]);
+  const fs=Math.max(8,Math.min(10,hw*0.25));
+  ctx.font=`bold ${fs}px Arial`;
+  ctx.textAlign='center'; ctx.textBaseline='bottom';
+  ctx.fillStyle='#333';
+  ctx.fillText("Aujourd'hui",x,y-hw-2);
+}
+
+function drawPerson(){
+  const{x:cx,y:cy}=carScreen();
+  const s=Math.max(20,Math.min(50,roadHW()*1.2));
+  const swing=playing?Math.sin(pulse*2.2)*0.42:0;
+  ctx.lineCap='round'; ctx.lineJoin='round'; ctx.setLineDash([]);
+
+  // Shadow
+  ctx.fillStyle='rgba(0,0,0,0.12)';
+  ctx.beginPath();ctx.ellipse(cx+s*0.04,cy+s*0.06,s*0.22,s*0.07,0,0,Math.PI*2);ctx.fill();
+
+  // Legs
+  const llx=cx-s*0.11-s*0.06*Math.sin(swing), lly=cy+s*0.55+s*0.10*Math.sin(swing);
+  ctx.strokeStyle='#1a3a7a'; ctx.lineWidth=s*0.14;
+  ctx.beginPath();ctx.moveTo(cx-s*0.07,cy-s*0.06);
+  ctx.quadraticCurveTo(cx-s*0.12,cy+s*0.28,llx,lly);ctx.stroke();
+  const rlx=cx+s*0.11+s*0.06*Math.sin(swing), rly=cy+s*0.55-s*0.10*Math.sin(swing);
+  ctx.beginPath();ctx.moveTo(cx+s*0.07,cy-s*0.06);
+  ctx.quadraticCurveTo(cx+s*0.12,cy+s*0.28,rlx,rly);ctx.stroke();
+
+  // Shoes
+  ctx.fillStyle='#111';
+  ctx.beginPath();ctx.ellipse(llx,lly+s*0.04,s*0.10,s*0.05,-swing*0.3,0,Math.PI*2);ctx.fill();
+  ctx.beginPath();ctx.ellipse(rlx,rly+s*0.04,s*0.10,s*0.05,swing*0.3,0,Math.PI*2);ctx.fill();
+
+  // Jean
+  ctx.strokeStyle='#2a4a7a'; ctx.lineWidth=s*0.13;
+  ctx.beginPath();ctx.moveTo(cx-s*0.09,cy+s*0.12);
+  ctx.quadraticCurveTo(cx-s*0.12,cy+s*0.35,llx,lly);ctx.stroke();
+  ctx.beginPath();ctx.moveTo(cx+s*0.09,cy+s*0.12);
+  ctx.quadraticCurveTo(cx+s*0.12,cy+s*0.35,rlx,rly);ctx.stroke();
+
+  // Hip
+  ctx.fillStyle='#2a4a7a';
+  ctx.beginPath();ctx.ellipse(cx,cy+s*0.02,s*0.18,s*0.10,0,0,Math.PI*2);ctx.fill();
+
+  // T-shirt
+  ctx.fillStyle='#f0f0f0';
+  ctx.beginPath();
+  ctx.moveTo(cx-s*0.22,cy-s*0.08);ctx.lineTo(cx+s*0.22,cy-s*0.08);
+  ctx.lineTo(cx+s*0.19,cy-s*0.62);ctx.lineTo(cx-s*0.19,cy-s*0.62);
+  ctx.closePath();ctx.fill();
+  // Sleeves
+  [[cx-s*0.19,cx-s*0.33],[cx+s*0.19,cx+s*0.33]].forEach(([ix,ox])=>{
+    ctx.fillStyle='#f0f0f0';
+    ctx.beginPath();
+    ctx.moveTo(ix,cy-s*0.60);ctx.lineTo(ix,cy-s*0.40);
+    ctx.lineTo(ox,cy-s*0.38);ctx.lineTo(ox,cy-s*0.57);
+    ctx.closePath();ctx.fill();
+  });
+
+  // Arms
+  ctx.strokeStyle='#e8a882'; ctx.lineWidth=s*0.11;
+  ctx.beginPath();ctx.moveTo(cx-s*0.26,cy-s*0.45);
+  ctx.quadraticCurveTo(cx-s*0.34,cy-s*0.28+s*0.10*swing,cx-s*0.30+s*0.08*swing,cy-s*0.06+s*0.05*swing);ctx.stroke();
+  ctx.beginPath();ctx.moveTo(cx+s*0.26,cy-s*0.45);
+  ctx.quadraticCurveTo(cx+s*0.34,cy-s*0.28-s*0.10*swing,cx+s*0.30-s*0.08*swing,cy-s*0.06-s*0.05*swing);ctx.stroke();
+  ctx.fillStyle='#e8a882';
+  ctx.beginPath();ctx.arc(cx-s*0.30+s*0.08*swing,cy-s*0.06+s*0.05*swing,s*0.065,0,Math.PI*2);ctx.fill();
+  ctx.beginPath();ctx.arc(cx+s*0.30-s*0.08*swing,cy-s*0.06-s*0.05*swing,s*0.065,0,Math.PI*2);ctx.fill();
+
+  // Neck + head
+  const hcy=cy-s*0.84;
+  ctx.fillStyle='#e8a882';
+  ctx.beginPath();ctx.ellipse(cx,cy-s*0.63,s*0.075,s*0.065,0,0,Math.PI*2);ctx.fill();
+  ctx.fillRect(cx-s*0.075,cy-s*0.68,s*0.15,s*0.08);
+  ctx.beginPath();ctx.ellipse(cx,hcy,s*0.195,s*0.215,0,0,Math.PI*2);ctx.fill();
+  // Ears
+  ctx.fillStyle='#d4906a';
+  ctx.beginPath();ctx.ellipse(cx-s*0.20,hcy+s*0.02,s*0.055,s*0.08,0.2,0,Math.PI*2);ctx.fill();
+  ctx.beginPath();ctx.ellipse(cx+s*0.20,hcy+s*0.02,s*0.055,s*0.08,-0.2,0,Math.PI*2);ctx.fill();
+  // Nuque
+  ctx.fillStyle='#e8a882';
+  ctx.beginPath();ctx.ellipse(cx,cy-s*0.66,s*0.12,s*0.08,0,0,Math.PI);ctx.fill();
+  // Hair
+  const hairG=ctx.createRadialGradient(cx,hcy-s*0.05,0,cx,hcy,s*0.22);
+  hairG.addColorStop(0,'#5a3a20');hairG.addColorStop(1,'#2a1808');
+  ctx.fillStyle=hairG;
+  ctx.beginPath();ctx.arc(cx,hcy-s*0.05,s*0.18,Math.PI+0.45,-0.45);ctx.fill();
+
+  // Pulse ring
+  ctx.strokeStyle=`rgba(26,115,232,${0.15+0.07*Math.sin(pulse)})`;
+  ctx.lineWidth=2;
+  ctx.beginPath();ctx.arc(cx,cy-s*0.3,s*0.35+2*Math.sin(pulse),0,Math.PI*2);ctx.stroke();
+}
+
+function rrFill(c,x,y,w,h,r){
+  c.beginPath();c.moveTo(x+r,y);c.lineTo(x+w-r,y);c.arcTo(x+w,y,x+w,y+r,r);
+  c.lineTo(x+w,y+h-r);c.arcTo(x+w,y+h,x+w-r,y+h,r);
+  c.lineTo(x+r,y+h);c.arcTo(x,y+h,x,y+h-r,r);c.lineTo(x,y+r);c.arcTo(x,y,x+r,y,r);c.closePath();c.fill();
+}
+
+function updateEta(){
+  const upcoming=ALL_EVENTS.filter(e=>e.day>camDay).sort((a,b)=>a.day-b.day);
+  if(upcoming.length){
+    const n=upcoming[0],diff=Math.max(0,Math.round(n.day-camDay));
+    document.getElementById('eta-who').textContent=`Prochain — ${n.who}`;
+    document.getElementById('eta-who').style.color=n.side==='right'?'#1a73e8':'#e67c73';
+    document.getElementById('eta-name').textContent=n.title.length>30?n.title.slice(0,28)+'…':n.title;
+    document.getElementById('eta-d').textContent=diff;
+    document.getElementById('eta-u').textContent=diff<=1?'jour':'jours';
+  } else {
+    document.getElementById('eta-who').textContent='Fin du parcours';
+    document.getElementById('eta-who').style.color='#5f6368';
+    document.getElementById('eta-name').textContent='31 décembre 2027';
+    document.getElementById('eta-d').textContent='—';
+  }
+}
+
+function updatePlay(){ document.getElementById('pico').className=playing?'ti ti-player-pause':'ti ti-player-play'; }
+
+resize(); requestAnimationFrame(draw); window.addEventListener('resize',resize);
+
+document.getElementById('playbtn').addEventListener('click',()=>{playing=!playing;updatePlay();});
+document.getElementById('resetbtn').addEventListener('click',()=>{playing=false;updatePlay();camDay=0;scrollY=0;lastTs=null;});
+document.getElementById('todaybtn').addEventListener('click',()=>{playing=false;updatePlay();camDay=TODAY_DAY;scrollY=TODAY_DAY/7*laneH();lastTs=null;});
+document.getElementById('zi').addEventListener('click',()=>{zoom=Math.min(3,zoom+0.25);});
+document.getElementById('zo').addEventListener('click',()=>{zoom=Math.max(0.3,zoom-0.25);});
+document.querySelectorAll('.sp').forEach(b=>{
+  b.addEventListener('click',()=>{speed=+b.dataset.s;document.querySelectorAll('.sp').forEach(x=>x.classList.remove('on'));b.classList.add('on');});
+});
+
+// Drag: vertical = scroll weeks (road moves down = go forward in time = person goes up)
+//        horizontal = scrub within current week
+// Mouse handled via pointer events above
+canvas.style.cursor='ns-resize';
+canvas.addEventListener('wheel',e=>{
+  e.preventDefault();
+  camDay=Math.max(0,Math.min(TOTAL_DAYS,camDay+e.deltaY/(PPD*zoom)));
+},{passive:false});
+
+// Touch: same logic
+let tX=null,tY=null,tCam=null;
+// === SCROLL TACTILE via Pointer Events ===
+let pStartY=null, pCamStart=null, pScrollStart=0, pVY=0, pLastY=null, pLastT=null;
+
+function scrollBy(dy){ /* handled in pointermove */ }
+
+wrap.style.touchAction='none';
+wrap.addEventListener('pointerdown',e=>{
+  if(e.target.closest('button')||e.target.closest('input')) return;
+  pStartY=e.clientY; pCamStart=camDay; pScrollStart=scrollY;
+  pLastY=e.clientY; pLastT=Date.now(); pVY=0;
+  wrap.setPointerCapture(e.pointerId);
+  e.preventDefault();
+},{passive:false});
+
+wrap.addEventListener('pointermove',e=>{
+  if(pStartY===null) return;
+  const now=Date.now(), dt=Math.max(1,now-pLastT);
+  pVY=(e.clientY-pLastY)/dt*16;
+  pLastY=e.clientY; pLastT=now;
+  // scrollY direct: glisser haut=avancer, bas=reculer
+  const dy=e.clientY-pStartY;
+  const lh=laneH();
+  scrollY=Math.max(0,Math.min(TOTAL_DAYS/7*lh, pScrollStart - dy));
+  e.preventDefault();
+},{passive:false});
+
+wrap.addEventListener('pointerup',e=>{
+  if(pStartY===null) return;
+  pStartY=null;
+  // Momentum
+  let vy=pVY;
+  function momentum(){
+    if(Math.abs(vy)<0.5) return;
+    scrollY=Math.max(0,Math.min(TOTAL_DAYS/7*laneH(),scrollY-vy));
+    vy*=0.90;
+    requestAnimationFrame(momentum);
+  }
+  momentum();
+});
+wrap.addEventListener('pointercancel',()=>{pStartY=null;});
+
+
+// Boutons navigation tactiles
+let navInterval=null;
+function startNav(dir){
+  // dir=1 avance, dir=-1 recule
+  function step(){ camDay=Math.max(0,Math.min(TOTAL_DAYS,camDay+dir*0.5)); }
+  step();
+  navInterval=setInterval(step,30);
+}
+function stopNav(){ if(navInterval){clearInterval(navInterval);navInterval=null;} }
+
+
+// Navigation buttons - hold to scroll
+let navIv=null;
+function startNav(d){ camDay=Math.max(0,Math.min(TOTAL_DAYS,Math.round(camDay/7)*7+d)); }
+function stopNav(){ clearInterval(navIv); navIv=null; }
+
+
+// ===== SYNCHRONISATION GOOGLE CALENDAR =====
+const APPS_SCRIPT_URL = 'https://api.allorigins.win/raw?url=' + encodeURIComponent('https://script.google.com/macros/s/AKfycbxuBmp4gbhdPE2F9S5wL1ck8-CaYQejF2uedwJ5yUSXYSmnxg50s1obQKjSljr-9miS/exec');
+
+async function syncAllCalendars(){
+  const btn = document.getElementById('syncbtn');
+  btn.style.color='#fbbc04';
+  btn.style.animation='spin 1s linear infinite';
+
+  try {
+    const resp = await fetch(APPS_SCRIPT_URL);
+    if(!resp.ok) throw new Error('HTTP ' + resp.status);
+    const events = await resp.json();
+
+    const ORIGIN = new Date('2023-01-01T00:00:00Z');
+
+    EVT_JF.length=0;
+    EVT_ANNE.length=0;
+
+    events.forEach(ev=>{
+      const d = new Date(ORIGIN.getTime() + ev.day*86400000);
+      const label = d.getDate() + ' ' + d.toLocaleString('fr-FR',{month:'short'});
+      const item = {
+        day: ev.day,
+        label: label,
+        title: (ev.title||'').slice(0,40),
+        color: ev.side==='right' ? '#1a73e8' : '#e67c73',
+        side: ev.side,
+        who: ev.who
+      };
+      if(ev.side==='right') EVT_JF.push(item);
+      else EVT_ANNE.push(item);
+    });
+
+    ALL_EVENTS.length=0;
+    [...EVT_JF,...EVT_ANNE].sort((a,b)=>a.day-b.day).forEach(e=>ALL_EVENTS.push(e));
+
+    btn.style.color='#34a853';
+    btn.style.animation='';
+    alert('✓ ' + events.length + ' événements synchronisés !');
+
+  } catch(err) {
+    btn.style.color='#ea4335';
+    btn.style.animation='';
+    alert('Erreur sync: ' + err.message);
+    console.error(err);
+  }
+}
+
+document.getElementById('syncbtn').addEventListener('click', window.syncAllCalendars);
+
+</script>
+</body>
+</html>

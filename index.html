@@ -78,7 +78,7 @@ window.syncAllCalendars = syncAllCalendars;
 <script>
 
 const TOTAL_DAYS=1825;
-const TODAY_DAY=1231;
+const TODAY_DAY=Math.round((new Date().setHours(0,0,0,0)-new Date("2023-01-01T00:00:00Z").getTime())/86400000);
 const TODAY_DOW=0;
 const EVT_JF=[
   {day:1,label:'2 Jan',title:'Noah et Arthur, Bourg d\'Oisans',color:'#1a73e8',side:'right',who:'JF'},

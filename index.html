@@ -1835,7 +1835,7 @@ const ctx=canvas.getContext('2d');
 const wrap=document.getElementById('wrap');
 let W,H;
 
-let camDay=Math.max(0,TODAY_DAY-7), playing=false, speed=3, lastTs=null, pulse=0, zoom=1;
+let camDay=TODAY_DAY, playing=false, speed=3, lastTs=null, pulse=0, zoom=1;
 let scrollY=TODAY_DAY/7*90; // scrollY en pixels, 90px par lane
 const PPD=90;
 

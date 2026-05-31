@@ -1901,8 +1901,9 @@ function draw(ts){
     scrollY=Math.max(0,Math.min(TOTAL_DAYS/7*laneH(),scrollY));
   }
   if(playingReverse){
-    camDay-=dt*0.2;
-    if(camDay<=0){camDay=0;playingReverse=false;document.getElementById("revbtn").style.background="";document.getElementById("revbtn").style.color="";}
+    camDay=Math.max(0,camDay-dt*0.2);
+    scrollY=camDay/7*laneH();
+    if(camDay<=0){playingReverse=false;document.getElementById("revbtn").style.background="";document.getElementById("revbtn").style.color="";}
   }
   // camDay toujours dérivé de scrollY
   camDay=Math.max(0,Math.min(TOTAL_DAYS,scrollY*7/laneH()));

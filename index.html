@@ -1985,12 +1985,12 @@ function drawAllLanes(){
     ctx.beginPath();ctx.moveTo(mg,y-hw+Math.max(4,hw*0.18));ctx.lineTo(W-mg,y-hw+Math.max(4,hw*0.18));ctx.stroke();
     ctx.beginPath();ctx.moveTo(mg,y+hw-Math.max(4,hw*0.18));ctx.lineTo(W-mg,y+hw-Math.max(4,hw*0.18));ctx.stroke();
 
-    // Traits fins noirs pour séparer les 7 jours
+    // Traits fins noirs entre les jours (décalés de 0.5 jour = milieu entre deux jours)
     ctx.strokeStyle='rgba(0,0,0,0.25)';
     ctx.lineWidth=Math.max(0.5,hw*0.03);
     ctx.setLineDash([]);
-    for(let d=1;d<7;d++){
-      const dx=mg+d*(rw/7);
+    for(let d=0;d<7;d++){
+      const dx=mg+(d+0.5)*(rw/7);
       ctx.beginPath();ctx.moveTo(dx,y-hw+2);ctx.lineTo(dx,y+hw-2);ctx.stroke();
     }
 

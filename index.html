@@ -67,7 +67,7 @@ window.syncAllCalendars = syncAllCalendars;
     <button class="zb" id="zo">−</button>
   </div>
   <button id="todaybtn" title="Aujourd'hui">Auj</button>  <button id="resetbtn" title="Retour au début"><i class="ti ti-arrow-back-up"></i></button>
-  <button id="playbtn"><i class="ti ti-player-play" id="pico"></i></button>      <div id="eta-name" style="font-size:14px;font-weight:500;color:#202124;margin-top:1px;">—</div>
+  <button id="revbtn" title="Reculer"><i class="ti ti-player-play" style="transform:scaleX(-1);display:inline-block"></i></button><button id="playbtn"><i class="ti ti-player-play" id="pico"></i></button>      <div id="eta-name" style="font-size:14px;font-weight:500;color:#202124;margin-top:1px;">—</div>
     </div>
     <div style="display:flex;align-items:baseline;gap:3px;">
       <span id="eta-d" style="font-size:22px;font-weight:500;color:#1a73e8;">—</span>
@@ -1900,6 +1900,10 @@ function draw(ts){
     scrollY+=dt*speed*laneH()/7;
     scrollY=Math.max(0,Math.min(TOTAL_DAYS/7*laneH(),scrollY));
   }
+  if(playingReverse){
+    camDay-=dt*0.2;
+    if(camDay<=0){camDay=0;playingReverse=false;document.getElementById("revbtn").style.background="";document.getElementById("revbtn").style.color="";}
+  }
   // camDay toujours dérivé de scrollY
   camDay=Math.max(0,Math.min(TOTAL_DAYS,scrollY*7/laneH()));
   ctx.clearRect(0,0,W,H);
@@ -2495,7 +2499,17 @@ function updatePlay(){ document.getElementById('pico').className=playing?'ti ti-
 
 resize(); requestAnimationFrame(draw); window.addEventListener('resize',resize);
 
-document.getElementById('playbtn').addEventListener('click',()=>{playing=!playing;updatePlay();});
+document.getElementById('playbtn').addEventListener('click',()=>{
+  if(playingReverse){playingReverse=false;}
+  playing=!playing;updatePlay();
+});
+let playingReverse=false;
+document.getElementById('revbtn').addEventListener('click',()=>{
+  if(playing){playing=false;updatePlay();}
+  playingReverse=!playingReverse;
+  document.getElementById('revbtn').style.background=playingReverse?'#e53935':'';
+  document.getElementById('revbtn').style.color=playingReverse?'#fff':'';
+});
 document.getElementById('resetbtn').addEventListener('click',()=>{playing=false;updatePlay();camDay=0;scrollY=0;lastTs=null;});
 document.getElementById('todaybtn').addEventListener('click',()=>{playing=false;updatePlay();camDay=TODAY_DAY;scrollY=TODAY_DAY/7*laneH();lastTs=null;});
 document.getElementById('zi').addEventListener('click',()=>{zoom=Math.min(3,zoom+0.25);});

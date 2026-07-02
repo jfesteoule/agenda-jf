@@ -2004,114 +2004,11 @@ function drawDayMarks(){}
 
 function drawWeekendZones(){}
 
-function drawVacanceBands(){
-  // Trait bleu continu le long du bord SUPÉRIEUR de la route pour chaque période de vacances
-  const hw=roadHW();
-  const lw=Math.max(3,hw*0.18);
-
-  VACANCES_A.forEach(v=>{
-    // Dessiner segment par segment jour par jour
-    // Mais connecter les points consécutifs sur la même lane
-    let prevX=null, prevY=null, prevLane=null;
-
-    for(let d=v.start;d<=v.end+1;d++){
-      const{x,y,lane}=dayToScreen(Math.min(d,TOTAL_DAYS));
-      const screenY=y-hw+lw/2; // bord supérieur de la route
-
-      if(!visible(y)){prevX=null;prevY=null;prevLane=null;continue;}
-
-      if(prevX!==null && lane===prevLane){
-        // Même lane: tracer le segment
-        ctx.strokeStyle='rgba(33,150,243,0.90)';
-        ctx.lineWidth=lw;
-        ctx.lineCap='round';
-        ctx.setLineDash([]);
-        ctx.beginPath();
-        ctx.moveTo(prevX,prevY);
-        ctx.lineTo(x,screenY);
-        ctx.stroke();
-      }
-      prevX=x; prevY=screenY; prevLane=lane;
-    }
-  });
-}
+function drawVacanceBands(){}
 
 function drawJoursFeriesBands(){}
 
-function drawMultiEventBands(){
-  const hw=roadHW();
-  const lw=Math.max(3,hw*0.18);
-  const KEYWORDS=['randon','voyage','vacance','séjour','sejour','trek','ski','montagne',
-    'plage','mer','camp','avignon','festival','tropez','bdo','noah','arthur','célia',
-    'celia','tangue','alpe','sarl','privas','châlons','chalons','dieulefit','gordes',
-    'sicile','lucille','william','balcon','vaujany','stay','bar des amis','sophie',
-    'séjours','paques','toussaint','ascension','interclub','interclubs'];
-
-  function isLeisure(title){
-    return KEYWORDS.some(k=>title.toLowerCase().includes(k));
-  }
-
-  // Helper: draw the arc connecting end of one lane to start of next
-  function drawTurnArc(fromLane){
-    const lh=laneH(), mg=margin(), rw=W-2*mg;
-    const dir=(fromLane%2===0)?1:-1; // direction of fromLane
-    const y1=dayToScreen(fromLane*7+6).y; // last day of fromLane
-    const y2=dayToScreen((fromLane+1)*7).y; // first day of next lane
-
-    if(!visible(y1)&&!visible(y2)) return;
-
-    // Arc center = turn corner, midpoint between the two lane y's
-    const arcX = dir===1 ? W-mg : mg; // corner X
-    const arcCY = (y1+y2)/2;
-    const arcR  = lh/2;
-    const ccw   = dir===1; // same as in drawAllLanes
-
-    // Offset: bottom edge of road = +hw-lw/2
-    const innerR = arcR - hw + lw/2;
-    const outerR = arcR + hw - lw/2;
-    // The red line is at the BOTTOM of the road = outermost arc (furthest from center)
-    // For dir=1 (LTR, turns left): outer = arcR+hw
-    // The red line follows the outer edge of the turn
-    const redR = arcR + hw - lw/2;
-
-    if(redR>0){
-      ctx.strokeStyle='rgba(230,81,0,0.90)';
-      ctx.lineWidth=lw;
-      ctx.lineCap='round';
-      ctx.setLineDash([]);
-      ctx.beginPath();
-      ctx.arc(arcX, arcCY, redR, Math.PI/2, -Math.PI/2, ccw);
-      ctx.stroke();
-    }
-  }
-
-  MULTI_EVENTS.forEach(ev=>{
-    if(!isLeisure(ev.title)) return;
-
-    let prevX=null, prevY=null, prevLane=null;
-
-    for(let d=ev.day1; d<=ev.day2+1; d++){
-      const dd=Math.min(d,TOTAL_DAYS);
-      const{x,y,lane}=dayToScreen(dd);
-      const screenY=y+hw-lw/2;
-
-      if(!visible(y)){prevX=null;prevY=null;prevLane=null;continue;}
-
-      if(prevX!==null){
-        if(lane===prevLane){
-          // Same lane: draw straight segment
-          ctx.strokeStyle='rgba(230,81,0,0.90)';
-          ctx.lineWidth=lw; ctx.lineCap='round'; ctx.setLineDash([]);
-          ctx.beginPath(); ctx.moveTo(prevX,prevY); ctx.lineTo(x,screenY); ctx.stroke();
-        } else {
-          // Lane changed: draw the turn arc for prevLane
-          drawTurnArc(prevLane);
-        }
-      }
-      prevX=x; prevY=screenY; prevLane=lane;
-    }
-  });
-}
+function drawMultiEventBands(){}
 
 function drawEventBars(){}
 

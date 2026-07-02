@@ -2008,7 +2008,25 @@ function drawVacanceBands(){}
 
 function drawJoursFeriesBands(){}
 
-function drawMultiEventBands(){}
+function drawMultiEventBands(){
+  // Colorier les cases des jours en orange très clair pour les événements loisirs
+  const KEYWORDS=['randon', 'voyage', 'vacance', 'séjour', 'sejour', 'trek', 'ski', 'montagne', 'plage', 'mer', 'camp', 'avignon', 'festival', 'tropez', 'bdo', 'noah', 'arthur', 'célia', 'celia', 'tangue', 'alpe', 'sarl', 'privas', 'châlons', 'chalons', 'dieulefit', 'gordes', 'sicile', 'lucille', 'william', 'balcon', 'vaujany', 'stay', 'bar des amis', 'sophie', 'paques', 'toussaint', 'ascension', 'interclub'];
+  function isLeisure(title){
+    return KEYWORDS.some(k=>title.toLowerCase().includes(k));
+  }
+
+  MULTI_EVENTS.forEach(ev=>{
+    if(!isLeisure(ev.title)) return;
+    for(let d=ev.day1; d<=ev.day2; d++){
+      const{x,y,hw}=dayToScreen(d);
+      if(!visible(y)) continue;
+      // Fond orange très clair sur la case du jour
+      const dayW=(W-2*margin())/7;
+      ctx.fillStyle='rgba(255,160,0,0.18)';
+      ctx.fillRect(x-dayW/2+1, y-hw+1, dayW-2, hw*2-2);
+    }
+  });
+}
 
 function drawEventBars(){}
 
@@ -2176,13 +2194,25 @@ function drawDayDates(){
 
 
 function drawDayLetters(){
-  // Affiche les 2 premières lettres du jour en bas de la route, pour chaque jour
   const hw=roadHW();
   const ORIGIN_MS=new Date('2023-01-01T00:00:00Z').getTime();
   const camLane=Math.floor(camDay/7);
   const _vl=Math.ceil(H/laneH())+3;
-  // Abréviations 2 lettres
-  const LABELS=['Di','Lu','Ma','Me','Je','Ve','Sa']; // 0=Dim,1=Lun,...,6=Sam
+  const LABELS=['Di','Lu','Ma','Me','Je','Ve','Sa'];
+  const LEISURE_KW=['randon','voyage','vacance','séjour','sejour','trek','ski',
+    'montagne','plage','mer','camp','avignon','festival','tropez','bdo',
+    'noah','arthur','célia','celia','tangue','alpe','sarl','privas','châlons',
+    'chalons','dieulefit','gordes','sicile','lucille','william','balcon','vaujany',
+    'stay','bar des amis','sophie','paques','toussaint','ascension'];
+
+  // Build leisure days map
+  const leisureByDay={};
+  MULTI_EVENTS.forEach(ev=>{
+    const t=ev.title.toLowerCase();
+    if(LEISURE_KW.some(k=>t.includes(k))){
+      for(let d=ev.day1;d<=ev.day2;d++) leisureByDay[d]=ev.title;
+    }
+  });
 
   for(let d=Math.max(0,Math.floor((camLane-_vl)*7));
          d<=Math.min(TOTAL_DAYS,Math.ceil((camLane+_vl)*7));d++){
@@ -2190,34 +2220,44 @@ function drawDayLetters(){
     if(!visible(y)) continue;
     if(hw<12) continue;
 
-    const jsDay=(TODAY_DOW+d)%7; // 0=Dim,1=Lun,...,6=Sam
+    const jsDay=(TODAY_DOW+d)%7;
     const lbl=LABELS[jsDay];
     const isSat2=jsDay===6, isSun2=jsDay===0;
     const isWE=isSat2||isSun2;
 
     const fs=Math.max(7,Math.min(11,hw*0.22));
-    const ty=y+hw*0.68; // bas de la route
+    const ty=y+hw*0.68;
     const color=isWE?'#1b5e20':'#000000';
 
     // Jour (2 lettres) à gauche de x
     ctx.font=`${isWE?'bold ':' '}${fs}px Arial`;
-    ctx.textAlign='right';
-    ctx.textBaseline='middle';
+    ctx.textAlign='right'; ctx.textBaseline='middle';
     ctx.fillStyle='rgba(255,255,255,0.65)';
     ctx.fillText(lbl, x-2+0.7, ty+0.7);
     ctx.fillStyle=color;
     ctx.fillText(lbl, x-2, ty);
 
     // Numéro du jour à droite de x
-    const dt2=new Date(new Date('2023-01-01T00:00:00Z').getTime()+d*86400000);
+    const dt2=new Date(ORIGIN_MS+d*86400000);
     const dayNum=dt2.getDate();
     ctx.font=`${isWE?'bold ':' '}${fs}px Arial`;
-    ctx.textAlign='left';
-    ctx.textBaseline='middle';
+    ctx.textAlign='left'; ctx.textBaseline='middle';
     ctx.fillStyle='rgba(255,255,255,0.65)';
     ctx.fillText(dayNum, x+2+0.7, ty+0.7);
     ctx.fillStyle=color;
     ctx.fillText(dayNum, x+2, ty);
+
+    // Nom événement loisir en petit au-dessus du numéro
+    if(leisureByDay[d] && hw>18){
+      const evTitle=leisureByDay[d].slice(0,12);
+      const fsSmall=Math.max(6,Math.min(9,hw*0.16));
+      ctx.font=`${fsSmall}px Arial`;
+      ctx.textAlign='center'; ctx.textBaseline='middle';
+      ctx.fillStyle='rgba(255,255,255,0.70)';
+      ctx.fillText(evTitle, x+0.6, y-hw*0.55+0.6);
+      ctx.fillStyle='#e65100'; // orange foncé
+      ctx.fillText(evTitle, x, y-hw*0.55);
+    }
   }
 }
 

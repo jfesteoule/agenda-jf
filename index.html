@@ -1845,17 +1845,18 @@ function lanesPerScreen(){ return Math.max(3, Math.floor((H*0.82) / laneH())); }
 
 function dayToScreen(day){
   const lh=laneH(), mg=margin(), rw=W-2*mg;
-  const lane=Math.floor(day/7);
   const dow=(TODAY_DOW+day)%7; // 0=Di,1=Lu,...,6=Sa
-  // Réordonner: Lu=0(gauche)...Ve=4, Sa=5, Di=6(droite)
-  const weekPos=[(6),(0),(1),(2),(3),(4),(5)]; // index par dow
-  const pos=(weekPos[dow]+0.5)/7;
-  const dir=1; // toujours gauche→droite
-  const x=mg+pos*rw;
-  // scrollY contrôle tout : lane 0 à y=H*0.65 quand scrollY=0
-  // scrollY augmente → tout monte (passé descend, futur monte)
-  const y = H*0.65 - lane*lh + scrollY;
-  return{x,y,lane,dir,hw:roadHW()};
+  // Semaine française Lu→Di : Lu=pos0(gauche)...Sa=pos5, Di=pos6(droite)
+  // dowFR: 0=Lu,1=Ma,2=Me,3=Je,4=Ve,5=Sa,6=Di
+  const dowFR = dow===0 ? 6 : dow-1; // convertir: Di(0)→6, Lu(1)→0, ...Sa(6)→5
+  // Numéro de semaine française : commence le lundi
+  // Pour day=0 (Di 1 jan 2023), dowFR=6, c'est le dernier jour de la semaine -1
+  const laneNum = Math.floor((day - (6-dowFR)) / 7); // semaine qui contient ce jour
+  const pos = (dowFR + 0.5) / 7;
+  const dir = 1; // toujours gauche→droite
+  const x = mg + pos*rw;
+  const y = H*0.65 - laneNum*lh + scrollY;
+  return{x,y,lane:laneNum,dir,hw:roadHW()};
 }
 
 function carScreen(){
@@ -2343,7 +2344,6 @@ function drawTodayMark(){
 
 function drawPerson(){
   const{x:cx,y:cy}=carScreen();
-  if(!isFinite(cx)||!isFinite(cy)) return;
   const s=Math.max(20,Math.min(50,roadHW()*1.2));
   const swing=playing?Math.sin(pulse*2.2)*0.42:0;
   ctx.lineCap='round'; ctx.lineJoin='round'; ctx.setLineDash([]);
@@ -2416,6 +2416,7 @@ function drawPerson(){
   ctx.fillStyle='#e8a882';
   ctx.beginPath();ctx.ellipse(cx,cy-s*0.66,s*0.12,s*0.08,0,0,Math.PI);ctx.fill();
   // Hair
+  if(!isFinite(cx)||!isFinite(cy)||isNaN(s)||s<=0) return;
   const hairG=ctx.createRadialGradient(cx,hcy-s*0.05,0,cx,hcy,s*0.22);
   hairG.addColorStop(0,'#5a3a20');hairG.addColorStop(1,'#2a1808');
   ctx.fillStyle=hairG;

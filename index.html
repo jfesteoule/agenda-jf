@@ -9,8 +9,8 @@
 *{box-sizing:border-box;margin:0;padding:0;}
 body{font-family:Arial,sans-serif;}
 #wrap{position:relative;width:100vw;height:100vh;overflow:hidden;}
-canvas#c{position:absolute;inset:0;width:100%;height:100%;touch-action:none;pointer-events:none;}
-#hud{position:absolute;top:12px;left:12px;right:12px;z-index:1000;display:flex;gap:8px;align-items:center;}
+canvas#c{position:absolute;inset:0;width:100%;height:100%;touch-action:none;}
+#hud{position:absolute;top:12px;left:12px;right:12px;z-index:20;display:flex;gap:8px;align-items:center;}
 #sbox{flex:1;height:40px;background:#fff;border:none;border-radius:20px;padding:0 16px 0 40px;font-size:13px;color:#202124;outline:none;box-shadow:0 2px 6px rgba(0,0,0,0.2);}
 #sico{position:absolute;left:26px;top:50%;transform:translateY(-50%);color:#5f6368;font-size:15px;pointer-events:none;}
 #mbtn{width:40px;height:40px;min-width:40px;background:#fff;border-radius:50%;border:none;cursor:pointer;display:flex;align-items:center;justify-content:center;box-shadow:0 2px 6px rgba(0,0,0,0.2);color:#5f6368;}
@@ -29,13 +29,6 @@ canvas#c{position:absolute;inset:0;width:100%;height:100%;touch-action:none;poin
 .legline{width:18px;height:4px;border-radius:2px;background:#e53935;}
 #eta{position:absolute;bottom:12px;left:12px;right:60px;z-index:20;background:#fff;border-radius:12px;padding:10px 14px;display:flex;align-items:center;justify-content:space-between;box-shadow:0 2px 8px rgba(0,0,0,0.18);}
 </style>
-  <script src="https://accounts.google.com/gsi/client" async defer>
-window.syncAllCalendars = syncAllCalendars;
-</script>
-
-<style>
-@keyframes spin { from{transform:rotate(0deg)} to{transform:rotate(360deg)} }
-</style>
 </head>
 <body>
 <div id="wrap">
@@ -46,7 +39,6 @@ window.syncAllCalendars = syncAllCalendars;
       <i class="ti ti-calendar" id="sico"></i>
       <input id="sbox" type="text" value="Route du temps · Jan 2023 › Déc 2027" readonly>
     </div>
-    <button id="syncbtn" style="position:relative;z-index:1000;pointer-events:auto;width:40px;height:40px;min-width:40px;background:#fff;border-radius:50%;border:none;cursor:pointer;display:flex;align-items:center;justify-content:center;box-shadow:0 2px 6px rgba(0,0,0,0.2);color:#34a853;font-size:18px;" title="Synchroniser Google Agenda"><i class="ti ti-refresh"></i></button>
   </div>
   <div id="speeds">
     <button class="sp" data-s="0.2">×⅕</button>
@@ -66,8 +58,9 @@ window.syncAllCalendars = syncAllCalendars;
     <button class="zb" id="zi">+</button>
     <button class="zb" id="zo">−</button>
   </div>
-  <button id="todaybtn" title="Aujourd'hui">Auj</button>  <button id="resetbtn" title="Retour au début"><i class="ti ti-arrow-back-up"></i></button>
-  <button id="revbtn" title="Reculer"><i class="ti ti-player-play" style="transform:scaleX(-1);display:inline-block"></i></button><button id="playbtn"><i class="ti ti-player-play" id="pico"></i></button>      <div id="eta-name" style="font-size:14px;font-weight:500;color:#202124;margin-top:1px;">—</div>
+  <button id="todaybtn" title="Aujourd'hui">Auj</button>  <button id="syncbtn" style="position:relative;z-index:1000;pointer-events:auto;width:40px;height:40px;min-width:40px;background:#fff;border-radius:50%;border:none;cursor:pointer;display:flex;align-items:center;justify-content:center;box-shadow:0 2px 6px rgba(0,0,0,0.2);color:#34a853;font-size:18px;" title="Synchroniser Google Agenda">↺</button>
+  <button id="resetbtn" title="Retour au début"><i class="ti ti-arrow-back-up"></i></button>
+  <button id="playbtn"><i class="ti ti-player-play" id="pico"></i></button>      <div id="eta-name" style="font-size:14px;font-weight:500;color:#202124;margin-top:1px;">—</div>
     </div>
     <div style="display:flex;align-items:baseline;gap:3px;">
       <span id="eta-d" style="font-size:22px;font-weight:500;color:#1a73e8;">—</span>
@@ -1835,8 +1828,8 @@ const ctx=canvas.getContext('2d');
 const wrap=document.getElementById('wrap');
 let W,H;
 
-let camDay=TODAY_DAY, playing=false, speed=3, lastTs=null, pulse=0, zoom=1;
-let scrollY=TODAY_DAY/7*90; // scrollY en pixels, 90px par lane
+let camDay=Math.max(0,TODAY_DAY-7), playing=false, speed=3, lastTs=null, pulse=0, zoom=1;
+let scrollY=0; // scrollY en pixels, 90px par lane
 const PPD=90;
 
 function resize(){ const r=wrap.getBoundingClientRect(); W=canvas.width=r.width; H=canvas.height=r.height; }
@@ -1853,9 +1846,12 @@ function lanesPerScreen(){ return Math.max(3, Math.floor((H*0.82) / laneH())); }
 function dayToScreen(day){
   const lh=laneH(), mg=margin(), rw=W-2*mg;
   const lane=Math.floor(day/7);
-  const pos=(day%7)/7;
-  const dir=(lane%2===0)?1:-1;
-  const x=dir===1 ? mg+pos*rw : (W-mg)-pos*rw;
+  const dow=(TODAY_DOW+day)%7; // 0=Di,1=Lu,...,6=Sa
+  // Réordonner: Lu=0(gauche)...Ve=4, Sa=5, Di=6(droite)
+  const weekPos=[(6),(0),(1),(2),(3),(4),(5)]; // index par dow
+  const pos=(weekPos[dow]+0.5)/7;
+  const dir=1; // toujours gauche→droite
+  const x=mg+pos*rw;
   // scrollY contrôle tout : lane 0 à y=H*0.65 quand scrollY=0
   // scrollY augmente → tout monte (passé descend, futur monte)
   const y = H*0.65 - lane*lh + scrollY;
@@ -1899,11 +1895,6 @@ function draw(ts){
   if(playing){
     scrollY+=dt*speed*laneH()/7;
     scrollY=Math.max(0,Math.min(TOTAL_DAYS/7*laneH(),scrollY));
-  }
-  if(playingReverse){
-    camDay=Math.max(0,camDay-dt*0.2);
-    scrollY=camDay/7*laneH();
-    if(camDay<=0){playingReverse=false;document.getElementById("revbtn").style.background="";document.getElementById("revbtn").style.color="";}
   }
   // camDay toujours dérivé de scrollY
   camDay=Math.max(0,Math.min(TOTAL_DAYS,scrollY*7/laneH()));
@@ -1959,7 +1950,7 @@ function drawAllLanes(){
     const lps=lanesPerScreen(),personLane=Math.floor(camDay/7),batchStart=personLane-(personLane%lps);
     if(ln<batchStart||ln>batchStart+lps+1) continue;
     if(!visible(y)) continue;
-    const dir=(ln%2===0)?1:-1;
+    const dir=1; // toujours gauche→droite
     const isCurrentLane=(ln===camLane);
 
     // === ROUTE PRINCIPALE : bande d'asphalte bien visible ===
@@ -1985,14 +1976,15 @@ function drawAllLanes(){
     ctx.beginPath();ctx.moveTo(mg,y-hw+Math.max(4,hw*0.18));ctx.lineTo(W-mg,y-hw+Math.max(4,hw*0.18));ctx.stroke();
     ctx.beginPath();ctx.moveTo(mg,y+hw-Math.max(4,hw*0.18));ctx.lineTo(W-mg,y+hw-Math.max(4,hw*0.18));ctx.stroke();
 
-    // Traits fins noirs entre les jours (décalés de 0.5 jour = milieu entre deux jours)
-    ctx.strokeStyle='rgba(0,0,0,0.25)';
-    ctx.lineWidth=Math.max(0.5,hw*0.03);
+    // Tirets centraux blancs (sens de circulation)
+    const dashLen=Math.max(12,rw/28), gapLen=dashLen*0.8;
+    ctx.strokeStyle='rgba(60,70,90,0.70)'; ctx.lineWidth=Math.max(1.5,hw*0.06);
+    ctx.setLineDash([dashLen,gapLen]);
+    // offset selon direction pour montrer sens de marche
+    ctx.lineDashOffset=dir===1 ? -(camDay%7/7)*( dashLen+gapLen)*3 : (camDay%7/7)*(dashLen+gapLen)*3;
+    ctx.beginPath();ctx.moveTo(mg+4,y);ctx.lineTo(W-mg-4,y);ctx.stroke();
     ctx.setLineDash([]);
-    for(let d=0;d<7;d++){
-      const dx=mg+(d+0.5)*(rw/7);
-      ctx.beginPath();ctx.moveTo(dx,y-hw+2);ctx.lineTo(dx,y+hw-2);ctx.stroke();
-    }
+    ctx.lineDashOffset=0;
 
     // Surbrillance sur la lane courante
     if(isCurrentLane){
@@ -2006,7 +1998,7 @@ function drawAllLanes(){
       const nextY=y-lh;
       if(visible(y)||visible(nextY)){
         // Centre de l'arc = côté de sortie, entre les deux lanes
-        const arcX = dir===1 ? W-mg : mg;
+        const arcX = W-mg; // virage toujours à droite
         const arcCY = (y+nextY)/2;  // exactement entre les deux
         const arcR  = lh/2;          // rayon = demi-écart entre lanes
 
@@ -2499,17 +2491,7 @@ function updatePlay(){ document.getElementById('pico').className=playing?'ti ti-
 
 resize(); requestAnimationFrame(draw); window.addEventListener('resize',resize);
 
-document.getElementById('playbtn').addEventListener('click',()=>{
-  if(playingReverse){playingReverse=false;}
-  playing=!playing;updatePlay();
-});
-let playingReverse=false;
-document.getElementById('revbtn').addEventListener('click',()=>{
-  if(playing){playing=false;updatePlay();}
-  playingReverse=!playingReverse;
-  document.getElementById('revbtn').style.background=playingReverse?'#e53935':'';
-  document.getElementById('revbtn').style.color=playingReverse?'#fff':'';
-});
+document.getElementById('playbtn').addEventListener('click',()=>{playing=!playing;updatePlay();});
 document.getElementById('resetbtn').addEventListener('click',()=>{playing=false;updatePlay();camDay=0;scrollY=0;lastTs=null;});
 document.getElementById('todaybtn').addEventListener('click',()=>{playing=false;updatePlay();camDay=TODAY_DAY;scrollY=TODAY_DAY/7*laneH();lastTs=null;});
 document.getElementById('zi').addEventListener('click',()=>{zoom=Math.min(3,zoom+0.25);});
@@ -2587,57 +2569,34 @@ let navIv=null;
 function startNav(d){ camDay=Math.max(0,Math.min(TOTAL_DAYS,Math.round(camDay/7)*7+d)); }
 function stopNav(){ clearInterval(navIv); navIv=null; }
 
-
-// ===== SYNCHRONISATION GOOGLE CALENDAR =====
-const APPS_SCRIPT_URL = 'https://raw.githubusercontent.com/jfesteoule/agenda-jf/main/events.json';
-
-async function syncAllCalendars(){
+window.syncAllCalendars = async function syncAllCalendars(){
   const btn = document.getElementById('syncbtn');
   btn.style.color='#fbbc04';
   btn.style.animation='spin 1s linear infinite';
-
+  const APPS_SCRIPT_URL='https://raw.githubusercontent.com/jfesteoule/agenda-jf/main/events.json';
   try {
     const resp = await fetch(APPS_SCRIPT_URL);
     if(!resp.ok) throw new Error('HTTP ' + resp.status);
     const events = await resp.json();
-
     const ORIGIN = new Date('2023-01-01T00:00:00Z');
-
-    EVT_JF.length=0;
-    EVT_ANNE.length=0;
-
+    EVT_JF.length=0; EVT_ANNE.length=0;
     events.forEach(ev=>{
-      const d = new Date(ORIGIN.getTime() + ev.day*86400000);
-      const label = d.getDate() + ' ' + d.toLocaleString('fr-FR',{month:'short'});
-      const item = {
-        day: ev.day,
-        label: label,
-        title: (ev.title||'').slice(0,40),
-        color: ev.side==='right' ? '#1a73e8' : '#e67c73',
-        side: ev.side,
-        who: ev.who
-      };
-      if(ev.side==='right') EVT_JF.push(item);
-      else EVT_ANNE.push(item);
+      const d=new Date(ORIGIN.getTime()+ev.day*86400000);
+      const label=d.getDate()+' '+d.toLocaleString('fr-FR',{month:'short'});
+      const item={day:ev.day,label,title:(ev.title||'').slice(0,40),color:ev.side==='right'?'#1a73e8':'#e67c73',side:ev.side,who:ev.who};
+      if(ev.side==='right') EVT_JF.push(item); else EVT_ANNE.push(item);
     });
-
     ALL_EVENTS.length=0;
     [...EVT_JF,...EVT_ANNE].sort((a,b)=>a.day-b.day).forEach(e=>ALL_EVENTS.push(e));
-
-    btn.style.color='#34a853';
-    btn.style.animation='';
-    alert('✓ ' + events.length + ' événements synchronisés !');
-
+    btn.style.color='#34a853'; btn.style.animation='';
+    alert('✓ '+events.length+' événements synchronisés !');
   } catch(err) {
-    btn.style.color='#ea4335';
-    btn.style.animation='';
-    alert('Erreur sync: ' + err.message);
-    console.error(err);
+    btn.style.color='#ea4335'; btn.style.animation='';
+    alert('Erreur sync: '+err.message);
   }
-}
-
+};
 document.getElementById('syncbtn').addEventListener('click', window.syncAllCalendars);
-
+window.syncAllCalendars = syncAllCalendars;
 </script>
 </body>
 </html>

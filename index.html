@@ -1845,18 +1845,17 @@ function lanesPerScreen(){ return Math.max(3, Math.floor((H*0.82) / laneH())); }
 
 function dayToScreen(day){
   const lh=laneH(), mg=margin(), rw=W-2*mg;
-  const dow=(TODAY_DOW+day)%7; // 0=Di,1=Lu,...,6=Sa
-  // Semaine française Lu→Di : Lu=pos0(gauche)...Sa=pos5, Di=pos6(droite)
-  // dowFR: 0=Lu,1=Ma,2=Me,3=Je,4=Ve,5=Sa,6=Di
-  const dowFR = dow===0 ? 6 : dow-1; // convertir: Di(0)→6, Lu(1)→0, ...Sa(6)→5
-  // Numéro de semaine française : commence le lundi
-  // Pour day=0 (Di 1 jan 2023), dowFR=6, c'est le dernier jour de la semaine -1
-  const laneNum = Math.floor((day - (6-dowFR)) / 7); // semaine qui contient ce jour
-  const pos = (dowFR + 0.5) / 7;
-  const dir = 1; // toujours gauche→droite
-  const x = mg + pos*rw;
-  const y = H*0.65 - laneNum*lh + scrollY;
-  return{x,y,lane:laneNum,dir,hw:roadHW()};
+  const jsDay=(TODAY_DOW+day)%7;   // 0=Di,1=Lu,...,6=Sa
+  const frDay=(jsDay+6)%7;          // 0=Lu,1=Ma,...,5=Sa,6=Di (semaine française)
+  // Numéro de semaine française (commence lundi)
+  const weekNum=Math.floor((day-frDay)/7);
+  // Position X : Lu à gauche (0), Di à droite (6)
+  const pos=(frDay+0.5)/7;
+  const x=mg+pos*rw;
+  // Position Y : scrollY contrôle le défilement
+  const camWeek=Math.floor((camDay-((TODAY_DOW+Math.round(camDay))%7+6)%7)/7);
+  const y=H*0.65-(weekNum-camWeek)*lh;
+  return{x,y,lane:weekNum,dir:1,hw:roadHW()};
 }
 
 function carScreen(){
@@ -1894,11 +1893,8 @@ function draw(ts){
   if(!lastTs)lastTs=ts;
   const dt=Math.min((ts-lastTs)/1000,0.1); lastTs=ts; pulse+=dt*2.5;
   if(playing){
-    scrollY+=dt*speed*laneH()/7;
-    scrollY=Math.max(0,Math.min(TOTAL_DAYS/7*laneH(),scrollY));
+    camDay=Math.min(TOTAL_DAYS,camDay+dt*speed);
   }
-  // camDay toujours dérivé de scrollY
-  camDay=Math.max(0,Math.min(TOTAL_DAYS,scrollY*7/laneH()));
   ctx.clearRect(0,0,W,H);
 
   drawBackground();
@@ -1949,7 +1945,8 @@ function drawAllLanes(){
 
   for(let ln=camLane-_vl; ln<=camLane+_vl; ln++){
     if(ln<0) continue;
-    const y=H*0.65-ln*lh+scrollY;
+    const camWeek2=Math.floor((camDay-((TODAY_DOW+Math.round(camDay))%7+6)%7)/7);
+    const y=H*0.65-(ln-camWeek2)*lh;
     if(!visible(y)) continue;
 
     // === BANDE HORIZONTALE : 7 cases égales ===
@@ -1982,7 +1979,7 @@ function drawAllLanes(){
 
     // === TRAIT Di→Lu (connexion entre semaines) ===
     // Di est à droite (x=mg+rw-dayW/2), Lu est à gauche (x=mg+dayW/2) de la semaine du dessus
-    const nextY=H*0.65-(ln+1)*lh+scrollY;
+    const nextY=H*0.65-(ln+1-camWeek2)*lh;
     if(visible(nextY)||visible(y)){
       const xDi=mg+rw-dayW*0.5;  // centre Di (dernier jour)
       const xLu=mg+dayW*0.5;      // centre Lu (premier jour semaine suivante)

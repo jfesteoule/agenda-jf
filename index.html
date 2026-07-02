@@ -1828,7 +1828,7 @@ const ctx=canvas.getContext('2d');
 const wrap=document.getElementById('wrap');
 let W,H;
 
-let camDay=Math.max(0,TODAY_DAY-7), playing=false, speed=3, lastTs=null, pulse=0, zoom=1;
+let camDay=TODAY_DAY, playing=false, speed=3, lastTs=null, pulse=0, zoom=1;
 let scrollY=0; // initialisé après resize // scrollY en pixels, 90px par lane
 const PPD=90;
 
@@ -2145,7 +2145,7 @@ function drawMonthLabels(){
 }
 
 function drawDayDates(){
-  // Affiche uniquement la date complète chaque samedi, au centre de la route
+  // Affiche la date complète dans la case du dimanche, sur 3 lignes
   const hw=roadHW();
   const ORIGIN_MS=new Date('2023-01-01T00:00:00Z').getTime();
   const camLane=Math.floor(camDay/7);
@@ -2162,33 +2162,23 @@ function drawDayDates(){
     const dayNum=dt.getDate();
     const mon=dt.toLocaleDateString('fr-FR',{month:'long'});
     const year=dt.getUTCFullYear();
-    const txt='Dim. '+dayNum+' '+mon+' '+year;
 
-    const fs=Math.max(9,Math.min(16,hw*0.30));
-    ctx.font=`bold ${fs}px Arial`;
-
-    // Décaler le texte vers le centre de la lane pour éviter les virages
-    const mg2=margin(), rw2=W-2*mg2;
-    const lane2=Math.floor(d/7);
-    const dir2=(lane2%2===0)?1:-1;
-    const turnX=dir2===1?W-mg2:mg2;        // x du virage
-    const centerX=W/2;                      // centre de la lane
-    const distToTurn=Math.abs(x-turnX);
-    const distToCenter=Math.abs(x-centerX);
-    // Si trop près du virage (< 15% de la largeur), décaler vers le centre
-    const threshold=rw2*0.15;
-    let tx=x;
-    if(distToTurn<threshold){
-      // Décaler vers le centre de la moitié de route
-      const shift=(threshold-distToTurn)*0.8;
-      tx=dir2===1 ? x-shift : x+shift;
-    }
+    const fs=Math.max(7,Math.min(12,hw*0.24));
+    const lineH=fs*1.3;
+    // 3 lignes centrées dans la case
+    const lines=['Dimanche', dayNum+' '+mon, String(year)];
+    const totalH=(lines.length-1)*lineH;
+    const startY=y-totalH/2;
 
     ctx.textAlign='center'; ctx.textBaseline='middle';
-    ctx.fillStyle='rgba(255,255,255,0.75)';
-    ctx.fillText(txt,tx+1,y+1);
-    ctx.fillStyle='#1b5e20';
-    ctx.fillText(txt,tx,y);
+    lines.forEach((line,i)=>{
+      const ty=startY+i*lineH;
+      ctx.font=i===0?`bold ${fs}px Arial`:`${fs}px Arial`;
+      ctx.fillStyle='rgba(255,255,255,0.75)';
+      ctx.fillText(line,x+1,ty+1);
+      ctx.fillStyle='#1b5e20';
+      ctx.fillText(line,x,ty);
+    });
   }
 }
 
@@ -2247,16 +2237,17 @@ function drawDayLetters(){
     ctx.fillStyle=color;
     ctx.fillText(dayNum, x+2, ty);
 
-    // Nom événement loisir en petit au-dessus du numéro
+    // Nom événement loisir en petit à côté du numéro en bas
     if(leisureByDay[d] && hw>18){
       const evTitle=leisureByDay[d].slice(0,12);
       const fsSmall=Math.max(6,Math.min(9,hw*0.16));
       ctx.font=`${fsSmall}px Arial`;
-      ctx.textAlign='center'; ctx.textBaseline='middle';
+      ctx.textAlign='left'; ctx.textBaseline='middle';
+      const numW=ctx.measureText(String(dayNum)).width+4;
       ctx.fillStyle='rgba(255,255,255,0.70)';
-      ctx.fillText(evTitle, x+0.6, y-hw*0.55+0.6);
-      ctx.fillStyle='#e65100'; // orange foncé
-      ctx.fillText(evTitle, x, y-hw*0.55);
+      ctx.fillText(evTitle, x+2+numW+0.6, ty+0.6);
+      ctx.fillStyle='#e65100';
+      ctx.fillText(evTitle, x+2+numW, ty);
     }
   }
 }

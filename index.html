@@ -54,11 +54,14 @@ canvas#c{position:absolute;inset:0;width:100%;height:100%;touch-action:none;}
     <div class="leg"><div class="legline"></div>Samedi</div>
     <div class="leg"><div style="width:10px;height:16px;background:linear-gradient(#ff9800,#66bb6a,#42a5f5);border-radius:2px;"></div>Vacances zone A</div>
   </div>
+  <div style="display:flex;justify-content:flex-end;margin-top:4px;">
+    <button id="syncbtn" style="position:relative;z-index:1000;pointer-events:auto;width:36px;height:36px;background:#fff;border-radius:50%;border:none;cursor:pointer;display:flex;align-items:center;justify-content:center;box-shadow:0 2px 6px rgba(0,0,0,0.2);color:#34a853;font-size:16px;" title="Synchroniser Google Agenda">↺</button>
+  </div>
   <div id="zbx">
     <button class="zb" id="zi">+</button>
     <button class="zb" id="zo">−</button>
   </div>
-  <button id="todaybtn" title="Aujourd'hui">Auj</button>  <button id="syncbtn" style="position:relative;z-index:1000;pointer-events:auto;width:40px;height:40px;min-width:40px;background:#fff;border-radius:50%;border:none;cursor:pointer;display:flex;align-items:center;justify-content:center;box-shadow:0 2px 6px rgba(0,0,0,0.2);color:#34a853;font-size:18px;" title="Synchroniser Google Agenda">↺</button>
+  <button id="todaybtn" title="Aujourd'hui">Auj</button>
   <button id="resetbtn" title="Retour au début"><i class="ti ti-arrow-back-up"></i></button>
   <button id="playbtn"><i class="ti ti-player-play" id="pico"></i></button>      <div id="eta-name" style="font-size:14px;font-weight:500;color:#202124;margin-top:1px;">—</div>
     </div>
@@ -2237,17 +2240,17 @@ function drawDayLetters(){
     ctx.fillStyle=color;
     ctx.fillText(dayNum, x+2, ty);
 
-    // Nom événement loisir en petit à côté du numéro en bas
+    // Nom événement loisir en petit EN DESSOUS du numéro
     if(leisureByDay[d] && hw>18){
       const evTitle=leisureByDay[d].slice(0,12);
       const fsSmall=Math.max(6,Math.min(9,hw*0.16));
       ctx.font=`${fsSmall}px Arial`;
-      ctx.textAlign='left'; ctx.textBaseline='middle';
-      const numW=ctx.measureText(String(dayNum)).width+4;
+      ctx.textAlign='center'; ctx.textBaseline='middle';
+      const tyLeisure=ty+fs*1.2; // en dessous de la date
       ctx.fillStyle='rgba(255,255,255,0.70)';
-      ctx.fillText(evTitle, x+2+numW+0.6, ty+0.6);
+      ctx.fillText(evTitle, x+0.6, tyLeisure+0.6);
       ctx.fillStyle='#e65100';
-      ctx.fillText(evTitle, x+2+numW, ty);
+      ctx.fillText(evTitle, x, tyLeisure);
     }
   }
 }

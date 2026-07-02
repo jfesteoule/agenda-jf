@@ -2385,13 +2385,13 @@ wrap.addEventListener('pointerdown',e=>{
 
 wrap.addEventListener('pointermove',e=>{
   if(pStartY===null) return;
-  const now=Date.now(), dt=Math.max(1,now-pLastT);
-  pVY=(e.clientY-pLastY)/dt*16;
+  const now=Date.now(), dt2=Math.max(1,now-pLastT);
+  pVY=(e.clientY-pLastY)/dt2*16;
   pLastY=e.clientY; pLastT=now;
-  // scrollY direct: glisser haut=avancer, bas=reculer
+  // glisser haut=avancer dans le futur, bas=reculer
   const dy=e.clientY-pStartY;
-  const lh=laneH();
-  scrollY=Math.max(0,Math.min(TOTAL_DAYS/7*lh, pScrollStart - dy));
+  const lh=laneH()||90;
+  camDay=Math.max(0,Math.min(TOTAL_DAYS, pCamStart - dy*7/lh));
   e.preventDefault();
 },{passive:false});
 

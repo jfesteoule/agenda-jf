@@ -1831,7 +1831,7 @@ const ctx=canvas.getContext('2d');
 const wrap=document.getElementById('wrap');
 let W,H;
 
-let camDay=TODAY_DAY, playing=false, speed=3, lastTs=null, pulse=0, zoom=1;
+let camDay=TODAY_DAY, scrollOffset=0, playing=false, speed=3, lastTs=null, pulse=0, zoom=1;
 let scrollY=0; // initialisé après resize // scrollY en pixels, 90px par lane
 const PPD=90;
 
@@ -1857,7 +1857,7 @@ function dayToScreen(day){
   const x=mg+pos*rw;
   // Position Y : scrollY contrôle le défilement
   const camWeek=Math.floor((camDay-((TODAY_DOW+Math.round(camDay))%7+6)%7)/7);
-  const y=H*0.65-(weekNum-camWeek)*lh;
+  const y=H*0.65-(weekNum-camWeek)*lh+scrollOffset;
   return{x,y,lane:weekNum,dir:1,hw:roadHW()};
 }
 
@@ -1949,7 +1949,7 @@ function drawAllLanes(){
   for(let ln=camLane-_vl; ln<=camLane+_vl; ln++){
     if(ln<0) continue;
     const camWeek2=Math.floor((camDay-((TODAY_DOW+Math.round(camDay))%7+6)%7)/7);
-    const y=H*0.65-(ln-camWeek2)*lh;
+    const y=H*0.65-(ln-camWeek2)*lh+scrollOffset;
     if(!visible(y)) continue;
 
     // === BANDE HORIZONTALE : 7 cases égales ===
@@ -1982,7 +1982,7 @@ function drawAllLanes(){
 
     // === TRAIT Di→Lu (connexion entre semaines) ===
     // Di est à droite (x=mg+rw-dayW/2), Lu est à gauche (x=mg+dayW/2) de la semaine du dessus
-    const nextY=H*0.65-(ln+1-camWeek2)*lh;
+    const nextY=H*0.65-(ln+1-camWeek2)*lh+scrollOffset;
     if(visible(nextY)||visible(y)){
       const xDi=mg+rw-dayW*0.5;  // centre Di (dernier jour)
       const xLu=mg+dayW*0.5;      // centre Lu (premier jour semaine suivante)
@@ -2411,7 +2411,7 @@ function scrollBy(dy){ /* handled in pointermove */ }
 wrap.style.touchAction='none';
 wrap.addEventListener('pointerdown',e=>{
   if(e.target.closest('button')||e.target.closest('input')) return;
-  pStartY=e.clientY; pCamStart=camDay; pScrollStart=scrollY;
+  pStartY=e.clientY; pCamStart=camDay; pScrollStart=scrollOffset;
   pLastY=e.clientY; pLastT=Date.now(); pVY=0;
   wrap.setPointerCapture(e.pointerId);
   e.preventDefault();
@@ -2422,10 +2422,9 @@ wrap.addEventListener('pointermove',e=>{
   const now=Date.now(), dt2=Math.max(1,now-pLastT);
   pVY=(e.clientY-pLastY)/dt2*16;
   pLastY=e.clientY; pLastT=now;
-  // glisser haut=avancer dans le futur, bas=reculer
+  // Le doigt scrolle l'écran SANS bouger le personnage
   const dy=e.clientY-pStartY;
-  const lh=laneH()||90;
-  camDay=Math.max(0,Math.min(TOTAL_DAYS, pCamStart - dy*7/lh));
+  scrollOffset=pScrollStart+dy;
   e.preventDefault();
 },{passive:false});
 

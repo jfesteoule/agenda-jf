@@ -1948,12 +1948,16 @@ function drawBackground(){
 function drawAllLanes(){
   const mg=margin(), rw=W-2*mg, lh=laneH(), hw=roadHW();
   const camLane=Math.floor(camDay/7);
-  const _vl=Math.ceil(H/lh)+3;
+  const _vl=Math.ceil((H+Math.abs(scrollOffset))/lh)+4;
   const dayW=rw/7; // largeur d'une case jour
 
-  for(let ln=camLane-_vl; ln<=camLane+_vl; ln++){
+  // Semaine de référence pour le personnage
+  const camWeek2=Math.floor((camDay-((TODAY_DOW+Math.round(camDay))%7+6)%7)/7);
+  // Élargir la plage pour couvrir scrollOffset
+  const extraVl=Math.ceil(Math.abs(scrollOffset)/lh)+2;
+
+  for(let ln=camLane-_vl-extraVl; ln<=camLane+_vl+extraVl; ln++){
     if(ln<0) continue;
-    const camWeek2=Math.floor((camDay-((TODAY_DOW+Math.round(camDay))%7+6)%7)/7);
     const y=H*0.65-(ln-camWeek2)*lh+scrollOffset;
     if(!visible(y)) continue;
 
@@ -2111,7 +2115,7 @@ function drawMonthLabels(){
   const lh=laneH(), mg=margin();
   const ORIGIN_MS=new Date('2023-01-01T00:00:00Z').getTime();
   const camLane=Math.floor(camDay/7);
-  const _vl=Math.ceil(H/lh)+3;
+  const _vl=Math.ceil((H+Math.abs(scrollOffset))/lh)+4;
   const lps=lanesPerScreen();
   const batchStart=camLane-(camLane%lps);
 

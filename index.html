@@ -1861,7 +1861,7 @@ function dayToScreen(day){
   const x=mg+pos*rw;
   // Position Y : scrollY contrôle le défilement
   const camWeek=Math.floor((camDay-((TODAY_DOW+Math.round(camDay))%7+6)%7)/7);
-  const y=H*0.65-(weekNum-camWeek)*lh+scrollOffset;
+  const y=H*0.65-(weekNum-camWeek)*lh;
   return{x,y,lane:weekNum,dir:1,hw:roadHW()};
 }
 
@@ -1950,14 +1950,12 @@ function drawAllLanes(){
   const camLane=Math.floor(camDay/7);
   const camWeek2=Math.floor((camDay-((TODAY_DOW+Math.round(camDay))%7+6)%7)/7);
   // Centre visuel = camWeek2 + décalage scrollOffset
-  const scrollWeeks=scrollOffset/lh;
-  const centerLane=Math.round(camWeek2-scrollWeeks);
-  const _vl=Math.ceil(H/lh)+Math.ceil(Math.abs(scrollWeeks))+5;
+  const _vl=Math.ceil(H/lh)+3;
   const dayW=rw/7;
 
-  for(let ln=centerLane-_vl; ln<=centerLane+_vl; ln++){
+  for(let ln=camWeek2-_vl; ln<=camWeek2+_vl; ln++){
     if(ln<0) continue;
-    const y=H*0.65-(ln-camWeek2)*lh+scrollOffset;
+    const y=H*0.65-(ln-camWeek2)*lh;
     if(!visible(y)) continue;
 
     // === BANDE HORIZONTALE : 7 cases égales ===
@@ -1990,7 +1988,7 @@ function drawAllLanes(){
 
     // === TRAIT Di→Lu (connexion entre semaines) ===
     // Di est à droite (x=mg+rw-dayW/2), Lu est à gauche (x=mg+dayW/2) de la semaine du dessus
-    const nextY=H*0.65-(ln+1-camWeek2)*lh+scrollOffset;
+    const nextY=H*0.65-(ln+1-camWeek2)*lh;
     if(visible(nextY)||visible(y)){
       const xDi=mg+rw-dayW*0.5;  // centre Di (dernier jour)
       const xLu=mg+dayW*0.5;      // centre Lu (premier jour semaine suivante)
@@ -2114,7 +2112,7 @@ function drawMonthLabels(){
   const lh=laneH(), mg=margin();
   const ORIGIN_MS=new Date('2023-01-01T00:00:00Z').getTime();
   const camLane=Math.floor(camDay/7);
-  const scrollWks=scrollOffset/lh; const _vl=Math.ceil(H/lh)+Math.ceil(Math.abs(scrollWks))+5;
+  const _vl=Math.ceil(H/lh)+3;
   const lps=lanesPerScreen();
   const batchStart=camLane-(camLane%lps);
 
@@ -2160,10 +2158,9 @@ function drawDayDates(){
   const hw=roadHW();
   const ORIGIN_MS=new Date('2023-01-01T00:00:00Z').getTime();
   const camLane=Math.floor(camDay/7);
-  const scrollWks2=scrollOffset/laneH();
   const _vl=Math.ceil(H/laneH())+Math.ceil(Math.abs(scrollWks2))+5;
-  const adjLane=Math.round(camLane-scrollWks2); for(let d=Math.max(0,Math.floor((adjLane-_vl)*7));
-         d<=Math.min(TOTAL_DAYS,Math.ceil((adjLane+_vl)*7));d++){
+   for(let d=Math.max(0,Math.floor((camLane-_vl)*7));
+         d<=Math.min(TOTAL_DAYS,Math.ceil((camLane+_vl)*7));d++){
     if(!isSun(d)) continue; // seulement les dimanches
     const{x,y}=dayToScreen(d);
     if(!visible(y)) continue;
@@ -2215,8 +2212,8 @@ function drawDayLetters(){
     }
   });
 
-  const scrollWks3=scrollOffset/laneH(); const adjLane=Math.round(camLane-scrollWks3); for(let d=Math.max(0,Math.floor((adjLane-_vl)*7));
-         d<=Math.min(TOTAL_DAYS,Math.ceil((adjLane+_vl)*7));d++){
+   for(let d=Math.max(0,Math.floor((camLane-_vl)*7));
+         d<=Math.min(TOTAL_DAYS,Math.ceil((camLane+_vl)*7));d++){
     const{x,y}=dayToScreen(d);
     if(!visible(y)) continue;
     if(hw<12) continue;
@@ -2431,7 +2428,9 @@ wrap.addEventListener('pointermove',e=>{
   pVY=(e.clientY-pLastY)/dt2*16;
   pLastY=e.clientY; pLastT=now;
   // Scroll pixel par pixel — la page entière monte ou descend
-  scrollOffset=pScrollStart+(e.clientY-pStartY);
+  const dy2=e.clientY-pStartY;
+  const lh2=laneH()||90;
+  camDay=Math.max(0,Math.min(TOTAL_DAYS, pCamStart - dy2*7/lh2));
   e.preventDefault();
 },{passive:false});
 
@@ -2548,7 +2547,6 @@ document.addEventListener('pointermove', e=>{
   const dy = e.clientY - thumbStartY;
   const dWeeks = -dy / (trackH - thumbH) * (SCROLL_WEEKS - visibleWeeks); // inversé
   camDay = Math.max(0, Math.min(TOTAL_DAYS, thumbStartCam + dWeeks*7));
-  scrollOffset = 0;
   e.preventDefault();
 },{passive:false});
 
@@ -2562,7 +2560,6 @@ scrollbarEl.addEventListener('click', e=>{
   const rect = scrollbarEl.getBoundingClientRect();
   const frac = 1 - (e.clientY - rect.top) / scrollbarEl.clientHeight; // inversé
   camDay = Math.max(0, Math.min(TOTAL_DAYS, frac * TOTAL_DAYS));
-  scrollOffset = 0;
 });
 
 // Update scrollbar in draw loop

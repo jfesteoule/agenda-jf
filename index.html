@@ -1948,15 +1948,14 @@ function drawBackground(){
 function drawAllLanes(){
   const mg=margin(), rw=W-2*mg, lh=laneH(), hw=roadHW();
   const camLane=Math.floor(camDay/7);
-  const _vl=Math.ceil((H+Math.abs(scrollOffset))/lh)+4;
-  const dayW=rw/7; // largeur d'une case jour
-
-  // Semaine de référence pour le personnage
   const camWeek2=Math.floor((camDay-((TODAY_DOW+Math.round(camDay))%7+6)%7)/7);
-  // Élargir la plage pour couvrir scrollOffset
-  const extraVl=Math.ceil(Math.abs(scrollOffset)/lh)+2;
+  // Centre visuel = camWeek2 + décalage scrollOffset
+  const scrollWeeks=scrollOffset/lh;
+  const centerLane=Math.round(camWeek2-scrollWeeks);
+  const _vl=Math.ceil(H/lh)+Math.ceil(Math.abs(scrollWeeks))+5;
+  const dayW=rw/7;
 
-  for(let ln=camLane-_vl-extraVl; ln<=camLane+_vl+extraVl; ln++){
+  for(let ln=centerLane-_vl; ln<=centerLane+_vl; ln++){
     if(ln<0) continue;
     const y=H*0.65-(ln-camWeek2)*lh+scrollOffset;
     if(!visible(y)) continue;
@@ -2115,7 +2114,7 @@ function drawMonthLabels(){
   const lh=laneH(), mg=margin();
   const ORIGIN_MS=new Date('2023-01-01T00:00:00Z').getTime();
   const camLane=Math.floor(camDay/7);
-  const _vl=Math.ceil((H+Math.abs(scrollOffset))/lh)+4;
+  const scrollWks=scrollOffset/lh; const _vl=Math.ceil(H/lh)+Math.ceil(Math.abs(scrollWks))+5;
   const lps=lanesPerScreen();
   const batchStart=camLane-(camLane%lps);
 
@@ -2161,10 +2160,10 @@ function drawDayDates(){
   const hw=roadHW();
   const ORIGIN_MS=new Date('2023-01-01T00:00:00Z').getTime();
   const camLane=Math.floor(camDay/7);
-  const _vl=Math.ceil(H/laneH())+3;
-
-  for(let d=Math.max(0,Math.floor((camLane-_vl)*7));
-         d<=Math.min(TOTAL_DAYS,Math.ceil((camLane+_vl)*7));d++){
+  const scrollWks2=scrollOffset/laneH();
+  const _vl=Math.ceil(H/laneH())+Math.ceil(Math.abs(scrollWks2))+5;
+  const adjLane=Math.round(camLane-scrollWks2); for(let d=Math.max(0,Math.floor((adjLane-_vl)*7));
+         d<=Math.min(TOTAL_DAYS,Math.ceil((adjLane+_vl)*7));d++){
     if(!isSun(d)) continue; // seulement les dimanches
     const{x,y}=dayToScreen(d);
     if(!visible(y)) continue;
@@ -2216,8 +2215,8 @@ function drawDayLetters(){
     }
   });
 
-  for(let d=Math.max(0,Math.floor((camLane-_vl)*7));
-         d<=Math.min(TOTAL_DAYS,Math.ceil((camLane+_vl)*7));d++){
+  const scrollWks3=scrollOffset/laneH(); const adjLane=Math.round(camLane-scrollWks3); for(let d=Math.max(0,Math.floor((adjLane-_vl)*7));
+         d<=Math.min(TOTAL_DAYS,Math.ceil((adjLane+_vl)*7));d++){
     const{x,y}=dayToScreen(d);
     if(!visible(y)) continue;
     if(hw<12) continue;

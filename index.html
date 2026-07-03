@@ -1850,18 +1850,20 @@ function roadHW(){ return Math.max(22,Math.min(70,W*0.09))*zoom; }
 // Nombre de lanes visibles simultanément
 function lanesPerScreen(){ return Math.max(3, Math.floor((H*0.82) / laneH())); }
 
+
+function getCamWeek(){
+  // Semaine française courante du personnage
+  const jsDay=(TODAY_DOW+Math.round(camDay))%7;
+  const frDay=(jsDay+6)%7;
+  return Math.floor((Math.round(camDay)-frDay)/7);
+}
 function dayToScreen(day){
   const lh=laneH(), mg=margin(), rw=W-2*mg;
-  const jsDay=(TODAY_DOW+day)%7;   // 0=Di,1=Lu,...,6=Sa
-  const frDay=(jsDay+6)%7;          // 0=Lu,1=Ma,...,5=Sa,6=Di (semaine française)
-  // Numéro de semaine française (commence lundi)
+  const jsDay=(TODAY_DOW+day)%7;
+  const frDay=(jsDay+6)%7; // 0=Lu...6=Di
   const weekNum=Math.floor((day-frDay)/7);
-  // Position X : Lu à gauche (0), Di à droite (6)
-  const pos=(frDay+0.5)/7;
-  const x=mg+pos*rw;
-  // Position Y : scrollY contrôle le défilement
-  const camWeek=Math.floor((camDay-((TODAY_DOW+Math.round(camDay))%7+6)%7)/7);
-  const y=H*0.65-(weekNum-camWeek)*lh;
+  const x=mg+(frDay+0.5)/7*rw;
+  const y=H*0.65-(weekNum-getCamWeek())*lh;
   return{x,y,lane:weekNum,dir:1,hw:roadHW()};
 }
 
@@ -1947,10 +1949,8 @@ function drawBackground(){
 
 function drawAllLanes(){
   const mg=margin(), rw=W-2*mg, lh=laneH(), hw=roadHW();
-  const camLane=Math.floor(camDay/7);
-  const camWeek2=Math.floor((camDay-((TODAY_DOW+Math.round(camDay))%7+6)%7)/7);
-  // Centre visuel = camWeek2 + décalage scrollOffset
-  const _vl=Math.ceil(H/lh)+3;
+  const camWeek2=getCamWeek();
+  const _vl=Math.ceil(H/lh)+4;
   const dayW=rw/7;
 
   for(let ln=camWeek2-_vl; ln<=camWeek2+_vl; ln++){
@@ -2111,8 +2111,8 @@ function drawMonthLabels(){
   // Positionné entre deux lanes consécutives
   const lh=laneH(), mg=margin();
   const ORIGIN_MS=new Date('2023-01-01T00:00:00Z').getTime();
-  const camLane=Math.floor(camDay/7);
-  const _vl=Math.ceil(H/lh)+3;
+  const camLane=getCamWeek();
+  const _vl=Math.ceil(H/lh)+4;
   const lps=lanesPerScreen();
   const batchStart=camLane-(camLane%lps);
 

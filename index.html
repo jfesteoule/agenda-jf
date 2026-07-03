@@ -2422,15 +2422,28 @@ wrap.addEventListener('pointermove',e=>{
   const now=Date.now(), dt2=Math.max(1,now-pLastT);
   pVY=(e.clientY-pLastY)/dt2*16;
   pLastY=e.clientY; pLastT=now;
-  // Le doigt scrolle l'écran SANS bouger le personnage
-  const dy=e.clientY-pStartY;
-  scrollOffset=pScrollStart+dy;
+  // Scroll pixel par pixel — la page entière monte ou descend
+  scrollOffset=pScrollStart+(e.clientY-pStartY);
   e.preventDefault();
+},{passive:false});
+
+wrap.addEventListener('wheel',e=>{
+  e.preventDefault();
+  scrollOffset -= e.deltaY;
 },{passive:false});
 
 wrap.addEventListener('pointerup',e=>{
   if(pStartY===null) return;
   pStartY=null;
+  // Momentum
+  let vyM=pVY;
+  function doMomentum(){
+    if(Math.abs(vyM)<0.5) return;
+    scrollOffset+=vyM;
+    vyM*=0.90;
+    requestAnimationFrame(doMomentum);
+  }
+  doMomentum();
   // Momentum
   let vy=pVY;
   function momentum(){

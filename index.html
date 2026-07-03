@@ -2520,7 +2520,7 @@ function updateScrollbar(){
   const visibleWeeks = Math.max(3, Math.ceil(H/laneH()));
   const thumbH = Math.max(30, trackH * visibleWeeks / SCROLL_WEEKS);
   // Thumb position
-  const scrollFrac = camWeekNow / SCROLL_WEEKS;
+  const scrollFrac = 1 - camWeekNow / SCROLL_WEEKS; // inversé: haut=futur, bas=passé
   const thumbTop = scrollFrac * (trackH - thumbH);
   thumbEl.style.height = thumbH + 'px';
   thumbEl.style.top = thumbTop + 'px';
@@ -2543,7 +2543,7 @@ document.addEventListener('pointermove', e=>{
   const visibleWeeks = Math.max(3, Math.ceil(H/laneH()));
   const thumbH = Math.max(30, trackH * visibleWeeks / SCROLL_WEEKS);
   const dy = e.clientY - thumbStartY;
-  const dWeeks = dy / (trackH - thumbH) * (SCROLL_WEEKS - visibleWeeks);
+  const dWeeks = -dy / (trackH - thumbH) * (SCROLL_WEEKS - visibleWeeks); // inversé
   camDay = Math.max(0, Math.min(TOTAL_DAYS, thumbStartCam + dWeeks*7));
   scrollOffset = 0;
   e.preventDefault();
@@ -2557,7 +2557,7 @@ document.addEventListener('pointerup', e=>{
 scrollbarEl.addEventListener('click', e=>{
   if(e.target===thumbEl) return;
   const rect = scrollbarEl.getBoundingClientRect();
-  const frac = (e.clientY - rect.top) / scrollbarEl.clientHeight;
+  const frac = 1 - (e.clientY - rect.top) / scrollbarEl.clientHeight; // inversé
   camDay = Math.max(0, Math.min(TOTAL_DAYS, frac * TOTAL_DAYS));
   scrollOffset = 0;
 });

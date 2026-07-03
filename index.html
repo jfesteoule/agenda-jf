@@ -1835,9 +1835,19 @@ const ctx=canvas.getContext('2d');
 const wrap=document.getElementById('wrap');
 let W,H;
 
-let camDay=TODAY_DAY, scrollOffset=0, playing=false, speed=3, lastTs=null, pulse=0, zoom=1;
-let scrollY=0; // initialisé après resize // scrollY en pixels, 90px par lane
+let camDay=TODAY_DAY, playing=false, speed=3, lastTs=null, pulse=0, zoom=1;
 const PPD=90;
+
+// weekOfDay: numéro de semaine française (continu) correspondant à un jour donné
+function weekOfDay(day){
+  const jsDay=(TODAY_DOW+Math.round(day))%7;
+  const frDay=(jsDay+6)%7;
+  return (Math.round(day)-frDay)/7;
+}
+// viewCenterWeek = semaine actuellement centrée à l'écran.
+// Séparée de camDay: le scroll tactile ne modifie QUE viewCenterWeek,
+// le bonhomme (camDay) ne bouge qu'avec les flèches / lecture auto.
+let viewCenterWeek = weekOfDay(TODAY_DAY);
 
 function resize(){ const r=wrap.getBoundingClientRect(); W=canvas.width=r.width; H=canvas.height=r.height; }
 
@@ -1852,10 +1862,8 @@ function lanesPerScreen(){ return Math.max(3, Math.floor((H*0.82) / laneH())); }
 
 
 function getCamWeek(){
-  // Semaine française courante du personnage
-  const jsDay=(TODAY_DOW+Math.round(camDay))%7;
-  const frDay=(jsDay+6)%7;
-  return Math.floor((Math.round(camDay)-frDay)/7);
+  // Semaine centrée à l'écran (vue), utilisée pour les bornes de boucle
+  return Math.floor(viewCenterWeek);
 }
 function dayToScreen(day){
   const lh=laneH(), mg=margin(), rw=W-2*mg;
@@ -1863,7 +1871,8 @@ function dayToScreen(day){
   const frDay=(jsDay+6)%7; // 0=Lu...6=Di
   const weekNum=Math.floor((day-frDay)/7);
   const x=mg+(frDay+0.5)/7*rw;
-  const y=H*0.65-(weekNum-getCamWeek())*lh;
+  // viewCenterWeek (continu, non arrondi) permet un scroll fluide au pixel
+  const y=H*0.65-(weekNum-viewCenterWeek)*lh;
   return{x,y,lane:weekNum,dir:1,hw:roadHW()};
 }
 
@@ -1903,6 +1912,7 @@ function draw(ts){
   const dt=Math.min((ts-lastTs)/1000,0.1); lastTs=ts; pulse+=dt*2.5;
   if(playing){
     camDay=Math.min(TOTAL_DAYS,camDay+dt*speed);
+    viewCenterWeek=weekOfDay(camDay);
   }
   ctx.clearRect(0,0,W,H);
 
@@ -1930,9 +1940,9 @@ function drawBackground(){
   ctx.fillRect(0,0,W,H);
   // Subtle horizontal lines between lanes
   const lh=laneH(), hw=roadHW();
-  const camLane=Math.floor(camDay/7);
+  const camLane=getCamWeek();
   const carY=H*0.82;
-  const lps2=lanesPerScreen(),personLane2=Math.floor(camDay/7),batchStart2=personLane2-(personLane2%lps2);
+  const lps2=lanesPerScreen(),personLane2=getCamWeek(),batchStart2=personLane2-(personLane2%lps2);
   for(let ln=batchStart2-1;ln<=batchStart2+lps2+1;ln++){
     const y=carY-(ln-camLane)*lh;
     if(y<-20||y>H+20) continue;
@@ -1981,7 +1991,7 @@ function drawAllLanes(){
     ctx.beginPath();ctx.moveTo(mg+rw,y-hw);ctx.lineTo(mg+rw,y+hw);ctx.stroke();
 
     // Highlight semaine courante
-    if(ln===camLane){
+    if(ln===camWeek2){
       ctx.fillStyle='rgba(251,191,36,0.08)';
       ctx.fillRect(mg,y-hw,rw,hw*2);
     }
@@ -2157,8 +2167,8 @@ function drawDayDates(){
   // Affiche la date complète dans la case du dimanche, sur 3 lignes
   const hw=roadHW();
   const ORIGIN_MS=new Date('2023-01-01T00:00:00Z').getTime();
-  const camLane=Math.floor(camDay/7);
-  const _vl=Math.ceil(H/laneH())+Math.ceil(Math.abs(scrollWks2))+5;
+  const camLane=getCamWeek();
+  const _vl=Math.ceil(H/laneH())+5;
    for(let d=Math.max(0,Math.floor((camLane-_vl)*7));
          d<=Math.min(TOTAL_DAYS,Math.ceil((camLane+_vl)*7));d++){
     if(!isSun(d)) continue; // seulement les dimanches
@@ -2194,7 +2204,7 @@ function drawDayDates(){
 function drawDayLetters(){
   const hw=roadHW();
   const ORIGIN_MS=new Date('2023-01-01T00:00:00Z').getTime();
-  const camLane=Math.floor(camDay/7);
+  const camLane=getCamWeek();
   const _vl=Math.ceil(H/laneH())+3;
   const LABELS=['Di','Lu','Ma','Me','Je','Ve','Sa'];
   const LEISURE_KW=['randon','voyage','vacance','séjour','sejour','trek','ski',
@@ -2389,34 +2399,27 @@ function updatePlay(){ document.getElementById('pico').className=playing?'ti ti-
 resize(); requestAnimationFrame(draw); window.addEventListener('resize',resize);
 
 document.getElementById('playbtn').addEventListener('click',()=>{playing=!playing;updatePlay();});
-document.getElementById('resetbtn').addEventListener('click',()=>{playing=false;updatePlay();camDay=0;scrollY=0;lastTs=null;});
-document.getElementById('todaybtn').addEventListener('click',()=>{playing=false;updatePlay();camDay=TODAY_DAY;scrollY=isFinite(laneH())&&laneH()>0?TODAY_DAY/7*laneH():0;lastTs=null;});
+document.getElementById('resetbtn').addEventListener('click',()=>{playing=false;updatePlay();camDay=0;viewCenterWeek=weekOfDay(0);lastTs=null;});
+document.getElementById('todaybtn').addEventListener('click',()=>{playing=false;updatePlay();camDay=TODAY_DAY;viewCenterWeek=weekOfDay(TODAY_DAY);lastTs=null;});
 document.getElementById('zi').addEventListener('click',()=>{zoom=Math.min(3,zoom+0.25);});
 document.getElementById('zo').addEventListener('click',()=>{zoom=Math.max(0.3,zoom-0.25);});
 document.querySelectorAll('.sp').forEach(b=>{
   b.addEventListener('click',()=>{speed=+b.dataset.s;document.querySelectorAll('.sp').forEach(x=>x.classList.remove('on'));b.classList.add('on');});
 });
 
-// Drag: vertical = scroll weeks (road moves down = go forward in time = person goes up)
-//        horizontal = scrub within current week
-// Mouse handled via pointer events above
+// Drag / molette : fait défiler la VUE uniquement (viewCenterWeek).
+// Le bonhomme (camDay) ne bouge jamais ici, seulement via les flèches / lecture auto.
 canvas.style.cursor='ns-resize';
-canvas.addEventListener('wheel',e=>{
-  e.preventDefault();
-  camDay=Math.max(0,Math.min(TOTAL_DAYS,camDay+e.deltaY/(PPD*zoom)));
-},{passive:false});
 
-// Touch: same logic
-let tX=null,tY=null,tCam=null;
 // === SCROLL TACTILE via Pointer Events ===
-let pStartY=null, pCamStart=null, pScrollStart=0, pVY=0, pLastY=null, pLastT=null;
-
-function scrollBy(dy){ /* handled in pointermove */ }
+let pStartY=null, pViewStart=0, pVY=0, pLastY=null, pLastT=null;
+const VIEW_MIN_WEEK=0, VIEW_MAX_WEEK=TOTAL_DAYS/7;
+function clampView(w){ return Math.max(VIEW_MIN_WEEK,Math.min(VIEW_MAX_WEEK,w)); }
 
 wrap.style.touchAction='none';
 wrap.addEventListener('pointerdown',e=>{
   if(e.target.closest('button')||e.target.closest('input')) return;
-  pStartY=e.clientY; pCamStart=camDay; pScrollStart=scrollOffset;
+  pStartY=e.clientY; pViewStart=viewCenterWeek;
   pLastY=e.clientY; pLastT=Date.now(); pVY=0;
   wrap.setPointerCapture(e.pointerId);
   e.preventDefault();
@@ -2427,57 +2430,42 @@ wrap.addEventListener('pointermove',e=>{
   const now=Date.now(), dt2=Math.max(1,now-pLastT);
   pVY=(e.clientY-pLastY)/dt2*16;
   pLastY=e.clientY; pLastT=now;
-  // Scroll pixel par pixel — la page entière monte ou descend
+  // Scroll pixel par pixel — la vue monte ou descend, le bonhomme ne bouge pas
   const dy2=e.clientY-pStartY;
   const lh2=laneH()||90;
-  camDay=Math.max(0,Math.min(TOTAL_DAYS, pCamStart - dy2*7/lh2));
+  viewCenterWeek=clampView(pViewStart - dy2/lh2);
   e.preventDefault();
 },{passive:false});
 
 wrap.addEventListener('wheel',e=>{
   e.preventDefault();
-  scrollOffset -= e.deltaY;
+  const lh2=laneH()||90;
+  viewCenterWeek=clampView(viewCenterWeek + e.deltaY/lh2);
 },{passive:false});
 
 wrap.addEventListener('pointerup',e=>{
   if(pStartY===null) return;
   pStartY=null;
-  // Momentum
+  // Momentum : continue de faire défiler la vue après le relâchement
   let vyM=pVY;
   function doMomentum(){
     if(Math.abs(vyM)<0.5) return;
-    scrollOffset+=vyM;
+    const lh2=laneH()||90;
+    viewCenterWeek=clampView(viewCenterWeek - vyM/lh2);
     vyM*=0.90;
     requestAnimationFrame(doMomentum);
   }
   doMomentum();
-  // Momentum
-  let vy=pVY;
-  function momentum(){
-    if(Math.abs(vy)<0.5) return;
-    scrollY=Math.max(0,Math.min(TOTAL_DAYS/7*laneH(),scrollY-vy));
-    vy*=0.90;
-    requestAnimationFrame(momentum);
-  }
-  momentum();
 });
 wrap.addEventListener('pointercancel',()=>{pStartY=null;});
 
 
-// Boutons navigation tactiles
-let navInterval=null;
-function startNav(dir){
-  // dir=1 avance, dir=-1 recule
-  function step(){ camDay=Math.max(0,Math.min(TOTAL_DAYS,camDay+dir*0.5)); }
-  step();
-  navInterval=setInterval(step,30);
-}
-function stopNav(){ if(navInterval){clearInterval(navInterval);navInterval=null;} }
-
-
-// Navigation buttons - hold to scroll
+// Boutons navigation (flèches) — déplacent le bonhomme (camDay), et la vue le suit
 let navIv=null;
-function startNav(d){ camDay=Math.max(0,Math.min(TOTAL_DAYS,Math.round(camDay/7)*7+d)); }
+function startNav(d){
+  camDay=Math.max(0,Math.min(TOTAL_DAYS,Math.round(camDay/7)*7+d));
+  viewCenterWeek=weekOfDay(camDay);
+}
 function stopNav(){ clearInterval(navIv); navIv=null; }
 
 window.syncAllCalendars = async function syncAllCalendars(){
@@ -2517,23 +2505,23 @@ const SCROLL_WEEKS = TOTAL_DAYS/7; // nombre total de semaines
 
 function updateScrollbar(){
   const trackH = scrollbarEl.clientHeight;
-  const camWeekNow = Math.floor(camDay/7);
+  const viewWeekNow = Math.floor(viewCenterWeek);
   // Thumb height = proportion visible / total
   const visibleWeeks = Math.max(3, Math.ceil(H/laneH()));
   const thumbH = Math.max(30, trackH * visibleWeeks / SCROLL_WEEKS);
   // Thumb position
-  const scrollFrac = 1 - camWeekNow / SCROLL_WEEKS; // inversé: haut=futur, bas=passé
+  const scrollFrac = 1 - viewWeekNow / SCROLL_WEEKS; // inversé: haut=futur, bas=passé
   const thumbTop = scrollFrac * (trackH - thumbH);
   thumbEl.style.height = thumbH + 'px';
   thumbEl.style.top = thumbTop + 'px';
 }
 
-// Drag thumb
-let thumbDrag = false, thumbStartY = 0, thumbStartCam = 0;
+// Drag thumb — fait défiler la vue (comme le doigt sur l'écran), le bonhomme ne bouge pas
+let thumbDrag = false, thumbStartY = 0, thumbStartView = 0;
 thumbEl.addEventListener('pointerdown', e=>{
   thumbDrag = true;
   thumbStartY = e.clientY;
-  thumbStartCam = camDay;
+  thumbStartView = viewCenterWeek;
   thumbEl.setPointerCapture(e.pointerId);
   e.stopPropagation();
   e.preventDefault();
@@ -2546,7 +2534,7 @@ document.addEventListener('pointermove', e=>{
   const thumbH = Math.max(30, trackH * visibleWeeks / SCROLL_WEEKS);
   const dy = e.clientY - thumbStartY;
   const dWeeks = -dy / (trackH - thumbH) * (SCROLL_WEEKS - visibleWeeks); // inversé
-  camDay = Math.max(0, Math.min(TOTAL_DAYS, thumbStartCam + dWeeks*7));
+  viewCenterWeek = clampView(thumbStartView + dWeeks);
   e.preventDefault();
 },{passive:false});
 
@@ -2559,7 +2547,7 @@ scrollbarEl.addEventListener('click', e=>{
   if(e.target===thumbEl) return;
   const rect = scrollbarEl.getBoundingClientRect();
   const frac = 1 - (e.clientY - rect.top) / scrollbarEl.clientHeight; // inversé
-  camDay = Math.max(0, Math.min(TOTAL_DAYS, frac * TOTAL_DAYS));
+  viewCenterWeek = clampView(frac * SCROLL_WEEKS);
 });
 
 // Update scrollbar in draw loop

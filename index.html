@@ -70,6 +70,10 @@ canvas#c{position:absolute;inset:0;width:100%;height:100%;touch-action:none;}
       <span id="eta-u" style="font-size:12px;color:#5f6368;">jours</span>
     </div>
   </div>
+  <!-- Ascenseur vertical -->
+  <div id="scrollbar" style="position:absolute;right:4px;top:60px;bottom:10px;width:12px;background:rgba(0,0,0,0.08);border-radius:6px;z-index:50;touch-action:none;">
+    <div id="scrollthumb" style="position:absolute;width:12px;background:rgba(0,0,0,0.35);border-radius:6px;cursor:pointer;left:0;"></div>
+  </div>
 </div>
 <script>
 
@@ -1914,6 +1918,7 @@ function draw(ts){
   drawMonthLabels();
   drawTodayMark();
   drawPerson();
+  updateScrollbar();
   requestAnimationFrame(draw);
 }
 
@@ -2501,6 +2506,63 @@ window.syncAllCalendars = async function syncAllCalendars(){
 };
 document.getElementById('syncbtn').addEventListener('click', window.syncAllCalendars);
 window.syncAllCalendars = syncAllCalendars;
+
+// ===== ASCENSEUR =====
+const scrollbarEl = document.getElementById('scrollbar');
+const thumbEl = document.getElementById('scrollthumb');
+
+const SCROLL_WEEKS = TOTAL_DAYS/7; // nombre total de semaines
+
+function updateScrollbar(){
+  const trackH = scrollbarEl.clientHeight;
+  const camWeekNow = Math.floor(camDay/7);
+  // Thumb height = proportion visible / total
+  const visibleWeeks = Math.max(3, Math.ceil(H/laneH()));
+  const thumbH = Math.max(30, trackH * visibleWeeks / SCROLL_WEEKS);
+  // Thumb position
+  const scrollFrac = camWeekNow / SCROLL_WEEKS;
+  const thumbTop = scrollFrac * (trackH - thumbH);
+  thumbEl.style.height = thumbH + 'px';
+  thumbEl.style.top = thumbTop + 'px';
+}
+
+// Drag thumb
+let thumbDrag = false, thumbStartY = 0, thumbStartCam = 0;
+thumbEl.addEventListener('pointerdown', e=>{
+  thumbDrag = true;
+  thumbStartY = e.clientY;
+  thumbStartCam = camDay;
+  thumbEl.setPointerCapture(e.pointerId);
+  e.stopPropagation();
+  e.preventDefault();
+},{passive:false});
+
+document.addEventListener('pointermove', e=>{
+  if(!thumbDrag) return;
+  const trackH = scrollbarEl.clientHeight;
+  const visibleWeeks = Math.max(3, Math.ceil(H/laneH()));
+  const thumbH = Math.max(30, trackH * visibleWeeks / SCROLL_WEEKS);
+  const dy = e.clientY - thumbStartY;
+  const dWeeks = dy / (trackH - thumbH) * (SCROLL_WEEKS - visibleWeeks);
+  camDay = Math.max(0, Math.min(TOTAL_DAYS, thumbStartCam + dWeeks*7));
+  scrollOffset = 0;
+  e.preventDefault();
+},{passive:false});
+
+document.addEventListener('pointerup', e=>{
+  thumbDrag = false;
+});
+
+// Click on track to jump
+scrollbarEl.addEventListener('click', e=>{
+  if(e.target===thumbEl) return;
+  const rect = scrollbarEl.getBoundingClientRect();
+  const frac = (e.clientY - rect.top) / scrollbarEl.clientHeight;
+  camDay = Math.max(0, Math.min(TOTAL_DAYS, frac * TOTAL_DAYS));
+  scrollOffset = 0;
+});
+
+// Update scrollbar in draw loop
 </script>
 </body>
 </html>

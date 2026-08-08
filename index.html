@@ -9,8 +9,8 @@
 *{box-sizing:border-box;margin:0;padding:0;}
 body{font-family:Arial,sans-serif;}
 #wrap{position:relative;width:100vw;height:100vh;overflow:hidden;}
-canvas#c{position:absolute;inset:0;width:100%;height:100%;touch-action:none;}
-#hud{position:absolute;top:12px;left:12px;right:12px;z-index:20;display:flex;gap:8px;align-items:center;}
+canvas#c{position:absolute;inset:0;width:100%;height:100%;touch-action:none;pointer-events:none;}
+#hud{position:absolute;top:12px;left:12px;right:12px;z-index:1000;display:flex;gap:8px;align-items:center;}
 #sbox{flex:1;height:40px;background:#fff;border:none;border-radius:20px;padding:0 16px 0 40px;font-size:13px;color:#202124;outline:none;box-shadow:0 2px 6px rgba(0,0,0,0.2);}
 #sico{position:absolute;left:26px;top:50%;transform:translateY(-50%);color:#5f6368;font-size:15px;pointer-events:none;}
 #mbtn{width:40px;height:40px;min-width:40px;background:#fff;border-radius:50%;border:none;cursor:pointer;display:flex;align-items:center;justify-content:center;box-shadow:0 2px 6px rgba(0,0,0,0.2);color:#5f6368;}
@@ -29,6 +29,13 @@ canvas#c{position:absolute;inset:0;width:100%;height:100%;touch-action:none;}
 .legline{width:18px;height:4px;border-radius:2px;background:#e53935;}
 #eta{position:absolute;bottom:12px;left:12px;right:60px;z-index:20;background:#fff;border-radius:12px;padding:10px 14px;display:flex;align-items:center;justify-content:space-between;box-shadow:0 2px 8px rgba(0,0,0,0.18);}
 </style>
+  <script src="https://accounts.google.com/gsi/client" async defer>
+window.syncAllCalendars = syncAllCalendars;
+</script>
+
+<style>
+@keyframes spin { from{transform:rotate(0deg)} to{transform:rotate(360deg)} }
+</style>
 </head>
 <body>
 <div id="wrap">
@@ -39,6 +46,7 @@ canvas#c{position:absolute;inset:0;width:100%;height:100%;touch-action:none;}
       <i class="ti ti-calendar" id="sico"></i>
       <input id="sbox" type="text" value="Route du temps · Jan 2023 › Déc 2027" readonly>
     </div>
+    <button id="syncbtn" style="position:relative;z-index:1000;pointer-events:auto;width:40px;height:40px;min-width:40px;background:#fff;border-radius:50%;border:none;cursor:pointer;display:flex;align-items:center;justify-content:center;box-shadow:0 2px 6px rgba(0,0,0,0.2);color:#34a853;font-size:18px;" title="Synchroniser Google Agenda"><i class="ti ti-refresh"></i></button>
   </div>
   <div id="speeds">
     <button class="sp" data-s="0.2">×⅕</button>
@@ -54,25 +62,17 @@ canvas#c{position:absolute;inset:0;width:100%;height:100%;touch-action:none;}
     <div class="leg"><div class="legline"></div>Samedi</div>
     <div class="leg"><div style="width:10px;height:16px;background:linear-gradient(#ff9800,#66bb6a,#42a5f5);border-radius:2px;"></div>Vacances zone A</div>
   </div>
-  <div style="display:flex;justify-content:flex-end;margin-top:4px;">
-    <button id="syncbtn" style="position:relative;z-index:1000;pointer-events:auto;width:36px;height:36px;background:#fff;border-radius:50%;border:none;cursor:pointer;display:flex;align-items:center;justify-content:center;box-shadow:0 2px 6px rgba(0,0,0,0.2);color:#34a853;font-size:16px;" title="Synchroniser Google Agenda">↺</button>
-  </div>
   <div id="zbx">
     <button class="zb" id="zi">+</button>
     <button class="zb" id="zo">−</button>
   </div>
-  <button id="todaybtn" title="Aujourd'hui">Auj</button>
-  <button id="resetbtn" title="Retour au début"><i class="ti ti-arrow-back-up"></i></button>
-  <button id="playbtn"><i class="ti ti-player-play" id="pico"></i></button>      <div id="eta-name" style="font-size:14px;font-weight:500;color:#202124;margin-top:1px;">—</div>
+  <button id="todaybtn" title="Aujourd'hui">Auj</button>  <button id="resetbtn" title="Retour au début"><i class="ti ti-arrow-back-up"></i></button>
+  <button id="revbtn" title="Reculer"><i class="ti ti-player-play" style="transform:scaleX(-1);display:inline-block"></i></button><button id="playbtn"><i class="ti ti-player-play" id="pico"></i></button>      <div id="eta-name" style="font-size:14px;font-weight:500;color:#202124;margin-top:1px;">—</div>
     </div>
     <div style="display:flex;align-items:baseline;gap:3px;">
       <span id="eta-d" style="font-size:22px;font-weight:500;color:#1a73e8;">—</span>
       <span id="eta-u" style="font-size:12px;color:#5f6368;">jours</span>
     </div>
-  </div>
-  <!-- Ascenseur vertical -->
-  <div id="scrollbar" style="position:absolute;right:4px;top:60px;bottom:10px;width:12px;background:rgba(0,0,0,0.08);border-radius:6px;z-index:50;touch-action:none;">
-    <div id="scrollthumb" style="position:absolute;width:12px;background:rgba(0,0,0,0.35);border-radius:6px;cursor:pointer;left:0;"></div>
   </div>
 </div>
 <script>
@@ -1836,18 +1836,8 @@ const wrap=document.getElementById('wrap');
 let W,H;
 
 let camDay=TODAY_DAY, playing=false, speed=3, lastTs=null, pulse=0, zoom=1;
+let scrollY=TODAY_DAY/7*90; // scrollY en pixels, 90px par lane
 const PPD=90;
-
-// weekOfDay: numéro de semaine française (continu) correspondant à un jour donné
-function weekOfDay(day){
-  const jsDay=(TODAY_DOW+Math.round(day))%7;
-  const frDay=(jsDay+6)%7;
-  return (Math.round(day)-frDay)/7;
-}
-// viewCenterWeek = semaine actuellement centrée à l'écran.
-// Séparée de camDay: le scroll tactile ne modifie QUE viewCenterWeek,
-// le bonhomme (camDay) ne bouge qu'avec les flèches / lecture auto.
-let viewCenterWeek = weekOfDay(TODAY_DAY);
 
 function resize(){ const r=wrap.getBoundingClientRect(); W=canvas.width=r.width; H=canvas.height=r.height; }
 
@@ -1860,20 +1850,16 @@ function roadHW(){ return Math.max(22,Math.min(70,W*0.09))*zoom; }
 // Nombre de lanes visibles simultanément
 function lanesPerScreen(){ return Math.max(3, Math.floor((H*0.82) / laneH())); }
 
-
-function getCamWeek(){
-  // Semaine centrée à l'écran (vue), utilisée pour les bornes de boucle
-  return Math.floor(viewCenterWeek);
-}
 function dayToScreen(day){
   const lh=laneH(), mg=margin(), rw=W-2*mg;
-  const jsDay=(TODAY_DOW+day)%7;
-  const frDay=(jsDay+6)%7; // 0=Lu...6=Di
-  const weekNum=Math.floor((day-frDay)/7);
-  const x=mg+(frDay+0.5)/7*rw;
-  // viewCenterWeek (continu, non arrondi) permet un scroll fluide au pixel
-  const y=H*0.65-(weekNum-viewCenterWeek)*lh;
-  return{x,y,lane:weekNum,dir:1,hw:roadHW()};
+  const lane=Math.floor(day/7);
+  const pos=(day%7)/7;
+  const dir=(lane%2===0)?1:-1;
+  const x=dir===1 ? mg+pos*rw : (W-mg)-pos*rw;
+  // scrollY contrôle tout : lane 0 à y=H*0.65 quand scrollY=0
+  // scrollY augmente → tout monte (passé descend, futur monte)
+  const y = H*0.65 - lane*lh + scrollY;
+  return{x,y,lane,dir,hw:roadHW()};
 }
 
 function carScreen(){
@@ -1911,9 +1897,16 @@ function draw(ts){
   if(!lastTs)lastTs=ts;
   const dt=Math.min((ts-lastTs)/1000,0.1); lastTs=ts; pulse+=dt*2.5;
   if(playing){
-    camDay=Math.min(TOTAL_DAYS,camDay+dt*speed);
-    viewCenterWeek=weekOfDay(camDay);
+    scrollY+=dt*speed*laneH()/7;
+    scrollY=Math.max(0,Math.min(TOTAL_DAYS/7*laneH(),scrollY));
   }
+  if(playingReverse){
+    camDay=Math.max(0,camDay-dt*0.2);
+    scrollY=camDay/7*laneH();
+    if(camDay<=0){playingReverse=false;document.getElementById("revbtn").style.background="";document.getElementById("revbtn").style.color="";}
+  }
+  // camDay toujours dérivé de scrollY
+  camDay=Math.max(0,Math.min(TOTAL_DAYS,scrollY*7/laneH()));
   ctx.clearRect(0,0,W,H);
 
   drawBackground();
@@ -1930,7 +1923,6 @@ function draw(ts){
   drawMonthLabels();
   drawTodayMark();
   drawPerson();
-  updateScrollbar();
   requestAnimationFrame(draw);
 }
 
@@ -1940,9 +1932,9 @@ function drawBackground(){
   ctx.fillRect(0,0,W,H);
   // Subtle horizontal lines between lanes
   const lh=laneH(), hw=roadHW();
-  const camLane=getCamWeek();
+  const camLane=Math.floor(camDay/7);
   const carY=H*0.82;
-  const lps2=lanesPerScreen(),personLane2=getCamWeek(),batchStart2=personLane2-(personLane2%lps2);
+  const lps2=lanesPerScreen(),personLane2=Math.floor(camDay/7),batchStart2=personLane2-(personLane2%lps2);
   for(let ln=batchStart2-1;ln<=batchStart2+lps2+1;ln++){
     const y=carY-(ln-camLane)*lh;
     if(y<-20||y>H+20) continue;
@@ -1959,62 +1951,99 @@ function drawBackground(){
 
 function drawAllLanes(){
   const mg=margin(), rw=W-2*mg, lh=laneH(), hw=roadHW();
-  const camWeek2=getCamWeek();
-  const _vl=Math.ceil(H/lh)+4;
-  const dayW=rw/7;
+  const camLane=Math.floor(camDay/7);
 
-  for(let ln=camWeek2-_vl; ln<=camWeek2+_vl; ln++){
-    if(ln<0) continue;
-    const y=H*0.65-(ln-camWeek2)*lh;
+  const lps2=lanesPerScreen(),personLane2=Math.floor(camDay/7),batchStart2=personLane2-(personLane2%lps2);
+  for(let ln=batchStart2-1;ln<=batchStart2+lps2+1;ln++){
+    const{y}=dayToScreen(ln*7);
+    const lps=lanesPerScreen(),personLane=Math.floor(camDay/7),batchStart=personLane-(personLane%lps);
+    if(ln<batchStart||ln>batchStart+lps+1) continue;
     if(!visible(y)) continue;
+    const dir=(ln%2===0)?1:-1;
+    const isCurrentLane=(ln===camLane);
 
-    // === BANDE HORIZONTALE : 7 cases égales ===
-    // Fond de toute la bande
+    // === ROUTE PRINCIPALE : bande d'asphalte bien visible ===
+    // Fond sombre avec bordures nettes
     ctx.fillStyle='#d4d8de';
     ctx.fillRect(mg, y-hw, rw, hw*2);
 
-    // Bordure haute et basse
-    ctx.strokeStyle='#5a6070'; ctx.lineWidth=Math.max(2,hw*0.12); ctx.setLineDash([]);
-    ctx.beginPath();ctx.moveTo(mg,y-hw);ctx.lineTo(mg+rw,y-hw);ctx.stroke();
-    ctx.beginPath();ctx.moveTo(mg,y+hw);ctx.lineTo(mg+rw,y+hw);ctx.stroke();
+    // Reflet léger au centre
+    const rg=ctx.createLinearGradient(mg,y-hw,mg,y+hw);
+    rg.addColorStop(0,'rgba(0,0,0,0.04)');
+    rg.addColorStop(0.5,'rgba(255,255,255,0.08)');
+    rg.addColorStop(1,'rgba(0,0,0,0.04)');
+    ctx.fillStyle=rg;
+    ctx.fillRect(mg,y-hw,rw,hw*2);
 
-    // Séparateurs verticaux entre les 7 jours
-    ctx.strokeStyle='rgba(0,0,0,0.20)'; ctx.lineWidth=1;
-    for(let d=1;d<7;d++){
-      const dx=mg+d*dayW;
-      ctx.beginPath();ctx.moveTo(dx,y-hw);ctx.lineTo(dx,y+hw);ctx.stroke();
+    // Bandes latérales blanches épaisses (marquage routier)
+    ctx.strokeStyle='#5a6070'; ctx.lineWidth=Math.max(2.5,hw*0.12); ctx.setLineDash([]);
+    ctx.beginPath();ctx.moveTo(mg,y-hw+1);ctx.lineTo(W-mg,y-hw+1);ctx.stroke();
+    ctx.beginPath();ctx.moveTo(mg,y+hw-1);ctx.lineTo(W-mg,y+hw-1);ctx.stroke();
+
+    // Liseré jaune intérieur (comme route nationale)
+    ctx.strokeStyle='rgba(150,150,150,0.5)'; ctx.lineWidth=Math.max(1,hw*0.04);
+    ctx.beginPath();ctx.moveTo(mg,y-hw+Math.max(4,hw*0.18));ctx.lineTo(W-mg,y-hw+Math.max(4,hw*0.18));ctx.stroke();
+    ctx.beginPath();ctx.moveTo(mg,y+hw-Math.max(4,hw*0.18));ctx.lineTo(W-mg,y+hw-Math.max(4,hw*0.18));ctx.stroke();
+
+    // Traits fins noirs entre les jours (décalés de 0.5 jour = milieu entre deux jours)
+    ctx.strokeStyle='rgba(0,0,0,0.25)';
+    ctx.lineWidth=Math.max(0.5,hw*0.03);
+    ctx.setLineDash([]);
+    for(let d=0;d<7;d++){
+      const dx=mg+(d+0.5)*(rw/7);
+      ctx.beginPath();ctx.moveTo(dx,y-hw+2);ctx.lineTo(dx,y+hw-2);ctx.stroke();
     }
 
-    // Bordure gauche et droite
-    ctx.strokeStyle='#5a6070'; ctx.lineWidth=Math.max(2,hw*0.12);
-    ctx.beginPath();ctx.moveTo(mg,y-hw);ctx.lineTo(mg,y+hw);ctx.stroke();
-    ctx.beginPath();ctx.moveTo(mg+rw,y-hw);ctx.lineTo(mg+rw,y+hw);ctx.stroke();
-
-    // Highlight semaine courante
-    if(ln===camWeek2){
+    // Surbrillance sur la lane courante
+    if(isCurrentLane){
       ctx.fillStyle='rgba(251,191,36,0.08)';
       ctx.fillRect(mg,y-hw,rw,hw*2);
     }
 
-    // === TRAIT Di→Lu (connexion entre semaines) ===
-    // Di est à droite (x=mg+rw-dayW/2), Lu est à gauche (x=mg+dayW/2) de la semaine du dessus
-    const nextY=H*0.65-(ln+1-camWeek2)*lh;
-    if(visible(nextY)||visible(y)){
-      const xDi=mg+rw-dayW*0.5;  // centre Di (dernier jour)
-      const xLu=mg+dayW*0.5;      // centre Lu (premier jour semaine suivante)
-      ctx.strokeStyle='rgba(80,80,80,0.45)';
-      ctx.lineWidth=Math.max(1.5,hw*0.08);
-      ctx.setLineDash([4,4]);
-      ctx.beginPath();
-      ctx.moveTo(xDi, y-hw); // haut de Di
-      // Courbe vers Lu de la semaine suivante
-      ctx.bezierCurveTo(
-        xDi, y-hw-lh*0.4,   // point contrôle 1 (monte à droite)
-        xLu, nextY+hw+lh*0.4, // point contrôle 2 (descend à gauche)
-        xLu, nextY+hw         // arrivée Lu (bas de la semaine suivante)
-      );
-      ctx.stroke();
-      ctx.setLineDash([]);
+    // === VIRAGE en bout de lane ===
+    // Relie la fin de cette lane au début de la lane suivante (au-dessus)
+    if(ln>=0 && ln<Math.ceil(TOTAL_DAYS/7)){
+      const nextY=y-lh;
+      if(visible(y)||visible(nextY)){
+        // Centre de l'arc = côté de sortie, entre les deux lanes
+        const arcX = dir===1 ? W-mg : mg;
+        const arcCY = (y+nextY)/2;  // exactement entre les deux
+        const arcR  = lh/2;          // rayon = demi-écart entre lanes
+
+        // Pour LTR (dir=1): on quitte par la droite, l'arc tourne à gauche (anticlockwise en haut)
+        // Angles: départ = PI/2 (bas de l'arc, côté lane courante)
+        //         fin    = -PI/2 = 3PI/2 (haut de l'arc, côté lane suivante)
+        // Pour RTL (dir=-1): symétrique
+        const startA = Math.PI/2;   // pointe vers le bas (lane courante)
+        const endA   = -Math.PI/2;  // pointe vers le haut (lane suivante)
+        const ccw    = dir===1;     // LTR → tourne dans le sens anti-horaire (va vers la gauche en haut)
+
+        // Fond asphalte du virage — remplissage par chemin fermé (pas de lineCap)
+        ctx.setLineDash([]);
+
+        // Remplir avec un anneau — garder arcR-hw > 0
+        const innerR=Math.max(1, arcR-hw);
+        const outerR=arcR+hw;
+        ctx.fillStyle='#d4d8de';
+        ctx.beginPath();
+        ctx.arc(arcX, arcCY, outerR, startA, endA, ccw);
+        ctx.arc(arcX, arcCY, innerR, endA, startA, !ccw);
+        ctx.closePath();
+        ctx.fill();
+
+        // Bordures extérieure et intérieure
+        ctx.strokeStyle='#5a6070';
+        ctx.lineWidth=Math.max(2,hw*0.12);
+        ctx.lineCap='butt';
+        ctx.beginPath();
+        ctx.arc(arcX, arcCY, outerR, startA, endA, ccw);
+        ctx.stroke();
+        if(innerR>1){
+          ctx.beginPath();
+          ctx.arc(arcX, arcCY, innerR, startA, endA, ccw);
+          ctx.stroke();
+        }
+      }
     }
   }
 }
@@ -2023,26 +2052,111 @@ function drawDayMarks(){}
 
 function drawWeekendZones(){}
 
-function drawVacanceBands(){}
+function drawVacanceBands(){
+  // Trait bleu continu le long du bord SUPÉRIEUR de la route pour chaque période de vacances
+  const hw=roadHW();
+  const lw=Math.max(3,hw*0.18);
+
+  VACANCES_A.forEach(v=>{
+    // Dessiner segment par segment jour par jour
+    // Mais connecter les points consécutifs sur la même lane
+    let prevX=null, prevY=null, prevLane=null;
+
+    for(let d=v.start;d<=v.end+1;d++){
+      const{x,y,lane}=dayToScreen(Math.min(d,TOTAL_DAYS));
+      const screenY=y-hw+lw/2; // bord supérieur de la route
+
+      if(!visible(y)){prevX=null;prevY=null;prevLane=null;continue;}
+
+      if(prevX!==null && lane===prevLane){
+        // Même lane: tracer le segment
+        ctx.strokeStyle='rgba(33,150,243,0.90)';
+        ctx.lineWidth=lw;
+        ctx.lineCap='round';
+        ctx.setLineDash([]);
+        ctx.beginPath();
+        ctx.moveTo(prevX,prevY);
+        ctx.lineTo(x,screenY);
+        ctx.stroke();
+      }
+      prevX=x; prevY=screenY; prevLane=lane;
+    }
+  });
+}
 
 function drawJoursFeriesBands(){}
 
 function drawMultiEventBands(){
-  // Colorier les cases des jours en orange très clair pour les événements loisirs
-  const KEYWORDS=['randon', 'voyage', 'vacance', 'séjour', 'sejour', 'trek', 'ski', 'montagne', 'plage', 'mer', 'camp', 'avignon', 'festival', 'tropez', 'bdo', 'noah', 'arthur', 'célia', 'celia', 'tangue', 'alpe', 'sarl', 'privas', 'châlons', 'chalons', 'dieulefit', 'gordes', 'sicile', 'lucille', 'william', 'balcon', 'vaujany', 'stay', 'bar des amis', 'sophie', 'paques', 'toussaint', 'ascension', 'interclub'];
+  const hw=roadHW();
+  const lw=Math.max(3,hw*0.18);
+  const KEYWORDS=['randon','voyage','vacance','séjour','sejour','trek','ski','montagne',
+    'plage','mer','camp','avignon','festival','tropez','bdo','noah','arthur','célia',
+    'celia','tangue','alpe','sarl','privas','châlons','chalons','dieulefit','gordes',
+    'sicile','lucille','william','balcon','vaujany','stay','bar des amis','sophie',
+    'séjours','paques','toussaint','ascension','interclub','interclubs'];
+
   function isLeisure(title){
     return KEYWORDS.some(k=>title.toLowerCase().includes(k));
   }
 
+  // Helper: draw the arc connecting end of one lane to start of next
+  function drawTurnArc(fromLane){
+    const lh=laneH(), mg=margin(), rw=W-2*mg;
+    const dir=(fromLane%2===0)?1:-1; // direction of fromLane
+    const y1=dayToScreen(fromLane*7+6).y; // last day of fromLane
+    const y2=dayToScreen((fromLane+1)*7).y; // first day of next lane
+
+    if(!visible(y1)&&!visible(y2)) return;
+
+    // Arc center = turn corner, midpoint between the two lane y's
+    const arcX = dir===1 ? W-mg : mg; // corner X
+    const arcCY = (y1+y2)/2;
+    const arcR  = lh/2;
+    const ccw   = dir===1; // same as in drawAllLanes
+
+    // Offset: bottom edge of road = +hw-lw/2
+    const innerR = arcR - hw + lw/2;
+    const outerR = arcR + hw - lw/2;
+    // The red line is at the BOTTOM of the road = outermost arc (furthest from center)
+    // For dir=1 (LTR, turns left): outer = arcR+hw
+    // The red line follows the outer edge of the turn
+    const redR = arcR + hw - lw/2;
+
+    if(redR>0){
+      ctx.strokeStyle='rgba(230,81,0,0.90)';
+      ctx.lineWidth=lw;
+      ctx.lineCap='round';
+      ctx.setLineDash([]);
+      ctx.beginPath();
+      ctx.arc(arcX, arcCY, redR, Math.PI/2, -Math.PI/2, ccw);
+      ctx.stroke();
+    }
+  }
+
   MULTI_EVENTS.forEach(ev=>{
     if(!isLeisure(ev.title)) return;
-    for(let d=ev.day1; d<=ev.day2; d++){
-      const{x,y,hw}=dayToScreen(d);
-      if(!visible(y)) continue;
-      // Fond orange très clair sur la case du jour
-      const dayW=(W-2*margin())/7;
-      ctx.fillStyle='rgba(255,160,0,0.18)';
-      ctx.fillRect(x-dayW/2+1, y-hw+1, dayW-2, hw*2-2);
+
+    let prevX=null, prevY=null, prevLane=null;
+
+    for(let d=ev.day1; d<=ev.day2+1; d++){
+      const dd=Math.min(d,TOTAL_DAYS);
+      const{x,y,lane}=dayToScreen(dd);
+      const screenY=y+hw-lw/2;
+
+      if(!visible(y)){prevX=null;prevY=null;prevLane=null;continue;}
+
+      if(prevX!==null){
+        if(lane===prevLane){
+          // Same lane: draw straight segment
+          ctx.strokeStyle='rgba(230,81,0,0.90)';
+          ctx.lineWidth=lw; ctx.lineCap='round'; ctx.setLineDash([]);
+          ctx.beginPath(); ctx.moveTo(prevX,prevY); ctx.lineTo(x,screenY); ctx.stroke();
+        } else {
+          // Lane changed: draw the turn arc for prevLane
+          drawTurnArc(prevLane);
+        }
+      }
+      prevX=x; prevY=screenY; prevLane=lane;
     }
   });
 }
@@ -2121,8 +2235,8 @@ function drawMonthLabels(){
   // Positionné entre deux lanes consécutives
   const lh=laneH(), mg=margin();
   const ORIGIN_MS=new Date('2023-01-01T00:00:00Z').getTime();
-  const camLane=getCamWeek();
-  const _vl=Math.ceil(H/lh)+4;
+  const camLane=Math.floor(camDay/7);
+  const _vl=Math.ceil(H/lh)+3;
   const lps=lanesPerScreen();
   const batchStart=camLane-(camLane%lps);
 
@@ -2164,12 +2278,13 @@ function drawMonthLabels(){
 }
 
 function drawDayDates(){
-  // Affiche la date complète dans la case du dimanche, sur 3 lignes
+  // Affiche uniquement la date complète chaque samedi, au centre de la route
   const hw=roadHW();
   const ORIGIN_MS=new Date('2023-01-01T00:00:00Z').getTime();
-  const camLane=getCamWeek();
-  const _vl=Math.ceil(H/laneH())+5;
-   for(let d=Math.max(0,Math.floor((camLane-_vl)*7));
+  const camLane=Math.floor(camDay/7);
+  const _vl=Math.ceil(H/laneH())+3;
+
+  for(let d=Math.max(0,Math.floor((camLane-_vl)*7));
          d<=Math.min(TOTAL_DAYS,Math.ceil((camLane+_vl)*7));d++){
     if(!isSun(d)) continue; // seulement les dimanches
     const{x,y}=dayToScreen(d);
@@ -2180,93 +2295,80 @@ function drawDayDates(){
     const dayNum=dt.getDate();
     const mon=dt.toLocaleDateString('fr-FR',{month:'long'});
     const year=dt.getUTCFullYear();
+    const txt='Dim. '+dayNum+' '+mon+' '+year;
 
-    const fs=Math.max(7,Math.min(12,hw*0.24));
-    const lineH=fs*1.3;
-    // 3 lignes centrées dans la case
-    const lines=['Dimanche', dayNum+' '+mon, String(year)];
-    const totalH=(lines.length-1)*lineH;
-    const startY=y-totalH/2;
+    const fs=Math.max(9,Math.min(16,hw*0.30));
+    ctx.font=`bold ${fs}px Arial`;
+
+    // Décaler le texte vers le centre de la lane pour éviter les virages
+    const mg2=margin(), rw2=W-2*mg2;
+    const lane2=Math.floor(d/7);
+    const dir2=(lane2%2===0)?1:-1;
+    const turnX=dir2===1?W-mg2:mg2;        // x du virage
+    const centerX=W/2;                      // centre de la lane
+    const distToTurn=Math.abs(x-turnX);
+    const distToCenter=Math.abs(x-centerX);
+    // Si trop près du virage (< 15% de la largeur), décaler vers le centre
+    const threshold=rw2*0.15;
+    let tx=x;
+    if(distToTurn<threshold){
+      // Décaler vers le centre de la moitié de route
+      const shift=(threshold-distToTurn)*0.8;
+      tx=dir2===1 ? x-shift : x+shift;
+    }
 
     ctx.textAlign='center'; ctx.textBaseline='middle';
-    lines.forEach((line,i)=>{
-      const ty=startY+i*lineH;
-      ctx.font=i===0?`bold ${fs}px Arial`:`${fs}px Arial`;
-      ctx.fillStyle='rgba(255,255,255,0.75)';
-      ctx.fillText(line,x+1,ty+1);
-      ctx.fillStyle='#1b5e20';
-      ctx.fillText(line,x,ty);
-    });
+    ctx.fillStyle='rgba(255,255,255,0.75)';
+    ctx.fillText(txt,tx+1,y+1);
+    ctx.fillStyle='#1b5e20';
+    ctx.fillText(txt,tx,y);
   }
 }
 
 
 function drawDayLetters(){
+  // Affiche les 2 premières lettres du jour en bas de la route, pour chaque jour
   const hw=roadHW();
   const ORIGIN_MS=new Date('2023-01-01T00:00:00Z').getTime();
-  const camLane=getCamWeek();
+  const camLane=Math.floor(camDay/7);
   const _vl=Math.ceil(H/laneH())+3;
-  const LABELS=['Di','Lu','Ma','Me','Je','Ve','Sa'];
-  const LEISURE_KW=['randon','voyage','vacance','séjour','sejour','trek','ski',
-    'montagne','plage','mer','camp','avignon','festival','tropez','bdo',
-    'noah','arthur','célia','celia','tangue','alpe','sarl','privas','châlons',
-    'chalons','dieulefit','gordes','sicile','lucille','william','balcon','vaujany',
-    'stay','bar des amis','sophie','paques','toussaint','ascension'];
+  // Abréviations 2 lettres
+  const LABELS=['Di','Lu','Ma','Me','Je','Ve','Sa']; // 0=Dim,1=Lun,...,6=Sam
 
-  // Build leisure days map
-  const leisureByDay={};
-  MULTI_EVENTS.forEach(ev=>{
-    const t=ev.title.toLowerCase();
-    if(LEISURE_KW.some(k=>t.includes(k))){
-      for(let d=ev.day1;d<=ev.day2;d++) leisureByDay[d]=ev.title;
-    }
-  });
-
-   for(let d=Math.max(0,Math.floor((camLane-_vl)*7));
+  for(let d=Math.max(0,Math.floor((camLane-_vl)*7));
          d<=Math.min(TOTAL_DAYS,Math.ceil((camLane+_vl)*7));d++){
     const{x,y}=dayToScreen(d);
     if(!visible(y)) continue;
     if(hw<12) continue;
 
-    const jsDay=(TODAY_DOW+d)%7;
+    const jsDay=(TODAY_DOW+d)%7; // 0=Dim,1=Lun,...,6=Sam
     const lbl=LABELS[jsDay];
     const isSat2=jsDay===6, isSun2=jsDay===0;
     const isWE=isSat2||isSun2;
 
     const fs=Math.max(7,Math.min(11,hw*0.22));
-    const ty=y+hw*0.68;
+    const ty=y+hw*0.68; // bas de la route
     const color=isWE?'#1b5e20':'#000000';
 
     // Jour (2 lettres) à gauche de x
     ctx.font=`${isWE?'bold ':' '}${fs}px Arial`;
-    ctx.textAlign='right'; ctx.textBaseline='middle';
+    ctx.textAlign='right';
+    ctx.textBaseline='middle';
     ctx.fillStyle='rgba(255,255,255,0.65)';
     ctx.fillText(lbl, x-2+0.7, ty+0.7);
     ctx.fillStyle=color;
     ctx.fillText(lbl, x-2, ty);
 
     // Numéro du jour à droite de x
-    const dt2=new Date(ORIGIN_MS+d*86400000);
+    const dt2=new Date(new Date('2023-01-01T00:00:00Z').getTime()+d*86400000);
     const dayNum=dt2.getDate();
     ctx.font=`${isWE?'bold ':' '}${fs}px Arial`;
-    ctx.textAlign='left'; ctx.textBaseline='middle';
+    ctx.textAlign='left';
+    ctx.textBaseline='middle';
     ctx.fillStyle='rgba(255,255,255,0.65)';
     ctx.fillText(dayNum, x+2+0.7, ty+0.7);
     ctx.fillStyle=color;
     ctx.fillText(dayNum, x+2, ty);
-
-    // Nom événement loisir en petit EN DESSOUS du numéro
-    if(leisureByDay[d] && hw>18){
-      const evTitle=leisureByDay[d].slice(0,12);
-      const fsSmall=Math.max(6,Math.min(9,hw*0.16));
-      ctx.font=`${fsSmall}px Arial`;
-      ctx.textAlign='center'; ctx.textBaseline='middle';
-      const tyLeisure=ty+fs*1.2; // en dessous de la date
-      ctx.fillStyle='rgba(255,255,255,0.70)';
-      ctx.fillText(evTitle, x+0.6, tyLeisure+0.6);
-      ctx.fillStyle='#e65100';
-      ctx.fillText(evTitle, x, tyLeisure);
-    }
   }
 }
 
@@ -2359,7 +2461,6 @@ function drawPerson(){
   ctx.fillStyle='#e8a882';
   ctx.beginPath();ctx.ellipse(cx,cy-s*0.66,s*0.12,s*0.08,0,0,Math.PI);ctx.fill();
   // Hair
-  if(!isFinite(cx)||!isFinite(cy)||isNaN(s)||s<=0) return;
   const hairG=ctx.createRadialGradient(cx,hcy-s*0.05,0,cx,hcy,s*0.22);
   hairG.addColorStop(0,'#5a3a20');hairG.addColorStop(1,'#2a1808');
   ctx.fillStyle=hairG;
@@ -2398,28 +2499,48 @@ function updatePlay(){ document.getElementById('pico').className=playing?'ti ti-
 
 resize(); requestAnimationFrame(draw); window.addEventListener('resize',resize);
 
-document.getElementById('playbtn').addEventListener('click',()=>{playing=!playing;updatePlay();});
-document.getElementById('resetbtn').addEventListener('click',()=>{playing=false;updatePlay();camDay=0;viewCenterWeek=weekOfDay(0);lastTs=null;});
-document.getElementById('todaybtn').addEventListener('click',()=>{playing=false;updatePlay();camDay=TODAY_DAY;viewCenterWeek=weekOfDay(TODAY_DAY);lastTs=null;});
+document.getElementById('playbtn').addEventListener('click',()=>{
+  if(playingReverse){playingReverse=false;}
+  playing=!playing;updatePlay();
+});
+let playingReverse=false;
+document.getElementById('revbtn').addEventListener('click',()=>{
+  if(playing){playing=false;updatePlay();}
+  playingReverse=!playingReverse;
+  document.getElementById('revbtn').style.background=playingReverse?'#e53935':'';
+  document.getElementById('revbtn').style.color=playingReverse?'#fff':'';
+});
+document.getElementById('resetbtn').addEventListener('click',()=>{playing=false;updatePlay();camDay=0;scrollY=0;lastTs=null;});
+document.getElementById('todaybtn').addEventListener('click',()=>{playing=false;updatePlay();camDay=TODAY_DAY;scrollY=TODAY_DAY/7*laneH();lastTs=null;});
 document.getElementById('zi').addEventListener('click',()=>{zoom=Math.min(3,zoom+0.25);});
 document.getElementById('zo').addEventListener('click',()=>{zoom=Math.max(0.3,zoom-0.25);});
 document.querySelectorAll('.sp').forEach(b=>{
   b.addEventListener('click',()=>{speed=+b.dataset.s;document.querySelectorAll('.sp').forEach(x=>x.classList.remove('on'));b.classList.add('on');});
 });
 
-// Drag / molette : fait défiler la VUE uniquement (viewCenterWeek).
-// Le bonhomme (camDay) ne bouge jamais ici, seulement via les flèches / lecture auto.
+// Drag: vertical = scroll weeks (road moves down = go forward in time = person goes up)
+//        horizontal = scrub within current week
+// Mouse handled via pointer events above
 canvas.style.cursor='ns-resize';
+// wheel doit être posé sur wrap : canvas a pointer-events:none donc ne reçoit jamais l'event
+wrap.addEventListener('wheel',e=>{
+  e.preventDefault();
+  const lh=laneH();
+  // deltaY>0 (molette vers le bas) = avancer dans le temps, comme glisser le doigt vers le haut
+  scrollY=Math.max(0,Math.min(TOTAL_DAYS/7*lh, scrollY+e.deltaY/zoom));
+},{passive:false});
 
+// Touch: same logic
+let tX=null,tY=null,tCam=null;
 // === SCROLL TACTILE via Pointer Events ===
-let pStartY=null, pViewStart=0, pVY=0, pLastY=null, pLastT=null;
-const VIEW_MIN_WEEK=0, VIEW_MAX_WEEK=TOTAL_DAYS/7;
-function clampView(w){ return Math.max(VIEW_MIN_WEEK,Math.min(VIEW_MAX_WEEK,w)); }
+let pStartY=null, pCamStart=null, pScrollStart=0, pVY=0, pLastY=null, pLastT=null;
+
+function scrollBy(dy){ /* handled in pointermove */ }
 
 wrap.style.touchAction='none';
 wrap.addEventListener('pointerdown',e=>{
   if(e.target.closest('button')||e.target.closest('input')) return;
-  pStartY=e.clientY; pViewStart=viewCenterWeek;
+  pStartY=e.clientY; pCamStart=camDay; pScrollStart=scrollY;
   pLastY=e.clientY; pLastT=Date.now(); pVY=0;
   wrap.setPointerCapture(e.pointerId);
   e.preventDefault();
@@ -2427,130 +2548,99 @@ wrap.addEventListener('pointerdown',e=>{
 
 wrap.addEventListener('pointermove',e=>{
   if(pStartY===null) return;
-  const now=Date.now(), dt2=Math.max(1,now-pLastT);
-  pVY=(e.clientY-pLastY)/dt2*16;
+  const now=Date.now(), dt=Math.max(1,now-pLastT);
+  pVY=(e.clientY-pLastY)/dt*16;
   pLastY=e.clientY; pLastT=now;
-  // Scroll pixel par pixel — la vue monte ou descend, le bonhomme ne bouge pas
-  const dy2=e.clientY-pStartY;
-  const lh2=laneH()||90;
-  viewCenterWeek=clampView(pViewStart - dy2/lh2);
+  // scrollY direct: glisser haut=avancer, bas=reculer
+  const dy=e.clientY-pStartY;
+  const lh=laneH();
+  scrollY=Math.max(0,Math.min(TOTAL_DAYS/7*lh, pScrollStart - dy));
   e.preventDefault();
-},{passive:false});
-
-wrap.addEventListener('wheel',e=>{
-  e.preventDefault();
-  const lh2=laneH()||90;
-  viewCenterWeek=clampView(viewCenterWeek + e.deltaY/lh2);
 },{passive:false});
 
 wrap.addEventListener('pointerup',e=>{
   if(pStartY===null) return;
   pStartY=null;
-  // Momentum : continue de faire défiler la vue après le relâchement
-  let vyM=pVY;
-  function doMomentum(){
-    if(Math.abs(vyM)<0.5) return;
-    const lh2=laneH()||90;
-    viewCenterWeek=clampView(viewCenterWeek - vyM/lh2);
-    vyM*=0.90;
-    requestAnimationFrame(doMomentum);
+  // Momentum
+  let vy=pVY;
+  function momentum(){
+    if(Math.abs(vy)<0.5) return;
+    scrollY=Math.max(0,Math.min(TOTAL_DAYS/7*laneH(),scrollY-vy));
+    vy*=0.90;
+    requestAnimationFrame(momentum);
   }
-  doMomentum();
+  momentum();
 });
 wrap.addEventListener('pointercancel',()=>{pStartY=null;});
 
 
-// Boutons navigation (flèches) — déplacent le bonhomme (camDay), et la vue le suit
-let navIv=null;
-function startNav(d){
-  camDay=Math.max(0,Math.min(TOTAL_DAYS,Math.round(camDay/7)*7+d));
-  viewCenterWeek=weekOfDay(camDay);
+// Boutons navigation tactiles
+let navInterval=null;
+function startNav(dir){
+  // dir=1 avance, dir=-1 recule
+  function step(){ camDay=Math.max(0,Math.min(TOTAL_DAYS,camDay+dir*0.5)); }
+  step();
+  navInterval=setInterval(step,30);
 }
+function stopNav(){ if(navInterval){clearInterval(navInterval);navInterval=null;} }
+
+
+// Navigation buttons - hold to scroll
+let navIv=null;
+function startNav(d){ camDay=Math.max(0,Math.min(TOTAL_DAYS,Math.round(camDay/7)*7+d)); }
 function stopNav(){ clearInterval(navIv); navIv=null; }
 
-window.syncAllCalendars = async function syncAllCalendars(){
+
+// ===== SYNCHRONISATION GOOGLE CALENDAR =====
+const APPS_SCRIPT_URL = 'https://raw.githubusercontent.com/jfesteoule/agenda-jf/main/events.json';
+
+async function syncAllCalendars(){
   const btn = document.getElementById('syncbtn');
   btn.style.color='#fbbc04';
   btn.style.animation='spin 1s linear infinite';
-  const APPS_SCRIPT_URL='https://raw.githubusercontent.com/jfesteoule/agenda-jf/main/events.json';
+
   try {
     const resp = await fetch(APPS_SCRIPT_URL);
     if(!resp.ok) throw new Error('HTTP ' + resp.status);
     const events = await resp.json();
+
     const ORIGIN = new Date('2023-01-01T00:00:00Z');
-    EVT_JF.length=0; EVT_ANNE.length=0;
+
+    EVT_JF.length=0;
+    EVT_ANNE.length=0;
+
     events.forEach(ev=>{
-      const d=new Date(ORIGIN.getTime()+ev.day*86400000);
-      const label=d.getDate()+' '+d.toLocaleString('fr-FR',{month:'short'});
-      const item={day:ev.day,label,title:(ev.title||'').slice(0,40),color:ev.side==='right'?'#1a73e8':'#e67c73',side:ev.side,who:ev.who};
-      if(ev.side==='right') EVT_JF.push(item); else EVT_ANNE.push(item);
+      const d = new Date(ORIGIN.getTime() + ev.day*86400000);
+      const label = d.getDate() + ' ' + d.toLocaleString('fr-FR',{month:'short'});
+      const item = {
+        day: ev.day,
+        label: label,
+        title: (ev.title||'').slice(0,40),
+        color: ev.side==='right' ? '#1a73e8' : '#e67c73',
+        side: ev.side,
+        who: ev.who
+      };
+      if(ev.side==='right') EVT_JF.push(item);
+      else EVT_ANNE.push(item);
     });
+
     ALL_EVENTS.length=0;
     [...EVT_JF,...EVT_ANNE].sort((a,b)=>a.day-b.day).forEach(e=>ALL_EVENTS.push(e));
-    btn.style.color='#34a853'; btn.style.animation='';
-    alert('✓ '+events.length+' événements synchronisés !');
+
+    btn.style.color='#34a853';
+    btn.style.animation='';
+    alert('✓ ' + events.length + ' événements synchronisés !');
+
   } catch(err) {
-    btn.style.color='#ea4335'; btn.style.animation='';
-    alert('Erreur sync: '+err.message);
+    btn.style.color='#ea4335';
+    btn.style.animation='';
+    alert('Erreur sync: ' + err.message);
+    console.error(err);
   }
-};
-document.getElementById('syncbtn').addEventListener('click', window.syncAllCalendars);
-window.syncAllCalendars = syncAllCalendars;
-
-// ===== ASCENSEUR =====
-const scrollbarEl = document.getElementById('scrollbar');
-const thumbEl = document.getElementById('scrollthumb');
-
-const SCROLL_WEEKS = TOTAL_DAYS/7; // nombre total de semaines
-
-function updateScrollbar(){
-  const trackH = scrollbarEl.clientHeight;
-  const viewWeekNow = Math.floor(viewCenterWeek);
-  // Thumb height = proportion visible / total
-  const visibleWeeks = Math.max(3, Math.ceil(H/laneH()));
-  const thumbH = Math.max(30, trackH * visibleWeeks / SCROLL_WEEKS);
-  // Thumb position
-  const scrollFrac = 1 - viewWeekNow / SCROLL_WEEKS; // inversé: haut=futur, bas=passé
-  const thumbTop = scrollFrac * (trackH - thumbH);
-  thumbEl.style.height = thumbH + 'px';
-  thumbEl.style.top = thumbTop + 'px';
 }
 
-// Drag thumb — fait défiler la vue (comme le doigt sur l'écran), le bonhomme ne bouge pas
-let thumbDrag = false, thumbStartY = 0, thumbStartView = 0;
-thumbEl.addEventListener('pointerdown', e=>{
-  thumbDrag = true;
-  thumbStartY = e.clientY;
-  thumbStartView = viewCenterWeek;
-  thumbEl.setPointerCapture(e.pointerId);
-  e.stopPropagation();
-  e.preventDefault();
-},{passive:false});
+document.getElementById('syncbtn').addEventListener('click', window.syncAllCalendars);
 
-document.addEventListener('pointermove', e=>{
-  if(!thumbDrag) return;
-  const trackH = scrollbarEl.clientHeight;
-  const visibleWeeks = Math.max(3, Math.ceil(H/laneH()));
-  const thumbH = Math.max(30, trackH * visibleWeeks / SCROLL_WEEKS);
-  const dy = e.clientY - thumbStartY;
-  const dWeeks = -dy / (trackH - thumbH) * (SCROLL_WEEKS - visibleWeeks); // inversé
-  viewCenterWeek = clampView(thumbStartView + dWeeks);
-  e.preventDefault();
-},{passive:false});
-
-document.addEventListener('pointerup', e=>{
-  thumbDrag = false;
-});
-
-// Click on track to jump
-scrollbarEl.addEventListener('click', e=>{
-  if(e.target===thumbEl) return;
-  const rect = scrollbarEl.getBoundingClientRect();
-  const frac = 1 - (e.clientY - rect.top) / scrollbarEl.clientHeight; // inversé
-  viewCenterWeek = clampView(frac * SCROLL_WEEKS);
-});
-
-// Update scrollbar in draw loop
 </script>
 </body>
 </html>

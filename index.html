@@ -1836,7 +1836,7 @@ const wrap=document.getElementById('wrap');
 let W,H;
 
 let camDay=TODAY_DAY, playing=false, speed=3, lastTs=null, pulse=0, zoom=1;
-let scrollY=TODAY_DAY/7*90; // scrollY en pixels, 90px par lane
+let scrollY=0; // recalculé après resize() pour partir pile sur aujourd'hui
 const PPD=90;
 
 function resize(){ const r=wrap.getBoundingClientRect(); W=canvas.width=r.width; H=canvas.height=r.height; }
@@ -2497,7 +2497,7 @@ function updateEta(){
 
 function updatePlay(){ document.getElementById('pico').className=playing?'ti ti-player-pause':'ti ti-player-play'; }
 
-resize(); requestAnimationFrame(draw); window.addEventListener('resize',resize);
+resize(); scrollY=TODAY_DAY/7*laneH(); requestAnimationFrame(draw); window.addEventListener('resize',resize);
 
 document.getElementById('playbtn').addEventListener('click',()=>{
   if(playingReverse){playingReverse=false;}

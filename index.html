@@ -1937,6 +1937,7 @@ function draw(ts){
   drawMonthLabels();
   drawTodayMark();
   drawPerson();
+  drawHaze();
   requestAnimationFrame(draw);
 }
 
@@ -1947,8 +1948,21 @@ function drawBackground(){
   ctx.fillStyle='#c8dba8';
   ctx.fillRect(0,0,W,H);
   const skyH=Math.min(60,H*0.10);
-  ctx.fillStyle='#87ceeb';
+  const sky=ctx.createLinearGradient(0,0,0,skyH);
+  sky.addColorStop(0,'#a9d8ec');
+  sky.addColorStop(1,'#d7ecd0');
+  ctx.fillStyle=sky;
   ctx.fillRect(0,0,W,skyH);
+}
+
+function drawHaze(){
+  // Léger effet de perspective/brume vers le fond (haut de l'écran = plus loin)
+  const hazeH=Math.min(260,H*0.42);
+  const g=ctx.createLinearGradient(0,0,0,hazeH);
+  g.addColorStop(0,'rgba(225,238,232,0.30)');
+  g.addColorStop(1,'rgba(225,238,232,0)');
+  ctx.fillStyle=g;
+  ctx.fillRect(0,0,W,hazeH);
 }
 
 function drawAllLanes(){

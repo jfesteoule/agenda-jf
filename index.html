@@ -1961,6 +1961,18 @@ function draw(ts){
 function weekX(week){ return W/2 + snakeAmp()*snakeFrac(week); }
 function weekBottomY(week){ return H*0.65 - week*laneH() + scrollY; } // y du lundi de cette semaine
 
+const MONTH_ORIGIN_MS=new Date('2023-01-01T00:00:00Z').getTime();
+function monthTint(week){
+  // Couleur pastel pseudo-aléatoire mais stable, propre à chaque mois calendaire
+  const firstDay=week*7+MON_SHIFT;
+  const dt=new Date(MONTH_ORIGIN_MS+firstDay*86400000);
+  const seed=dt.getUTCFullYear()*12+dt.getUTCMonth();
+  let h=Math.sin(seed*12.9898)*43758.5453;
+  h=h-Math.floor(h);
+  const hue=Math.floor(h*360);
+  return `hsla(${hue},70%,55%,0.15)`;
+}
+
 function drawBackground(){
   ctx.fillStyle='#c8dba8';
   ctx.fillRect(0,0,W,H);
@@ -2021,6 +2033,13 @@ function drawAllLanes(){
     ctx.lineTo(pBR.x,pBR.y);ctx.lineTo(pBL.x,pBL.y);
     ctx.closePath();ctx.fill();
 
+    // Teinte légère propre au mois (change au fil des mois, sans gêner la lecture)
+    ctx.fillStyle=monthTint(ln);
+    ctx.beginPath();
+    ctx.moveTo(pTL.x,pTL.y);ctx.lineTo(pTR.x,pTR.y);
+    ctx.lineTo(pBR.x,pBR.y);ctx.lineTo(pBL.x,pBL.y);
+    ctx.closePath();ctx.fill();
+
     // Bordures latérales
     ctx.strokeStyle='#5a6070'; ctx.lineWidth=Math.max(2.5,hwRaw*0.12*pBL.s); ctx.setLineDash([]);
     ctx.beginPath();ctx.moveTo(pTL.x,pTL.y);ctx.lineTo(pBL.x,pBL.y);ctx.stroke();
@@ -2049,6 +2068,12 @@ function drawAllLanes(){
     const pNL=project(xr2-hwRaw,yr2), pNR=project(xr2+hwRaw,yr2);
     if(visible(pTL.y)||visible(pNL.y)){
       ctx.fillStyle='#d4d8de';
+      ctx.beginPath();
+      ctx.moveTo(pTL.x,pTL.y);ctx.lineTo(pNL.x,pNL.y);
+      ctx.lineTo(pNR.x,pNR.y);ctx.lineTo(pTR.x,pTR.y);
+      ctx.closePath();ctx.fill();
+
+      ctx.fillStyle=monthTint(ln);
       ctx.beginPath();
       ctx.moveTo(pTL.x,pTL.y);ctx.lineTo(pNL.x,pNL.y);
       ctx.lineTo(pNR.x,pNR.y);ctx.lineTo(pTR.x,pTR.y);

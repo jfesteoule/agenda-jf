@@ -1962,12 +1962,13 @@ function weekX(week){ return W/2 + snakeAmp()*snakeFrac(week); }
 function weekBottomY(week){ return H*0.65 - week*laneH() + scrollY; } // y du lundi de cette semaine
 
 const MONTH_ORIGIN_MS=new Date('2023-01-01T00:00:00Z').getTime();
-function monthTint(week){
+function dayMonthKey(day){
+  const dt=new Date(MONTH_ORIGIN_MS+day*86400000);
+  return dt.getUTCFullYear()*12+dt.getUTCMonth();
+}
+function tintForMonthKey(key){
   // Couleur pastel pseudo-aléatoire mais stable, propre à chaque mois calendaire
-  const firstDay=week*7+MON_SHIFT;
-  const dt=new Date(MONTH_ORIGIN_MS+firstDay*86400000);
-  const seed=dt.getUTCFullYear()*12+dt.getUTCMonth();
-  let h=Math.sin(seed*12.9898)*43758.5453;
+  let h=Math.sin(key*12.9898)*43758.5453;
   h=h-Math.floor(h);
   const hue=Math.floor(h*360);
   return `hsla(${hue},70%,55%,0.38)`;
@@ -2033,12 +2034,29 @@ function drawAllLanes(){
     ctx.lineTo(pBR.x,pBR.y);ctx.lineTo(pBL.x,pBL.y);
     ctx.closePath();ctx.fill();
 
-    // Teinte légère propre au mois (change au fil des mois, sans gêner la lecture)
-    ctx.fillStyle=monthTint(ln);
-    ctx.beginPath();
-    ctx.moveTo(pTL.x,pTL.y);ctx.lineTo(pTR.x,pTR.y);
-    ctx.lineTo(pBR.x,pBR.y);ctx.lineTo(pBL.x,pBL.y);
-    ctx.closePath();ctx.fill();
+    // Teinte légère propre au mois (change exactement le 1er de chaque mois)
+    {
+      const firstDay=ln*7+MON_SHIFT;
+      const segs=[];
+      let curStart=0, curKey=dayMonthKey(firstDay);
+      for(let d=1;d<7;d++){
+        const k=dayMonthKey(firstDay+d);
+        if(k!==curKey){ segs.push({start:curStart,end:d,key:curKey}); curStart=d; curKey=k; }
+      }
+      segs.push({start:curStart,end:7,key:curKey});
+
+      segs.forEach(seg=>{
+        const fracStart=seg.start/7, fracEnd=Math.min(seg.end/7,6/7);
+        const yrS=yrBottom-fracStart*lh, yrE=yrBottom-fracEnd*lh;
+        const sBL=project(xr-hwRaw,yrS), sBR=project(xr+hwRaw,yrS);
+        const sTL=project(xr-hwRaw,yrE), sTR=project(xr+hwRaw,yrE);
+        ctx.fillStyle=tintForMonthKey(seg.key);
+        ctx.beginPath();
+        ctx.moveTo(sTL.x,sTL.y);ctx.lineTo(sTR.x,sTR.y);
+        ctx.lineTo(sBR.x,sBR.y);ctx.lineTo(sBL.x,sBL.y);
+        ctx.closePath();ctx.fill();
+      });
+    }
 
     // Bordures latérales
     ctx.strokeStyle='#5a6070'; ctx.lineWidth=Math.max(2.5,hwRaw*0.12*pBL.s); ctx.setLineDash([]);
@@ -2073,7 +2091,7 @@ function drawAllLanes(){
       ctx.lineTo(pNR.x,pNR.y);ctx.lineTo(pTR.x,pTR.y);
       ctx.closePath();ctx.fill();
 
-      ctx.fillStyle=monthTint(ln);
+      ctx.fillStyle=tintForMonthKey(dayMonthKey(ln*7+MON_SHIFT+6));
       ctx.beginPath();
       ctx.moveTo(pTL.x,pTL.y);ctx.lineTo(pNL.x,pNL.y);
       ctx.lineTo(pNR.x,pNR.y);ctx.lineTo(pTR.x,pTR.y);

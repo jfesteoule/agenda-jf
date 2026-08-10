@@ -2170,12 +2170,13 @@ function drawMonthLabels(){
 
     const fs=Math.max(10,Math.min(16,lh*0.28*p1.s));
     ctx.font=`bold ${fs}px Arial`;
-    ctx.textAlign='center';
+    ctx.textAlign='left';
     ctx.textBaseline='middle';
+    const lx=Math.max(8,margin()*0.3);
     ctx.fillStyle='rgba(255,255,255,0.55)';
-    ctx.fillText(label, xMid+1, yMid+1);
+    ctx.fillText(label, lx+1, yMid+1);
     ctx.fillStyle='#2d4a1e';
-    ctx.fillText(label, xMid, yMid);
+    ctx.fillText(label, lx, yMid);
   }
 }
 

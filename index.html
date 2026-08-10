@@ -1970,7 +1970,7 @@ function monthTint(week){
   let h=Math.sin(seed*12.9898)*43758.5453;
   h=h-Math.floor(h);
   const hue=Math.floor(h*360);
-  return `hsla(${hue},70%,55%,0.15)`;
+  return `hsla(${hue},70%,55%,0.38)`;
 }
 
 function drawBackground(){
@@ -2433,7 +2433,7 @@ wrap.addEventListener('wheel',e=>{
 // Touch: same logic
 let tX=null,tY=null,tCam=null;
 // === SCROLL TACTILE via Pointer Events ===
-let pStartY=null, pCamStart=null, pScrollStart=0, pVY=0, pLastY=null, pLastT=null;
+let pStartY=null, pCamStart=null, pScrollStart=0, pVY=0, pLastY=null, pLastT=null, pIsTouch=false;
 
 function scrollBy(dy){ /* handled in pointermove */ }
 
@@ -2442,6 +2442,7 @@ wrap.addEventListener('pointerdown',e=>{
   if(e.target.closest('button')||e.target.closest('input')) return;
   pStartY=e.clientY; pCamStart=camDay; pScrollStart=scrollY;
   pLastY=e.clientY; pLastT=Date.now(); pVY=0;
+  pIsTouch=(e.pointerType==='touch'||e.pointerType==='pen');
   wrap.setPointerCapture(e.pointerId);
   e.preventDefault();
 },{passive:false});
@@ -2451,10 +2452,11 @@ wrap.addEventListener('pointermove',e=>{
   const now=Date.now(), dt=Math.max(1,now-pLastT);
   pVY=(e.clientY-pLastY)/dt*16;
   pLastY=e.clientY; pLastT=now;
-  // scrollY direct: glisser haut=avancer, bas=reculer
+  // scrollY direct: glisser haut=avancer, bas=reculer (inversé sur tactile)
   const dy=e.clientY-pStartY;
   const lh=laneH();
-  scrollY=Math.max(0,Math.min(TOTAL_DAYS/7*lh, pScrollStart - dy));
+  const delta=pIsTouch ? dy : -dy;
+  scrollY=Math.max(0,Math.min(TOTAL_DAYS/7*lh, pScrollStart + delta));
   e.preventDefault();
 },{passive:false});
 
@@ -2462,7 +2464,7 @@ wrap.addEventListener('pointerup',e=>{
   if(pStartY===null) return;
   pStartY=null;
   // Momentum
-  let vy=pVY;
+  let vy=pIsTouch ? -pVY : pVY;
   function momentum(){
     if(Math.abs(vy)<0.5) return;
     scrollY=Math.max(0,Math.min(TOTAL_DAYS/7*laneH(),scrollY-vy));

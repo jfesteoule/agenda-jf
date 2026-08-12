@@ -2379,7 +2379,7 @@ function drawMonthLabels(){
   const batchStart=camWeek-(camWeek%lps);
 
   let lastMonth=-1;
-  const rx=W-Math.max(8,margin()*0.3);
+  const rx=Math.max(8,margin()*0.3);
   const points=[];
 
   for(let ln=batchStart-_vl; ln<=batchStart+lps+_vl; ln++){
@@ -2418,12 +2418,12 @@ function drawMonthLabels(){
 
   points.forEach(pt=>{
     ctx.font=`bold ${pt.fs}px Arial`;
-    ctx.textAlign='right';
+    ctx.textAlign='left';
     ctx.textBaseline='middle';
     ctx.fillStyle='rgba(255,255,255,0.55)';
-    ctx.fillText(pt.label, rx-1+1, pt.y+1);
+    ctx.fillText(pt.label, rx+8+1, pt.y+1);
     ctx.fillStyle='#2d4a1e';
-    ctx.fillText(pt.label, rx-1, pt.y);
+    ctx.fillText(pt.label, rx+8, pt.y);
     // petit repère sur le trait
     ctx.fillStyle='#2d4a1e';
     ctx.beginPath();ctx.arc(rx,pt.y,2,0,Math.PI*2);ctx.fill();
@@ -2432,50 +2432,7 @@ function drawMonthLabels(){
 
 function drawDayDates(){}
 
-function drawWeekNumbers(){
-  // Affiche le n° de semaine dans l'année (par rapport au 1er janvier), à gauche de la route
-  const lh=laneH();
-  const camWeek=Math.floor((camDay-MON_SHIFT)/7);
-  const lps=lanesPerScreen();
-  const batchStart=camWeek-(camWeek%lps);
-
-  for(let ln=batchStart-lps-3; ln<=batchStart+lps+3; ln++){
-    const firstDay=ln*7+MON_SHIFT;
-    if(firstDay>TOTAL_DAYS||firstDay<0) continue;
-
-    const dt=new Date(MONTH_ORIGIN_MS+firstDay*86400000);
-    const year=dt.getUTCFullYear();
-    const jan1=Date.UTC(year,0,1);
-    const weekNum=Math.floor((dt.getTime()-jan1)/86400000/7)+1;
-
-    const xrB=weekX(ln), yrB=weekBottomY(ln), yrT=yrB-(6/7)*lh;
-    const pB=project(xrB,yrB), pT=project(xrB,yrT);
-    const yMid=(pB.y+pT.y)/2;
-    if(!visible(yMid)) continue;
-
-    const fs=Math.max(8,Math.min(12,lh*0.20*pB.s));
-    ctx.font=`${fs}px Arial`;
-    ctx.textAlign='left';
-    ctx.textBaseline='middle';
-    const lx=Math.max(8,margin()*0.3)+56;
-    const label='Semaine '+weekNum;
-    const jour=dt.getUTCDate();
-    const weekOfMonth=Math.floor((jour-1)/7)+1;
-    const moisNom=dt.toLocaleDateString('fr-FR',{month:'long'});
-    const dateLabel='('+weekOfMonth+' semaine '+moisNom+' '+year+')';
-    ctx.fillStyle='rgba(255,255,255,0.55)';
-    ctx.fillText(label, lx+1, yMid+1);
-    ctx.fillStyle='#5a6070';
-    ctx.fillText(label, lx, yMid);
-    const fs2=Math.max(7,fs*0.85);
-    ctx.font=`${fs2}px Arial`;
-    const ty2=yMid+fs*1.05;
-    ctx.fillStyle='rgba(255,255,255,0.55)';
-    ctx.fillText(dateLabel, lx+1, ty2+1);
-    ctx.fillStyle='#5a6070';
-    ctx.fillText(dateLabel, lx, ty2);
-  }
-}
+function drawWeekNumbers(){}
 
 
 function drawDayLetters(){
@@ -2499,14 +2456,15 @@ function drawDayLetters(){
 
     const dt2=new Date(ORIGIN_MS+d*86400000);
     const dayNum=dt2.getDate();
-    const fs=Math.max(7,Math.min(10,hw*0.20));
+    const moisAbrev=dt2.toLocaleDateString('fr-FR',{month:'short'}).replace('.','').slice(0,3);
+    const fs=Math.max(9,Math.min(13,hw*0.26));
     const color=isWE?'#1b5e20':'#000000';
 
     ctx.font=`${isWE?'bold ':' '}${fs}px Arial`;
     ctx.textAlign='left';
     ctx.textBaseline='middle';
     const tx=x-hw-6;
-    const txt=lbl+' '+dayNum;
+    const txt=lbl+' '+dayNum+' '+moisAbrev;
     ctx.textAlign='right';
     ctx.fillStyle='rgba(255,255,255,0.65)';
     ctx.fillText(txt, tx+0.7, y+0.7);

@@ -1868,6 +1868,7 @@ function snakeFrac(week){
 function vpX(){ return W/2; }              // point de fuite horizontal
 function vpY(){ return H*0.58; }           // point de fuite vertical (horizon bas = route en pente qui descend vers nous)
 function perspD(){ return H*0.55; }        // profondeur de champ (plus petit = perspective plus marquée)
+function horizonY(){ return Math.max(10,vpY()-perspD()); } // ligne d'horizon réelle : point vers lequel la route converge visuellement
 function perspScale(yr){
   const D=perspD();
   const depth=H*0.65-yr; // >0 = vers l'horizon (l'avenir), <0 = vers l'avant-plan (le passé proche)
@@ -2019,7 +2020,7 @@ function drawBackground(){
 
 function drawHaze(){
   // Léger effet de perspective/brume vers le fond (haut de l'écran = plus loin)
-  const hzY=vpY();
+  const hzY=horizonY();
   const hazeH=Math.min(260,H*0.42);
   const g=ctx.createLinearGradient(0,0,0,hazeH);
   g.addColorStop(0,'rgba(225,238,232,0.30)');
@@ -2037,7 +2038,17 @@ function drawAllLanes(){
   const lh=laneH(), hwRaw=roadHW();
   const camWeek=Math.floor((camDay-MON_SHIFT)/7);
   const lps=lanesPerScreen();
-  const batchStart=camWeek-lps-2, batchEnd=camWeek+lps+2;
+  const batchStart=camWeek-lps-2;
+  let batchEnd=camWeek+lps+2;
+  {
+    // Étendre vers le futur jusqu'à ce que la route rejoigne visuellement l'horizon
+    let guard=0;
+    while(guard<600){
+      const s=perspScale(weekBottomY(batchEnd));
+      if(s<0.02) break;
+      batchEnd++; guard++;
+    }
+  }
 
   for(let ln=batchStart; ln<=batchEnd; ln++){
     const xr=weekX(ln);

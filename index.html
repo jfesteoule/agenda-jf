@@ -2217,6 +2217,8 @@ const VACANCE_KEYWORDS_GLOBAL=['randon','voyage','vacance','séjour','sejour','t
   'dieulefit','gordes','sicile','lucille'];
 function isLieVacanceGlobal(t){ return VACANCE_KEYWORDS_GLOBAL.some(k=>t.toLowerCase().includes(k)); }
 
+const JF_RIGHT_FROM_DAY=Math.round((Date.UTC(2025,8,1)-MONTH_ORIGIN_MS)/86400000); // 1er septembre 2025
+
 function drawEventTexts(){
   const lh=laneH();
   const byDay={};
@@ -2239,18 +2241,31 @@ function drawEventTexts(){
     ctx.font=`bold ${fs}px Arial`;
     const maxTextW=hw*1.85;
 
-    // === Anne : centrée sur la route ===
-    if(anneEvts.length){
+    const useRight=(+day>=JF_RIGHT_FROM_DAY);
+    const centeredEvts=useRight?anneEvts:[...anneEvts,...jfEvts];
+    const rightEvts=useRight?jfEvts:[];
+
+    // === Événements centrés sur la route (Anne, + JF avant sept. 2025) ===
+    if(centeredEvts.length){
       ctx.textAlign='center';
       ctx.textBaseline='middle';
-      let ty=y-Math.min(rowH*0.4,(anneEvts.length*lineH)/2)+lineH*0.5;
-      anneEvts.slice(0,3).forEach(ev=>{
-        const color=isLieVacanceGlobal(ev.title)?'#e65100':'#004400';
+      let ty=y-Math.min(rowH*0.4,(centeredEvts.length*lineH)/2)+lineH*0.5;
+      centeredEvts.slice(0,3).forEach(ev=>{
+        const isJF=ev.side==='right';
+        const baseColor=isJF?'#001a66':'#004400';
+        const color=isLieVacanceGlobal(ev.title)?'#e65100':baseColor;
         let title=ev.title;
         while(ctx.measureText(title).width>maxTextW && title.length>3){
           title=title.slice(0,-2);
         }
         if(title!==ev.title) title=title.trimEnd()+'…';
+        if(isJF){
+          const w=ctx.measureText(title).width+6;
+          ctx.strokeStyle='rgba(0,0,0,0.55)';
+          ctx.lineWidth=1;
+          ctx.setLineDash([]);
+          ctx.strokeRect(x-w/2, ty-lineH*0.45, w, lineH*0.9);
+        }
         ctx.fillStyle='rgba(255,255,255,0.65)';
         ctx.fillText(title,x+0.7,ty+0.7);
         ctx.fillStyle=color;
@@ -2259,14 +2274,14 @@ function drawEventTexts(){
       });
     }
 
-    // === JF : juste à droite de la route ===
-    if(jfEvts.length){
+    // === JF : à droite de la route, à partir de sept. 2025 ===
+    if(rightEvts.length){
       ctx.textAlign='left';
       ctx.textBaseline='middle';
       const jx=x+hw+6;
       const maxJfW=hw*2.4;
-      let ty=y-Math.min(rowH*0.4,(jfEvts.length*lineH)/2)+lineH*0.5;
-      jfEvts.slice(0,3).forEach(ev=>{
+      let ty=y-Math.min(rowH*0.4,(rightEvts.length*lineH)/2)+lineH*0.5;
+      rightEvts.slice(0,3).forEach(ev=>{
         const baseColor='#001a66';
         const color=isLieVacanceGlobal(ev.title)?'#e65100':baseColor;
         let title=ev.title;

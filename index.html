@@ -1963,6 +1963,35 @@ function weekX(week){ return W/2 + snakeAmp()*snakeFrac(week); }
 function weekBottomY(week){ return H*0.65 - week*laneH() + scrollY; } // y du lundi de cette semaine
 
 const MONTH_ORIGIN_MS=new Date('2023-01-01T00:00:00Z').getTime();
+
+// === JOURS FÉRIÉS FRANÇAIS ===
+function easterDateUTC(year){
+  const a=year%19, b=Math.floor(year/100), c=year%100;
+  const d=Math.floor(b/4), e=b%4;
+  const f=Math.floor((b+8)/25);
+  const g=Math.floor((b-f+1)/3);
+  const h=(19*a+b-d-g+15)%30;
+  const i=Math.floor(c/4), k=c%4;
+  const l=(32+2*e+2*i-h-k)%7;
+  const m=Math.floor((a+11*h+22*l)/451);
+  const month=Math.floor((h+l-7*m+114)/31);
+  const day=((h+l-7*m+114)%31)+1;
+  return new Date(Date.UTC(year,month-1,day));
+}
+const HOLIDAY_DAYS=new Set();
+for(let y=2022;y<=2028;y++){
+  const easter=easterDateUTC(y);
+  const plus=(n)=>{const dt=new Date(easter.getTime()); dt.setUTCDate(dt.getUTCDate()+n); return dt;};
+  [
+    new Date(Date.UTC(y,0,1)), plus(1), new Date(Date.UTC(y,4,1)), new Date(Date.UTC(y,4,8)),
+    plus(39), plus(50), new Date(Date.UTC(y,6,14)), new Date(Date.UTC(y,7,15)),
+    new Date(Date.UTC(y,10,1)), new Date(Date.UTC(y,10,11)), new Date(Date.UTC(y,11,25))
+  ].forEach(dt=>{
+    HOLIDAY_DAYS.add(Math.round((dt.getTime()-MONTH_ORIGIN_MS)/86400000));
+  });
+}
+function isJourFerie(day){ return HOLIDAY_DAYS.has(day); }
+
 function dayMonthKey(day){
   const dt=new Date(MONTH_ORIGIN_MS+day*86400000);
   return dt.getUTCFullYear()*12+dt.getUTCMonth();
@@ -2082,6 +2111,23 @@ function drawAllLanes(){
       ctx.closePath();ctx.fill();
     }
 
+    // === JOURS FÉRIÉS EN JAUNE ===
+    const firstDayFerie=ln*7+MON_SHIFT;
+    for(let d=0;d<7;d++){
+      const dayIdx=firstDayFerie+d;
+      if(!isJourFerie(dayIdx)) continue;
+      const fS=d/7, fE=Math.min((d+1)/7,6/7);
+      if(fE<=fS) continue;
+      const yS=yrBottom-fS*lh, yE=yrBottom-fE*lh;
+      const hBL=project(xr-hwRaw,yS), hBR=project(xr+hwRaw,yS);
+      const hTL=project(xr-hwRaw,yE), hTR=project(xr+hwRaw,yE);
+      ctx.fillStyle='rgba(255,224,0,0.55)';
+      ctx.beginPath();
+      ctx.moveTo(hTL.x,hTL.y);ctx.lineTo(hTR.x,hTR.y);
+      ctx.lineTo(hBR.x,hBR.y);ctx.lineTo(hBL.x,hBL.y);
+      ctx.closePath();ctx.fill();
+    }
+
     // === RACCORD vers la semaine suivante (le S) ===
     const xr2=weekX(ln+1), yr2=weekBottomY(ln+1); // == yrTop, mais recalculé pour la semaine ln+1
     const pNL=project(xr2-hwRaw,yr2), pNR=project(xr2+hwRaw,yr2);
@@ -2187,37 +2233,59 @@ function drawEventTexts(){
 
     const fs=Math.max(7,Math.min(12,Math.min(hw*0.30,rowH*0.42)));
     const lineH=Math.max(fs*1.15,fs+2);
-    const allEvts=[...evts.filter(e=>e.side==='left'),...evts.filter(e=>e.side==='right')];
-    if(!allEvts.length) return;
+    const anneEvts=evts.filter(e=>e.side==='left');
+    const jfEvts=evts.filter(e=>e.side==='right');
 
     ctx.font=`bold ${fs}px Arial`;
-    ctx.textAlign='center';
-    ctx.textBaseline='middle';
     const maxTextW=hw*1.85;
 
-    let ty=y-Math.min(rowH*0.4,(allEvts.length*lineH)/2)+lineH*0.5;
-    allEvts.slice(0,3).forEach(ev=>{
-      const isJF=ev.side==='right';
-      const baseColor=isJF?'#001a66':'#004400';
-      const color=isLieVacanceGlobal(ev.title)?'#e65100':baseColor;
-      let title=ev.title;
-      while(ctx.measureText(title).width>maxTextW && title.length>3){
-        title=title.slice(0,-2);
-      }
-      if(title!==ev.title) title=title.trimEnd()+'…';
-      if(isJF){
+    // === Anne : centrée sur la route ===
+    if(anneEvts.length){
+      ctx.textAlign='center';
+      ctx.textBaseline='middle';
+      let ty=y-Math.min(rowH*0.4,(anneEvts.length*lineH)/2)+lineH*0.5;
+      anneEvts.slice(0,3).forEach(ev=>{
+        const color=isLieVacanceGlobal(ev.title)?'#e65100':'#004400';
+        let title=ev.title;
+        while(ctx.measureText(title).width>maxTextW && title.length>3){
+          title=title.slice(0,-2);
+        }
+        if(title!==ev.title) title=title.trimEnd()+'…';
+        ctx.fillStyle='rgba(255,255,255,0.65)';
+        ctx.fillText(title,x+0.7,ty+0.7);
+        ctx.fillStyle=color;
+        ctx.fillText(title,x,ty);
+        ty+=lineH;
+      });
+    }
+
+    // === JF : juste à droite de la route ===
+    if(jfEvts.length){
+      ctx.textAlign='left';
+      ctx.textBaseline='middle';
+      const jx=x+hw+6;
+      const maxJfW=hw*2.4;
+      let ty=y-Math.min(rowH*0.4,(jfEvts.length*lineH)/2)+lineH*0.5;
+      jfEvts.slice(0,3).forEach(ev=>{
+        const baseColor='#001a66';
+        const color=isLieVacanceGlobal(ev.title)?'#e65100':baseColor;
+        let title=ev.title;
+        while(ctx.measureText(title).width>maxJfW && title.length>3){
+          title=title.slice(0,-2);
+        }
+        if(title!==ev.title) title=title.trimEnd()+'…';
         const w=ctx.measureText(title).width+6;
         ctx.strokeStyle='rgba(0,0,0,0.55)';
         ctx.lineWidth=1;
         ctx.setLineDash([]);
-        ctx.strokeRect(x-w/2, ty-lineH*0.45, w, lineH*0.9);
-      }
-      ctx.fillStyle='rgba(255,255,255,0.65)';
-      ctx.fillText(title,x+0.7,ty+0.7);
-      ctx.fillStyle=color;
-      ctx.fillText(title,x,ty);
-      ty+=lineH;
-    });
+        ctx.strokeRect(jx-3, ty-lineH*0.45, w, lineH*0.9);
+        ctx.fillStyle='rgba(255,255,255,0.65)';
+        ctx.fillText(title,jx+0.7,ty+0.7);
+        ctx.fillStyle=color;
+        ctx.fillText(title,jx,ty);
+        ty+=lineH;
+      });
+    }
   });
 }
 

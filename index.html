@@ -1965,6 +1965,25 @@ function draw(ts){
 function weekX(week){ return W/2 + snakeAmp()*snakeFrac(week); }
 function weekBottomY(week){ return H*0.65 - week*laneH() + scrollY; } // y du lundi de cette semaine
 
+function strokeRoundedPath(pts,radius){
+  if(pts.length<2) return;
+  if(pts.length===2){ ctx.beginPath();ctx.moveTo(pts[0].x,pts[0].y);ctx.lineTo(pts[1].x,pts[1].y);ctx.stroke(); return; }
+  ctx.beginPath();
+  ctx.moveTo(pts[0].x,pts[0].y);
+  for(let i=1;i<pts.length-1;i++){
+    const p0=pts[i-1], p1=pts[i], p2=pts[i+1];
+    const d1x=p1.x-p0.x, d1y=p1.y-p0.y, len1=Math.hypot(d1x,d1y)||1;
+    const d2x=p2.x-p1.x, d2y=p2.y-p1.y, len2=Math.hypot(d2x,d2y)||1;
+    const r=Math.min(radius, len1/2, len2/2);
+    const cx1=p1.x-d1x/len1*r, cy1=p1.y-d1y/len1*r;
+    const cx2=p1.x+d2x/len2*r, cy2=p1.y+d2y/len2*r;
+    ctx.lineTo(cx1,cy1);
+    ctx.quadraticCurveTo(p1.x,p1.y,cx2,cy2);
+  }
+  ctx.lineTo(pts[pts.length-1].x,pts[pts.length-1].y);
+  ctx.stroke();
+}
+
 const MONTH_ORIGIN_MS=new Date('2023-01-01T00:00:00Z').getTime();
 
 // === JOURS FÉRIÉS FRANÇAIS ===
@@ -2101,10 +2120,7 @@ function drawAllLanes(){
       });
     }
 
-    // Bordures latérales
-    ctx.strokeStyle='#5a6070'; ctx.lineWidth=Math.max(2.5,hwRaw*0.12*pBL.s); ctx.setLineDash([]);
-    ctx.beginPath();ctx.moveTo(pTL.x,pTL.y);ctx.lineTo(pBL.x,pBL.y);ctx.stroke();
-    ctx.beginPath();ctx.moveTo(pTR.x,pTR.y);ctx.lineTo(pBR.x,pBR.y);ctx.stroke();
+    // Bordures latérales (arrondies au raccord, tracées plus bas avec le raccord)
 
     // Traits fins entre les jours
     ctx.strokeStyle='rgba(0,0,0,0.25)';
@@ -2151,10 +2167,16 @@ function drawAllLanes(){
       ctx.lineTo(pNR.x,pNR.y);ctx.lineTo(pTR.x,pTR.y);
       ctx.closePath();ctx.fill();
 
-      ctx.strokeStyle='#5a6070'; ctx.lineCap='round';
-      ctx.lineWidth=Math.max(2,hwRaw*0.12*pTL.s);
-      ctx.beginPath();ctx.moveTo(pTL.x,pTL.y);ctx.lineTo(pNL.x,pNL.y);ctx.stroke();
-      ctx.beginPath();ctx.moveTo(pTR.x,pTR.y);ctx.lineTo(pNR.x,pNR.y);ctx.stroke();
+      // Bordures : semaine + raccord fusionnés en un seul tracé, angle arrondi
+      ctx.strokeStyle='#5a6070'; ctx.lineCap='round'; ctx.lineJoin='round'; ctx.setLineDash([]);
+      ctx.lineWidth=Math.max(2.5,hwRaw*0.12*pBL.s);
+      const rad=Math.max(4,hwRaw*0.35*pTL.s);
+      strokeRoundedPath([pBL,pTL,pNL],rad);
+      strokeRoundedPath([pBR,pTR,pNR],rad);
+    }else{
+      ctx.strokeStyle='#5a6070'; ctx.lineWidth=Math.max(2.5,hwRaw*0.12*pBL.s); ctx.setLineDash([]);
+      ctx.beginPath();ctx.moveTo(pTL.x,pTL.y);ctx.lineTo(pBL.x,pBL.y);ctx.stroke();
+      ctx.beginPath();ctx.moveTo(pTR.x,pTR.y);ctx.lineTo(pBR.x,pBR.y);ctx.stroke();
     }
   }
 }
@@ -2348,7 +2370,7 @@ function drawEventTexts(){
 }
 
 function drawMonthLabels(){
-  // Affiche mois + année à côté de la route, au raccord entre semaines
+  // Affiche mois + année à droite de la route, au raccord entre semaines, reliés par un trait vertical
   const lh=laneH();
   const ORIGIN_MS=new Date('2023-01-01T00:00:00Z').getTime();
   const camWeek=Math.floor((camDay-MON_SHIFT)/7);
@@ -2357,6 +2379,8 @@ function drawMonthLabels(){
   const batchStart=camWeek-(camWeek%lps);
 
   let lastMonth=-1;
+  const rx=W-Math.max(8,margin()*0.3);
+  const points=[];
 
   for(let ln=batchStart-_vl; ln<=batchStart+lps+_vl; ln++){
     const firstDay=ln*7+MON_SHIFT;
@@ -2373,22 +2397,37 @@ function drawMonthLabels(){
     const p1=project(xr1,yr1), p0=project(xr0,yr0);
     if(!visible(p1.y)&&!visible(p0.y)) continue;
 
-    const xMid=(p0.x+p1.x)/2, yMid=(p0.y+p1.y)/2;
+    const yMid=(p0.y+p1.y)/2;
     if(!visible(yMid)) continue;
 
     const mois=dt.toLocaleDateString('fr-FR',{month:'long'});
     const label=mois.charAt(0).toUpperCase()+mois.slice(1)+' '+year;
-
-    const fs=Math.max(10,Math.min(16,lh*0.28*p1.s));
-    ctx.font=`bold ${fs}px Arial`;
-    ctx.textAlign='left';
-    ctx.textBaseline='middle';
-    const lx=Math.max(8,margin()*0.3);
-    ctx.fillStyle='rgba(255,255,255,0.55)';
-    ctx.fillText(label, lx+1, yMid+1);
-    ctx.fillStyle='#2d4a1e';
-    ctx.fillText(label, lx, yMid);
+    points.push({y:yMid,label,fs:Math.max(10,Math.min(16,lh*0.28*p1.s))});
   }
+
+  if(!points.length) return;
+
+  // Trait vertical reliant les repères de mois entre eux
+  ctx.strokeStyle='rgba(45,74,30,0.4)';
+  ctx.lineWidth=1.5;
+  ctx.setLineDash([]);
+  ctx.beginPath();
+  ctx.moveTo(rx,points[0].y);
+  for(let i=1;i<points.length;i++) ctx.lineTo(rx,points[i].y);
+  ctx.stroke();
+
+  points.forEach(pt=>{
+    ctx.font=`bold ${pt.fs}px Arial`;
+    ctx.textAlign='right';
+    ctx.textBaseline='middle';
+    ctx.fillStyle='rgba(255,255,255,0.55)';
+    ctx.fillText(pt.label, rx-1+1, pt.y+1);
+    ctx.fillStyle='#2d4a1e';
+    ctx.fillText(pt.label, rx-1, pt.y);
+    // petit repère sur le trait
+    ctx.fillStyle='#2d4a1e';
+    ctx.beginPath();ctx.arc(rx,pt.y,2,0,Math.PI*2);ctx.fill();
+  });
 }
 
 function drawDayDates(){}
@@ -2420,10 +2459,21 @@ function drawWeekNumbers(){
     ctx.textBaseline='middle';
     const lx=Math.max(8,margin()*0.3)+56;
     const label='Semaine '+weekNum;
+    const jour=dt.getUTCDate();
+    const weekOfMonth=Math.floor((jour-1)/7)+1;
+    const moisNom=dt.toLocaleDateString('fr-FR',{month:'long'});
+    const dateLabel='('+weekOfMonth+' semaine '+moisNom+' '+year+')';
     ctx.fillStyle='rgba(255,255,255,0.55)';
     ctx.fillText(label, lx+1, yMid+1);
     ctx.fillStyle='#5a6070';
     ctx.fillText(label, lx, yMid);
+    const fs2=Math.max(7,fs*0.85);
+    ctx.font=`${fs2}px Arial`;
+    const ty2=yMid+fs*1.05;
+    ctx.fillStyle='rgba(255,255,255,0.55)';
+    ctx.fillText(dateLabel, lx+1, ty2+1);
+    ctx.fillStyle='#5a6070';
+    ctx.fillText(dateLabel, lx, ty2);
   }
 }
 

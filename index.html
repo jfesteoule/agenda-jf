@@ -1954,6 +1954,7 @@ function draw(ts){
   drawDayDates();
   drawDayLetters();
   drawMonthLabels();
+  drawWeekNumbers();
   drawTodayMark();
   drawPerson();
   drawHaze();
@@ -2129,17 +2130,11 @@ function drawAllLanes(){
       ctx.closePath();ctx.fill();
     }
 
-    // === RACCORD vers la semaine suivante (le S) ===
+    // === RACCORD vers la semaine suivante (le S) : entre dimanche et lundi ===
     const xr2=weekX(ln+1), yr2=weekBottomY(ln+1); // == yrTop, mais recalculé pour la semaine ln+1
     const pNL=project(xr2-hwRaw,yr2), pNR=project(xr2+hwRaw,yr2);
     if(visible(pTL.y)||visible(pNL.y)){
-      ctx.fillStyle='#d4d8de';
-      ctx.beginPath();
-      ctx.moveTo(pTL.x,pTL.y);ctx.lineTo(pNL.x,pNL.y);
-      ctx.lineTo(pNR.x,pNR.y);ctx.lineTo(pTR.x,pTR.y);
-      ctx.closePath();ctx.fill();
-
-      ctx.fillStyle=tintForMonthKey(dayMonthKey(ln*7+MON_SHIFT+6));
+      ctx.fillStyle='#d32f2f';
       ctx.beginPath();
       ctx.moveTo(pTL.x,pTL.y);ctx.lineTo(pNL.x,pNL.y);
       ctx.lineTo(pNR.x,pNR.y);ctx.lineTo(pTR.x,pTR.y);
@@ -2386,6 +2381,40 @@ function drawMonthLabels(){
 }
 
 function drawDayDates(){}
+
+function drawWeekNumbers(){
+  // Affiche le n° de semaine dans l'année (par rapport au 1er janvier), à gauche de la route
+  const lh=laneH();
+  const camWeek=Math.floor((camDay-MON_SHIFT)/7);
+  const lps=lanesPerScreen();
+  const batchStart=camWeek-(camWeek%lps);
+
+  for(let ln=batchStart-lps-3; ln<=batchStart+lps+3; ln++){
+    const firstDay=ln*7+MON_SHIFT;
+    if(firstDay>TOTAL_DAYS||firstDay<0) continue;
+
+    const dt=new Date(MONTH_ORIGIN_MS+firstDay*86400000);
+    const year=dt.getUTCFullYear();
+    const jan1=Date.UTC(year,0,1);
+    const weekNum=Math.floor((dt.getTime()-jan1)/86400000/7)+1;
+
+    const xrB=weekX(ln), yrB=weekBottomY(ln), yrT=yrB-(6/7)*lh;
+    const pB=project(xrB,yrB), pT=project(xrB,yrT);
+    const yMid=(pB.y+pT.y)/2;
+    if(!visible(yMid)) continue;
+
+    const fs=Math.max(8,Math.min(12,lh*0.20*pB.s));
+    ctx.font=`${fs}px Arial`;
+    ctx.textAlign='left';
+    ctx.textBaseline='middle';
+    const lx=Math.max(8,margin()*0.3)+56;
+    const label='Semaine '+weekNum;
+    ctx.fillStyle='rgba(255,255,255,0.55)';
+    ctx.fillText(label, lx+1, yMid+1);
+    ctx.fillStyle='#5a6070';
+    ctx.fillText(label, lx, yMid);
+  }
+}
 
 
 function drawDayLetters(){

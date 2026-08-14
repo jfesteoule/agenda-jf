@@ -1968,6 +1968,7 @@ function draw(ts){
   drawTodayMark();
   drawPerson();
   drawHaze();
+  drawZoomedPhoto();
   requestAnimationFrame(draw);
 }
 
@@ -2391,7 +2392,42 @@ function isLieVacanceGlobal(t){ return VACANCE_KEYWORDS_GLOBAL.some(k=>t.toLower
 
 const JF_RIGHT_FROM_DAY=Math.round((Date.UTC(2025,8,1)-MONTH_ORIGIN_MS)/86400000); // 1er septembre 2025
 
+function drawZoomedPhoto(){
+  if(!zoomedPhoto || !zoomedPhoto.loaded) return;
+  const p=zoomedPhoto;
+  ctx.save();
+  ctx.fillStyle='rgba(0,0,0,0.72)';
+  ctx.fillRect(0,0,W,H);
+
+  const maxW=W*0.86, maxH=H*0.78;
+  const iw=p.img.width, ih=p.img.height;
+  const scale=Math.min(maxW/iw, maxH/ih);
+  const dw=iw*scale, dh=ih*scale;
+  const dx=(W-dw)/2, dy=(H-dh)/2-10;
+
+  ctx.shadowColor='rgba(0,0,0,0.6)';
+  ctx.shadowBlur=20;
+  ctx.fillStyle='#fff';
+  const pad=Math.max(8,dw*0.02);
+  ctx.fillRect(dx-pad,dy-pad,dw+pad*2,dh+pad*2+pad*3);
+  ctx.shadowColor='transparent';
+  ctx.shadowBlur=0;
+  ctx.drawImage(p.img,dx,dy,dw,dh);
+
+  ctx.fillStyle='#333';
+  ctx.font=`bold ${Math.max(14,dw*0.035)}px Arial`;
+  ctx.textAlign='center';
+  ctx.textBaseline='top';
+  ctx.fillText(p.legende, W/2, dy+dh+pad*1.2);
+
+  ctx.fillStyle='rgba(255,255,255,0.85)';
+  ctx.font='14px Arial';
+  ctx.fillText('Cliquer pour fermer', W/2, dy-pad-20);
+  ctx.restore();
+}
+
 function drawPhotos(){
+  PHOTOS.forEach(p=>{ p._box=null; });
   PHOTOS.forEach(p=>{
     if(!p.loaded) return;
     if(dayMonthKey(Math.round(camDay))!==dayMonthKey(p.day)) return;
@@ -2402,6 +2438,8 @@ function drawPhotos(){
     let px = p.side==='right' ? x+hw+70 : x-hw-70-size;
     px = Math.max(pad+4, Math.min(W-size-pad-4, px));
     const py = y-size/2;
+
+    p._box={x:px-pad, y:py-pad, w:size+pad*2, h:size+pad*2+size*0.22};
 
     ctx.save();
     ctx.shadowColor='rgba(0,0,0,0.35)';
@@ -2773,15 +2811,16 @@ wrap.addEventListener('wheel',e=>{
 // Touch: same logic
 let tX=null,tY=null,tCam=null;
 // === SCROLL TACTILE via Pointer Events ===
-let pStartY=null, pCamStart=null, pScrollStart=0, pVY=0, pLastY=null, pLastT=null, pIsTouch=false;
+let pStartY=null, pStartX=null, pCamStart=null, pScrollStart=0, pVY=0, pLastY=null, pLastT=null, pIsTouch=false, pMoved=false;
+let zoomedPhoto=null;
 
 function scrollBy(dy){ /* handled in pointermove */ }
 
 wrap.style.touchAction='none';
 wrap.addEventListener('pointerdown',e=>{
   if(e.target.closest('button')||e.target.closest('input')) return;
-  pStartY=e.clientY; pCamStart=camDay; pScrollStart=scrollY;
-  pLastY=e.clientY; pLastT=Date.now(); pVY=0;
+  pStartY=e.clientY; pStartX=e.clientX; pCamStart=camDay; pScrollStart=scrollY;
+  pLastY=e.clientY; pLastT=Date.now(); pVY=0; pMoved=false;
   pIsTouch=(e.pointerType==='touch'||e.pointerType==='pen');
   wrap.setPointerCapture(e.pointerId);
   e.preventDefault();
@@ -2789,6 +2828,8 @@ wrap.addEventListener('pointerdown',e=>{
 
 wrap.addEventListener('pointermove',e=>{
   if(pStartY===null) return;
+  if(Math.abs(e.clientX-pStartX)>10||Math.abs(e.clientY-pStartY)>10) pMoved=true;
+  if(zoomedPhoto) return; // pas de scroll pendant le zoom photo
   const now=Date.now(), dt=Math.max(1,now-pLastT);
   pVY=(e.clientY-pLastY)/dt*16;
   pLastY=e.clientY; pLastT=now;
@@ -2802,7 +2843,12 @@ wrap.addEventListener('pointermove',e=>{
 
 wrap.addEventListener('pointerup',e=>{
   if(pStartY===null) return;
+  const wasMoved=pMoved;
   pStartY=null;
+  if(!wasMoved && zoomedPhoto){
+    zoomedPhoto=null;
+    return;
+  }
   // Momentum
   let vy=pIsTouch ? -pVY : pVY;
   function momentum(){
@@ -2814,6 +2860,16 @@ wrap.addEventListener('pointerup',e=>{
   momentum();
 });
 wrap.addEventListener('pointercancel',()=>{pStartY=null;});
+
+wrap.addEventListener('click',e=>{
+  if(zoomedPhoto) return; // déjà géré par pointerup pour fermer
+  if(e.target.closest('button')||e.target.closest('input')) return;
+  const rect=canvas.getBoundingClientRect();
+  const scaleX=canvas.width/rect.width, scaleY=canvas.height/rect.height;
+  const cx=(e.clientX-rect.left)*scaleX, cy=(e.clientY-rect.top)*scaleY;
+  const hit=PHOTOS.find(p=>p._box && cx>=p._box.x && cx<=p._box.x+p._box.w && cy>=p._box.y && cy<=p._box.y+p._box.h);
+  if(hit) zoomedPhoto=hit;
+});
 
 
 // Boutons navigation tactiles

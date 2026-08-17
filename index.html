@@ -47,6 +47,7 @@ window.syncAllCalendars = syncAllCalendars;
       <input id="sbox" type="text" value="Route du temps · Jan 2023 › Déc 2027" readonly>
     </div>
     <button id="syncbtn" style="position:relative;z-index:1000;pointer-events:auto;width:40px;height:40px;min-width:40px;background:#fff;border-radius:50%;border:none;cursor:pointer;display:flex;align-items:center;justify-content:center;box-shadow:0 2px 6px rgba(0,0,0,0.2);color:#34a853;font-size:18px;" title="Synchroniser Google Agenda"><i class="ti ti-refresh"></i></button>
+    <button id="monthbtn" style="position:relative;z-index:1000;pointer-events:auto;width:40px;height:40px;min-width:40px;background:#fff;border-radius:50%;border:none;cursor:pointer;display:flex;align-items:center;justify-content:center;box-shadow:0 2px 6px rgba(0,0,0,0.2);color:#1a73e8;font-size:18px;margin-left:6px;" title="Vue mensuelle"><i class="ti ti-calendar-month"></i></button>
   </div>
   <div id="speeds">
     <button class="sp" data-s="0.2">×⅕</button>
@@ -1915,6 +1916,7 @@ const wrap=document.getElementById('wrap');
 let W,H;
 
 let camDay=TODAY_DAY, playing=false, speed=3, lastTs=null, pulse=0, zoom=1;
+let monthViewActive=false;
 let scrollY=0; // recalculé après resize() pour partir pile sur aujourd'hui
 const PPD=90;
 
@@ -2008,6 +2010,14 @@ function shortDate(d){
 function draw(ts){
   if(!lastTs)lastTs=ts;
   const dt=Math.min((ts-lastTs)/1000,0.1); lastTs=ts; pulse+=dt*2.5;
+
+  if(monthViewActive){
+    ctx.clearRect(0,0,W,H);
+    drawMonthView();
+    requestAnimationFrame(draw);
+    return;
+  }
+
   if(playing){
     scrollY+=dt*speed*laneH()/7;
     scrollY=Math.max(0,Math.min(TOTAL_DAYS/7*laneH(),scrollY));
@@ -2108,6 +2118,94 @@ function tintForMonthKey(key){
   h=h-Math.floor(h);
   const hue=Math.floor(h*360);
   return `hsla(${hue},70%,55%,0.38)`;
+}
+
+function drawMonthView(){
+  ctx.fillStyle='#ffffff';
+  ctx.fillRect(0,0,W,H);
+
+  const dt=new Date(MONTH_ORIGIN_MS+Math.round(camDay)*86400000);
+  const year=dt.getUTCFullYear(), month=dt.getUTCMonth();
+  const moisNom=dt.toLocaleDateString('fr-FR',{month:'long'});
+  const title=moisNom.charAt(0).toUpperCase()+moisNom.slice(1)+' '+year;
+
+  ctx.fillStyle='#202124';
+  ctx.font='bold 26px Arial';
+  ctx.textAlign='center'; ctx.textBaseline='top';
+  ctx.fillText(title, W/2, 18);
+
+  const weekdays=['Lun','Mar','Mer','Jeu','Ven','Sam','Dim'];
+  const gridTop=90;
+  const gridH=H-gridTop-10;
+  const colW=W/7;
+
+  ctx.font='bold 12px Arial';
+  ctx.fillStyle='#5f6368';
+  weekdays.forEach((wd,i)=>{
+    ctx.textAlign='center';
+    ctx.fillText(wd, colW*i+colW/2, gridTop-24);
+  });
+
+  const firstOfMonthDayIdx=Math.round((Date.UTC(year,month,1)-MONTH_ORIGIN_MS)/86400000);
+  const firstDow=new Date(Date.UTC(year,month,1)).getUTCDay(); // 0=Dim..6=Sam
+  const mondayOffset=(firstDow===0)?6:firstDow-1;
+  const gridStartDay=firstOfMonthDayIdx-mondayOffset;
+  const daysInMonth=new Date(Date.UTC(year,month+1,0)).getUTCDate();
+  const rows=Math.ceil((mondayOffset+daysInMonth)/7);
+  const rowH=gridH/rows;
+
+  const byDay={};
+  ALL_EVENTS.forEach(ev=>{ (byDay[ev.day]=byDay[ev.day]||[]).push(ev); });
+
+  for(let i=0;i<rows*7;i++){
+    const dayIdx=gridStartDay+i;
+    const col=i%7, row=Math.floor(i/7);
+    const x=col*colW, y=gridTop+row*rowH;
+
+    ctx.strokeStyle='#e0e0e0'; ctx.lineWidth=1;
+    ctx.strokeRect(x,y,colW,rowH);
+
+    const inMonth=dayIdx>=firstOfMonthDayIdx && dayIdx<firstOfMonthDayIdx+daysInMonth;
+    if(!inMonth){ ctx.fillStyle='#fafafa'; ctx.fillRect(x+1,y+1,colW-2,rowH-2); continue; }
+
+    const cellDate=new Date(MONTH_ORIGIN_MS+dayIdx*86400000);
+    const dayNum=cellDate.getUTCDate();
+    const isToday=dayIdx===TODAY_DAY;
+    const isCam=dayIdx===Math.round(camDay);
+
+    ctx.textAlign='left'; ctx.textBaseline='top';
+    if(isToday){
+      ctx.fillStyle='#1a73e8';
+      ctx.beginPath(); ctx.arc(x+15,y+15,11,0,Math.PI*2); ctx.fill();
+      ctx.fillStyle='#fff'; ctx.font='bold 12px Arial'; ctx.textAlign='center';
+      ctx.fillText(dayNum, x+15, y+9); ctx.textAlign='left';
+    }else{
+      ctx.fillStyle=isCam?'#e53935':'#3c4043';
+      ctx.font=isCam?'bold 12px Arial':'12px Arial';
+      ctx.fillText(dayNum, x+7, y+6);
+    }
+
+    const evts=byDay[dayIdx]||[];
+    const lineH=Math.max(11,Math.min(15,(rowH-30)/4));
+    let ty=y+28;
+    ctx.font=`${Math.max(9,Math.min(11,lineH*0.82))}px Arial`;
+    const maxLines=Math.max(1,Math.floor((rowH-30)/lineH));
+    evts.slice(0,maxLines).forEach(ev=>{
+      const color=ev.side==='right'?'#1a73e8':'#c0392b';
+      let t=ev.title;
+      const maxW=colW-10;
+      while(ctx.measureText(t).width>maxW && t.length>3) t=t.slice(0,-2);
+      if(t!==ev.title) t=t.trimEnd()+'…';
+      ctx.fillStyle=color;
+      ctx.fillText(t, x+5, ty);
+      ty+=lineH;
+    });
+    if(evts.length>maxLines){
+      ctx.fillStyle='#5f6368';
+      ctx.font='10px Arial';
+      ctx.fillText('+'+(evts.length-maxLines)+' autres', x+5, ty);
+    }
+  }
 }
 
 function drawBackground(){
@@ -2886,6 +2984,12 @@ document.getElementById('revbtn').addEventListener('click',()=>{
 });
 document.getElementById('resetbtn').addEventListener('click',()=>{playing=false;updatePlay();camDay=0;scrollY=0;lastTs=null;});
 document.getElementById('todaybtn').addEventListener('click',()=>{playing=false;updatePlay();camDay=TODAY_DAY;scrollY=TODAY_DAY/7*laneH();lastTs=null;});
+document.getElementById('monthbtn').addEventListener('click',()=>{
+  monthViewActive=!monthViewActive;
+  const btn=document.getElementById('monthbtn');
+  btn.style.background=monthViewActive?'#1a73e8':'#fff';
+  btn.style.color=monthViewActive?'#fff':'#1a73e8';
+});
 document.getElementById('zi').addEventListener('click',()=>{zoom=Math.min(3,zoom+0.25);});
 document.getElementById('zo').addEventListener('click',()=>{zoom=Math.max(0.3,zoom-0.25);});
 document.querySelectorAll('.sp').forEach(b=>{
@@ -2898,6 +3002,7 @@ document.querySelectorAll('.sp').forEach(b=>{
 canvas.style.cursor='ns-resize';
 // wheel doit être posé sur wrap : canvas a pointer-events:none donc ne reçoit jamais l'event
 wrap.addEventListener('wheel',e=>{
+  if(monthViewActive) return;
   e.preventDefault();
   const lh=laneH();
   // deltaY>0 (molette vers le bas) = avancer dans le temps, comme glisser le doigt vers le haut
@@ -2914,6 +3019,7 @@ function scrollBy(dy){ /* handled in pointermove */ }
 
 wrap.style.touchAction='none';
 wrap.addEventListener('pointerdown',e=>{
+  if(monthViewActive) return;
   if(e.target.closest('button')||e.target.closest('input')) return;
   pStartY=e.clientY; pStartX=e.clientX; pCamStart=camDay; pScrollStart=scrollY;
   pLastY=e.clientY; pLastT=Date.now(); pVY=0; pMoved=false;
@@ -2958,6 +3064,7 @@ wrap.addEventListener('pointerup',e=>{
 wrap.addEventListener('pointercancel',()=>{pStartY=null;});
 
 wrap.addEventListener('click',e=>{
+  if(monthViewActive) return;
   if(zoomedPhoto) return; // déjà géré par pointerup pour fermer
   if(e.target.closest('button')||e.target.closest('input')) return;
   const rect=canvas.getBoundingClientRect();

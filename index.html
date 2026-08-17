@@ -3107,7 +3107,26 @@ function stopNav(){ clearInterval(navIv); navIv=null; }
 
 
 // ===== SYNCHRONISATION GOOGLE CALENDAR =====
-const APPS_SCRIPT_URL = 'https://raw.githubusercontent.com/jfesteoule/agenda-jf/main/events.json';
+// jsDelivr : CDN public qui met en cache le contenu GitHub et tolère bien plus
+// de requêtes que raw.githubusercontent.com (qui renvoie parfois une erreur 429).
+const APPS_SCRIPT_URL = 'https://cdn.jsdelivr.net/gh/jfesteoule/agenda-jf@main/events.json';
+const APPS_SCRIPT_URL_FALLBACK = 'https://raw.githubusercontent.com/jfesteoule/agenda-jf/main/events.json';
+
+async function fetchEventsJson(){
+  try{
+    const resp = await fetch(APPS_SCRIPT_URL, {cache:'no-store'});
+    if(!resp.ok) throw new Error('HTTP ' + resp.status);
+    return await resp.json();
+  }catch(errPrimary){
+    // Si jsDelivr échoue (ex: pas encore propagé le tout dernier commit), on retente sur GitHub direct
+    const resp = await fetch(APPS_SCRIPT_URL_FALLBACK);
+    if(!resp.ok){
+      if(resp.status===429) throw new Error("limite de requêtes atteinte (429) — réessaie dans une minute");
+      throw new Error('HTTP ' + resp.status);
+    }
+    return await resp.json();
+  }
+}
 
 async function syncAllCalendars(){
   const btn = document.getElementById('syncbtn');
@@ -3115,9 +3134,7 @@ async function syncAllCalendars(){
   btn.style.animation='spin 1s linear infinite';
 
   try {
-    const resp = await fetch(APPS_SCRIPT_URL);
-    if(!resp.ok) throw new Error('HTTP ' + resp.status);
-    const events = await resp.json();
+    const events = await fetchEventsJson();
 
     const ORIGIN = new Date('2023-01-01T00:00:00Z');
 

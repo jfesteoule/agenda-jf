@@ -48,6 +48,7 @@ window.syncAllCalendars = syncAllCalendars;
     </div>
     <button id="syncbtn" style="position:relative;z-index:1000;pointer-events:auto;width:40px;height:40px;min-width:40px;background:#fff;border-radius:50%;border:none;cursor:pointer;display:flex;align-items:center;justify-content:center;box-shadow:0 2px 6px rgba(0,0,0,0.2);color:#34a853;font-size:18px;" title="Synchroniser Google Agenda"><i class="ti ti-refresh"></i></button>
     <button id="monthbtn" style="position:relative;z-index:1000;pointer-events:auto;width:40px;height:40px;min-width:40px;background:#fff;border-radius:50%;border:none;cursor:pointer;display:flex;align-items:center;justify-content:center;box-shadow:0 2px 6px rgba(0,0,0,0.2);color:#1a73e8;font-size:18px;margin-left:6px;" title="Vue mensuelle"><i class="ti ti-calendar-month"></i></button>
+    <button id="jfonlybtn" style="position:relative;z-index:1000;pointer-events:auto;width:40px;height:40px;min-width:40px;background:#fff;border-radius:50%;border:none;cursor:pointer;display:flex;align-items:center;justify-content:center;box-shadow:0 2px 6px rgba(0,0,0,0.2);color:#1a73e8;font-size:16px;font-weight:bold;margin-left:6px;" title="Afficher uniquement l'agenda de JF">JF</button>
   </div>
   <div id="speeds">
     <button class="sp" data-s="0.2">×⅕</button>
@@ -1931,6 +1932,8 @@ let W,H;
 
 let camDay=TODAY_DAY, playing=false, speed=3, lastTs=null, pulse=0, zoom=1;
 let monthViewActive=false;
+let filterJFOnly=false;
+function visibleEvents(){ return filterJFOnly ? ALL_EVENTS.filter(e=>e.side==='right') : ALL_EVENTS; }
 let scrollY=0; // recalculé après resize() pour partir pile sur aujourd'hui
 const PPD=90;
 
@@ -2169,7 +2172,7 @@ function drawMonthView(){
   const rowH=gridH/rows;
 
   const byDay={};
-  ALL_EVENTS.forEach(ev=>{ (byDay[ev.day]=byDay[ev.day]||[]).push(ev); });
+  visibleEvents().forEach(ev=>{ (byDay[ev.day]=byDay[ev.day]||[]).push(ev); });
 
   for(let i=0;i<rows*7;i++){
     const dayIdx=gridStartDay+i;
@@ -2520,7 +2523,7 @@ function refreshAutoMultiDay(){
   // ce sont des événements multi-jours qu'on affichera avec nom au départ,
   // nom à l'arrivée, et un trait qui relie les deux.
   const groups={};
-  ALL_EVENTS.forEach(ev=>{
+  visibleEvents().forEach(ev=>{
     const key=ev.side+'\u0001'+ev.title;
     (groups[key]=groups[key]||[]).push(ev.day);
   });
@@ -2547,7 +2550,8 @@ function refreshAutoMultiDay(){
 }
 
 function drawMultiDayEvents(){
-  [...MULTI_EVENTS,...AUTO_RUNS].forEach(ev=>{
+  const multi = filterJFOnly ? MULTI_EVENTS.filter(e=>e.side==='right') : MULTI_EVENTS;
+  [...multi,...AUTO_RUNS].forEach(ev=>{
     const d1=Math.max(0,Math.min(TOTAL_DAYS,ev.day1));
     const d2=Math.max(0,Math.min(TOTAL_DAYS,ev.day2));
     if(d2<=d1) return;
@@ -2670,7 +2674,7 @@ function drawPhotos(){
 function drawEventTexts(){
   const lh=laneH();
   const byDay={};
-  ALL_EVENTS.forEach(ev=>{
+  visibleEvents().forEach(ev=>{
     if(AUTO_EXCLUDE.has(ev.side+'\u0001'+ev.day+'\u0001'+ev.title)) return;
     if(!(ev.day in byDay)) byDay[ev.day]=[];
     byDay[ev.day].push(ev);
@@ -2965,7 +2969,7 @@ function rrFill(c,x,y,w,h,r){
 }
 
 function updateEta(){
-  const upcoming=ALL_EVENTS.filter(e=>e.day>camDay).sort((a,b)=>a.day-b.day);
+  const upcoming=visibleEvents().filter(e=>e.day>camDay).sort((a,b)=>a.day-b.day);
   if(upcoming.length){
     const n=upcoming[0],diff=Math.max(0,Math.round(n.day-camDay));
     document.getElementById('eta-who').textContent=`Prochain — ${n.who}`;
@@ -3003,6 +3007,12 @@ document.getElementById('monthbtn').addEventListener('click',()=>{
   const btn=document.getElementById('monthbtn');
   btn.style.background=monthViewActive?'#1a73e8':'#fff';
   btn.style.color=monthViewActive?'#fff':'#1a73e8';
+});
+document.getElementById('jfonlybtn').addEventListener('click',()=>{
+  filterJFOnly=!filterJFOnly;
+  const btn=document.getElementById('jfonlybtn');
+  btn.style.background=filterJFOnly?'#1a73e8':'#fff';
+  btn.style.color=filterJFOnly?'#fff':'#1a73e8';
 });
 document.getElementById('zi').addEventListener('click',()=>{zoom=Math.min(3,zoom+0.25);});
 document.getElementById('zo').addEventListener('click',()=>{zoom=Math.max(0.3,zoom-0.25);});

@@ -2046,6 +2046,7 @@ function draw(ts){
   }
   // camDay toujours dérivé de scrollY
   camDay=Math.max(0,Math.min(TOTAL_DAYS,scrollY*7/laneH()));
+  seasonBlend=computeSeasonBlend(camDay);
   ctx.clearRect(0,0,W,H);
 
   drawBackground();
@@ -2225,13 +2226,100 @@ function drawMonthView(){
   }
 }
 
+// === SAISONS : le décor (fond, montagnes, soleil, route) change avec la date affichée ===
+const APP_SEASONS={
+  hiver:{
+    skyTop:'#2b4152',skyBottom:'#d9e7e6',ground:'#e3ebe8',
+    mtnFar:'#93a8ac',mtnMid:'#6d838a',mtnNear:'#4c626b',snowAmt:0.6,
+    sun:'#eef3f2',sunGlow:'#e9f1f0',
+    road:'#c9d4d7',
+    coat:'#33454f',scarf:'#c1502f',shirt:'#e7edec',
+    particle:'snow',particleColor:'#ffffff'
+  },
+  printemps:{
+    skyTop:'#5f93ad',skyBottom:'#dcecd0',ground:'#bcdc98',
+    mtnFar:'#9db38f',mtnMid:'#7a9a72',mtnNear:'#5c7a54',snowAmt:0.16,
+    sun:'#fff3c9',sunGlow:'#fff3c9',
+    road:'#d7d9cd',
+    coat:'#3c6b45',scarf:'#e58ab0',shirt:'#f3efe4',
+    particle:'petal',particleColor:'#f4c9d8'
+  },
+  ete:{
+    skyTop:'#3f7fae',skyBottom:'#eee0ae',ground:'#dcb75c',
+    mtnFar:'#a89a70',mtnMid:'#8a7c54',mtnNear:'#6c6040',snowAmt:0.03,
+    sun:'#ffe38f',sunGlow:'#ffdc78',
+    road:'#ddd2ae',
+    coat:'#c98a3e',scarf:'#dba43c',shirt:'#fff8e6',
+    particle:'dust',particleColor:'#fff3cf'
+  },
+  automne:{
+    skyTop:'#6a4a5c',skyBottom:'#e8b177',ground:'#b0723e',
+    mtnFar:'#8a7062',mtnMid:'#6c5648',mtnNear:'#4e3e34',snowAmt:0.2,
+    sun:'#f4b16b',sunGlow:'#f4b16b',
+    road:'#cdb894',
+    coat:'#8f3c25',scarf:'#c1502f',shirt:'#f1e2cf',
+    particle:'leaf',particleColor:'#c1502f'
+  }
+};
+const SEASON_BEFORE_BOUNDARY={1:2,4:5,7:8,10:11}; // fin de mois -> saison suivante
+const SEASON_AFTER_BOUNDARY={2:1,5:4,8:7,11:10};  // début de mois -> saison précédente
+function seasonForMonth(m){
+  if(m===11||m===0||m===1) return 'hiver';
+  if(m>=2&&m<=4) return 'printemps';
+  if(m>=5&&m<=7) return 'ete';
+  return 'automne';
+}
+function computeSeasonBlend(day){
+  const dt=new Date(MONTH_ORIGIN_MS+Math.round(day)*86400000);
+  const m=dt.getUTCMonth(), dom=dt.getUTCDate();
+  const TRANS=6;
+  if(SEASON_BEFORE_BOUNDARY[m]!==undefined){
+    const dim=new Date(Date.UTC(dt.getUTCFullYear(),m+1,0)).getUTCDate();
+    const left=dim-dom;
+    if(left<TRANS){
+      const t=1-(left/TRANS);
+      return{a:seasonForMonth(m),b:seasonForMonth(SEASON_BEFORE_BOUNDARY[m]),t:Math.max(0,Math.min(1,t))};
+    }
+  }
+  if(SEASON_AFTER_BOUNDARY[m]!==undefined && dom<=TRANS){
+    const t=dom/TRANS;
+    return{a:seasonForMonth(SEASON_AFTER_BOUNDARY[m]),b:seasonForMonth(m),t:Math.max(0,Math.min(1,t))};
+  }
+  const s=seasonForMonth(m);
+  return{a:s,b:s,t:1};
+}
+let seasonBlend={a:'ete',b:'ete',t:1};
+function hexToRgbArr(hex){
+  const v=hex.replace('#','');
+  return[parseInt(v.substring(0,2),16),parseInt(v.substring(2,4),16),parseInt(v.substring(4,6),16)];
+}
+function hexToRgba(hex,a){ const[r,g,b]=hexToRgbArr(hex); return`rgba(${r},${g},${b},${a})`; }
+function lerpHex(a,b,t){
+  const[ar,ag,ab]=hexToRgbArr(a),[br,bg,bb]=hexToRgbArr(b);
+  const toHex=(v)=>Math.max(0,Math.min(255,Math.round(v))).toString(16).padStart(2,'0');
+  return`#${toHex(ar+(br-ar)*t)}${toHex(ag+(bg-ag)*t)}${toHex(ab+(bb-ab)*t)}`;
+}
+function seasonColor(field){
+  const A=APP_SEASONS[seasonBlend.a],B=APP_SEASONS[seasonBlend.b],t=seasonBlend.t;
+  if(t<=0.001) return A[field];
+  if(t>=0.999) return B[field];
+  return lerpHex(A[field],B[field],t);
+}
+function seasonNum(field){
+  const A=APP_SEASONS[seasonBlend.a],B=APP_SEASONS[seasonBlend.b];
+  return A[field]+(B[field]-A[field])*seasonBlend.t;
+}
+function seasonParticleCfg(){
+  return seasonBlend.t<0.5 ? APP_SEASONS[seasonBlend.a] : APP_SEASONS[seasonBlend.b];
+}
+
 function drawBackground(){
-  ctx.fillStyle='#c8dba8';
+  ctx.fillStyle=seasonColor('ground');
   ctx.fillRect(0,0,W,H);
   const skyH=Math.min(60,H*0.10);
   const sky=ctx.createLinearGradient(0,0,0,skyH);
-  sky.addColorStop(0,'#a9d8ec');
-  sky.addColorStop(1,'#d7ecd0');
+  sky.addColorStop(0,seasonColor('skyTop'));
+  sky.addColorStop(1,seasonColor('skyBottom'));
   ctx.fillStyle=sky;
   ctx.fillRect(0,0,W,skyH);
 }
@@ -2247,6 +2335,44 @@ function drawCloudShape(cx,cy,scale){
   ctx.fill();
 }
 
+function drawMountainRow(baseY,peaks,colorFar,alpha,heightFn,midHeightFn){
+  const pts=[];
+  ctx.beginPath();
+  ctx.moveTo(0,baseY+10);
+  for(let i=0;i<=peaks;i++){
+    const px=W*(i/peaks);
+    const h=heightFn(i);
+    ctx.lineTo(px,baseY-h);
+    pts.push({x:px,y:baseY-h,h});
+    if(midHeightFn && i<peaks){
+      const midx=W*((i+0.5)/peaks);
+      const midh=midHeightFn(i);
+      ctx.lineTo(midx,baseY-midh);
+      pts.push({x:midx,y:baseY-midh,h:midh});
+    }
+  }
+  ctx.lineTo(W,baseY+10);
+  ctx.closePath();
+  ctx.fillStyle=hexToRgba(colorFar,alpha);
+  ctx.fill();
+
+  // Neige : calotte au sommet des pics les plus hauts, proportionnelle à la saison
+  const snowAmt=seasonNum('snowAmt');
+  if(snowAmt>0.02){
+    ctx.fillStyle=hexToRgba('#f4f8f7',Math.min(0.95,alpha+0.4));
+    pts.forEach(p=>{
+      const cap=p.h*snowAmt*0.55;
+      if(cap<2) return;
+      ctx.beginPath();
+      ctx.moveTo(p.x-Math.max(2,p.h*0.16),p.y+cap);
+      ctx.lineTo(p.x,p.y);
+      ctx.lineTo(p.x+Math.max(2,p.h*0.16),p.y+cap);
+      ctx.closePath();
+      ctx.fill();
+    });
+  }
+}
+
 function drawScenery(){
   const hz=horizonY();
 
@@ -2254,73 +2380,77 @@ function drawScenery(){
   const sunX=W*0.78, sunY=Math.max(12,hz-14);
   const sunR=Math.max(8,Math.min(18,H*0.02));
   const glow=ctx.createRadialGradient(sunX,sunY,0,sunX,sunY,sunR*2.4);
-  glow.addColorStop(0,'rgba(255,241,180,0.9)');
-  glow.addColorStop(0.5,'rgba(255,224,130,0.35)');
-  glow.addColorStop(1,'rgba(255,224,130,0)');
+  glow.addColorStop(0,hexToRgba(seasonColor('sunGlow'),0.85));
+  glow.addColorStop(0.5,hexToRgba(seasonColor('sunGlow'),0.32));
+  glow.addColorStop(1,hexToRgba(seasonColor('sunGlow'),0));
   ctx.fillStyle=glow;
   ctx.beginPath();ctx.arc(sunX,sunY,sunR*2.4,0,Math.PI*2);ctx.fill();
-  ctx.fillStyle='#ffe9a8';
+  ctx.fillStyle=seasonColor('sun');
   ctx.beginPath();ctx.arc(sunX,sunY,sunR,0,Math.PI*2);ctx.fill();
 
-  // === Montagnes (trois rangées marron, silhouettes détaillées à l'horizon) ===
+  // === Montagnes (trois rangées, teinte + calotte neigeuse selon la saison) ===
   const baseY=hz+6;
-
-  // Rangée lointaine (plus claire)
-  ctx.fillStyle='rgba(150,120,95,0.35)';
-  ctx.beginPath();
-  ctx.moveTo(0,baseY+10);
-  const peaksFar=10;
-  for(let i=0;i<=peaksFar;i++){
-    const px=W*(i/peaksFar);
-    const h=5+Math.abs(Math.sin(i*1.7+0.4))*10;
-    ctx.lineTo(px,baseY-h);
-  }
-  ctx.lineTo(W,baseY+10);
-  ctx.closePath();
-  ctx.fill();
-
-  // Rangée médiane
-  ctx.fillStyle='rgba(122,90,64,0.45)';
-  ctx.beginPath();
-  ctx.moveTo(0,baseY+10);
-  const peaks=9;
-  for(let i=0;i<=peaks;i++){
-    const px=W*(i/peaks);
-    const h=6+Math.abs(Math.sin(i*2.3+1.1))*14;
-    ctx.lineTo(px,baseY-h);
-    if(i<peaks){
-      const midx=W*((i+0.5)/peaks);
-      const midh=3+Math.abs(Math.cos(i*3.1))*7;
-      ctx.lineTo(midx,baseY-midh);
-    }
-  }
-  ctx.lineTo(W,baseY+10);
-  ctx.closePath();
-  ctx.fill();
-
-  // Rangée proche (plus foncée, plus détaillée)
-  ctx.fillStyle='rgba(92,63,42,0.55)';
-  ctx.beginPath();
-  ctx.moveTo(0,baseY+10);
-  const peaks2=13;
-  for(let i=0;i<=peaks2;i++){
-    const px=W*(i/peaks2);
-    const h=3+Math.abs(Math.cos(i*1.9+0.6))*9;
-    ctx.lineTo(px,baseY-h+2);
-    if(i<peaks2){
-      const midx=W*((i+0.5)/peaks2);
-      const midh=1+Math.abs(Math.sin(i*4.2))*4;
-      ctx.lineTo(midx,baseY-midh+2);
-    }
-  }
-  ctx.lineTo(W,baseY+10);
-  ctx.closePath();
-  ctx.fill();
+  drawMountainRow(baseY+10,10,seasonColor('mtnFar'),0.35,i=>5+Math.abs(Math.sin(i*1.7+0.4))*10);
+  drawMountainRow(baseY+6,9,seasonColor('mtnMid'),0.45,
+    i=>6+Math.abs(Math.sin(i*2.3+1.1))*14,
+    i=>3+Math.abs(Math.cos(i*3.1))*7);
+  drawMountainRow(baseY+2,13,seasonColor('mtnNear'),0.55,
+    i=>3+Math.abs(Math.cos(i*1.9+0.6))*9,
+    i=>1+Math.abs(Math.sin(i*4.2))*4);
 
   // === Nuages ===
   ctx.fillStyle='rgba(255,255,255,0.8)';
   [{x:W*0.18,y:Math.max(10,hz-16),s:0.55},{x:W*0.42,y:Math.max(8,hz-22),s:0.42},{x:W*0.62,y:Math.max(10,hz-10),s:0.35}]
     .forEach(c=>drawCloudShape(c.x,c.y,c.s));
+
+  drawSeasonParticles();
+}
+
+// === Particules saisonnières : neige, pétales, poussière de chaleur, feuilles ===
+let seasonParticles=null, seasonParticlesType=null;
+function ensureSeasonParticles(type){
+  if(seasonParticles && seasonParticlesType===type) return seasonParticles;
+  seasonParticlesType=type;
+  const count=type==='dust'?22:34;
+  seasonParticles=[];
+  for(let i=0;i<count;i++){
+    seasonParticles.push({
+      x:Math.random(), y:Math.random(),
+      r:2+Math.random()*3,
+      sp:0.02+Math.random()*0.05,
+      drift:(Math.random()-0.5)*0.04,
+      phase:Math.random()*Math.PI*2,
+      rot:Math.random()*Math.PI
+    });
+  }
+  return seasonParticles;
+}
+function drawSeasonParticles(){
+  const cfg=seasonParticleCfg();
+  const arr=ensureSeasonParticles(cfg.particle);
+  const dt=playing||playingReverse?1:0.4; // moins de mouvement quand la route est à l'arrêt
+  for(let i=0;i<arr.length;i++){
+    const p=arr[i];
+    p.y+=p.sp*dt*0.02;
+    p.x+=(p.drift+Math.sin(p.phase+p.y*8)*0.01)*dt*0.02;
+    p.phase+=dt*0.03;
+    if(p.y>1.05){ p.y=-0.04; p.x=Math.random(); }
+    const x=p.x*W, y=p.y*H*0.5; // les particules restent dans la moitié haute (ciel/montagnes)
+    if(cfg.particle==='snow'){
+      ctx.fillStyle=`rgba(255,255,255,${0.5+0.35*Math.sin(p.phase)})`;
+      ctx.beginPath();ctx.arc(x,y,p.r*0.5,0,Math.PI*2);ctx.fill();
+    }else if(cfg.particle==='dust'){
+      ctx.fillStyle=hexToRgba(cfg.particleColor,0.3);
+      ctx.beginPath();ctx.arc(x,y,p.r*0.45,0,Math.PI*2);ctx.fill();
+    }else{
+      ctx.save();
+      ctx.translate(x,y);
+      ctx.rotate(p.rot+p.y*4);
+      ctx.fillStyle=hexToRgba(cfg.particleColor,0.7);
+      ctx.beginPath();ctx.ellipse(0,0,p.r*0.7,p.r*0.35,0,0,Math.PI*2);ctx.fill();
+      ctx.restore();
+    }
+  }
 }
 
 function drawHaze(){
@@ -2366,7 +2496,7 @@ function drawAllLanes(){
     const isCurrentLane=(ln===camWeek);
 
     // === ROUTE PRINCIPALE (trapèze en perspective) ===
-    ctx.fillStyle='#d4d8de';
+    ctx.fillStyle=seasonColor('road');
     ctx.beginPath();
     ctx.moveTo(pTL.x,pTL.y);ctx.lineTo(pTR.x,pTR.y);
     ctx.lineTo(pBR.x,pBR.y);ctx.lineTo(pBL.x,pBL.y);
@@ -2912,20 +3042,26 @@ function drawPerson(){
   ctx.fillStyle='#2a4a7a';
   ctx.beginPath();ctx.ellipse(cx,cy+s*0.02,s*0.18,s*0.10,0,0,Math.PI*2);ctx.fill();
 
-  // T-shirt
-  ctx.fillStyle='#f0f0f0';
+  // Manteau (couleur selon la saison)
+  const coatColor=seasonColor('shirt');
+  ctx.fillStyle=coatColor;
   ctx.beginPath();
   ctx.moveTo(cx-s*0.22,cy-s*0.08);ctx.lineTo(cx+s*0.22,cy-s*0.08);
   ctx.lineTo(cx+s*0.19,cy-s*0.62);ctx.lineTo(cx-s*0.19,cy-s*0.62);
   ctx.closePath();ctx.fill();
   // Sleeves
   [[cx-s*0.19,cx-s*0.33],[cx+s*0.19,cx+s*0.33]].forEach(([ix,ox])=>{
-    ctx.fillStyle='#f0f0f0';
+    ctx.fillStyle=coatColor;
     ctx.beginPath();
     ctx.moveTo(ix,cy-s*0.60);ctx.lineTo(ix,cy-s*0.40);
     ctx.lineTo(ox,cy-s*0.38);ctx.lineTo(ox,cy-s*0.57);
     ctx.closePath();ctx.fill();
   });
+  // Écharpe : accessoire qui change de couleur avec la saison
+  ctx.fillStyle=seasonColor('scarf');
+  ctx.beginPath();ctx.ellipse(cx,cy-s*0.60,s*0.15,s*0.065,0,0,Math.PI*2);ctx.fill();
+  ctx.beginPath();ctx.moveTo(cx-s*0.045,cy-s*0.58);ctx.lineTo(cx+s*0.045,cy-s*0.58);
+  ctx.lineTo(cx+s*0.04,cy-s*0.38);ctx.lineTo(cx-s*0.04,cy-s*0.38);ctx.closePath();ctx.fill();
 
   // Arms
   ctx.strokeStyle='#e8a882'; ctx.lineWidth=s*0.11;

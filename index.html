@@ -71,7 +71,11 @@ window.syncAllCalendars = syncAllCalendars;
     <button class="zb" id="zo">−</button>
   </div>
   <button id="todaybtn" title="Aujourd'hui">Auj</button>  <button id="resetbtn" title="Retour au début"><i class="ti ti-arrow-back-up"></i></button>
-  <button id="revbtn" title="Reculer"><i class="ti ti-player-play" style="transform:scaleX(-1);display:inline-block"></i></button><button id="playbtn"><i class="ti ti-player-play" id="pico"></i></button>      <div id="eta-name" style="font-size:14px;font-weight:500;color:#202124;margin-top:1px;">—</div>
+  <button id="revbtn" title="Reculer"><i class="ti ti-player-play" style="transform:scaleX(-1);display:inline-block"></i></button><button id="playbtn"><i class="ti ti-player-play" id="pico"></i></button>
+  <div id="eta">
+    <div>
+      <div id="eta-who" style="font-size:12px;font-weight:600;color:#5f6368;">—</div>
+      <div id="eta-name" style="font-size:14px;font-weight:500;color:#202124;margin-top:1px;">—</div>
     </div>
     <div style="display:flex;align-items:baseline;gap:3px;">
       <span id="eta-d" style="font-size:22px;font-weight:500;color:#c1502f;">—</span>
@@ -2079,6 +2083,7 @@ function draw(ts){
   // camDay toujours dérivé de scrollY
   camDay=Math.max(0,Math.min(TOTAL_DAYS,scrollY*7/laneH()));
   seasonBlend=computeSeasonBlend(camDay);
+  updateEta();
   ctx.clearRect(0,0,W,H);
 
   drawBackground();
@@ -3368,23 +3373,6 @@ wrap.addEventListener('click',e=>{
 });
 
 
-// Boutons navigation tactiles
-let navInterval=null;
-function startNav(dir){
-  // dir=1 avance, dir=-1 recule
-  function step(){ camDay=Math.max(0,Math.min(TOTAL_DAYS,camDay+dir*0.5)); }
-  step();
-  navInterval=setInterval(step,30);
-}
-function stopNav(){ if(navInterval){clearInterval(navInterval);navInterval=null;} }
-
-
-// Navigation buttons - hold to scroll
-let navIv=null;
-function startNav(d){ camDay=Math.max(0,Math.min(TOTAL_DAYS,Math.round(camDay/7)*7+d)); }
-function stopNav(){ clearInterval(navIv); navIv=null; }
-
-
 // ===== SYNCHRONISATION GOOGLE CALENDAR =====
 // jsDelivr : CDN public qui met en cache le contenu GitHub et tolère bien plus
 // de requêtes que raw.githubusercontent.com (qui renvoie parfois une erreur 429).
@@ -3398,7 +3386,7 @@ async function fetchEventsJson(){
     return await resp.json();
   }catch(errPrimary){
     // Si jsDelivr échoue (ex: pas encore propagé le tout dernier commit), on retente sur GitHub direct
-    const resp = await fetch(APPS_SCRIPT_URL_FALLBACK);
+    const resp = await fetch(APPS_SCRIPT_URL_FALLBACK, {cache:'no-store'});
     if(!resp.ok){
       if(resp.status===429) throw new Error("limite de requêtes atteinte (429) — réessaie dans une minute");
       throw new Error('HTTP ' + resp.status);

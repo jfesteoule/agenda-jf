@@ -35,6 +35,20 @@ window.syncAllCalendars = syncAllCalendars;
 
 <style>
 @keyframes spin { from{transform:rotate(0deg)} to{transform:rotate(360deg)} }
+#gcal-overlay{display:none;position:fixed;inset:0;background:rgba(0,0,0,0.45);z-index:5000;align-items:center;justify-content:center;padding:20px;}
+#gcal-overlay.show{display:flex;}
+#gcal-box{background:#fff;border-radius:14px;max-width:420px;width:100%;max-height:80vh;overflow:auto;padding:18px;box-shadow:0 8px 30px rgba(0,0,0,0.3);}
+#gcal-box h3{font-size:16px;margin-bottom:4px;color:#202124;}
+#gcal-box p.hint{font-size:12px;color:#5f6368;margin-bottom:12px;}
+#gcal-list .gcal-row{display:flex;align-items:center;gap:8px;padding:8px 0;border-bottom:1px solid #f1f3f4;}
+#gcal-list .gcal-dot{width:12px;height:12px;border-radius:50%;flex-shrink:0;}
+#gcal-list .gcal-name{flex:1;font-size:13px;color:#202124;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+#gcal-list select{font-size:12px;border:1px solid #dadce0;border-radius:6px;padding:3px 6px;}
+#gcal-actions{display:flex;justify-content:space-between;align-items:center;margin-top:14px;gap:8px;}
+#gcal-actions button{border:none;border-radius:20px;padding:8px 14px;font-size:13px;cursor:pointer;}
+#gcal-validate{background:#1a73e8;color:#fff;}
+#gcal-cancel{background:#f1f3f4;color:#202124;}
+#gcal-logout{background:#fce8e6;color:#c5221f;}
 </style>
 </head>
 <body>
@@ -47,6 +61,7 @@ window.syncAllCalendars = syncAllCalendars;
       <input id="sbox" type="text" value="Route du temps · Jan 2023 › Déc 2027" readonly>
     </div>
     <button id="syncbtn" style="position:relative;z-index:1000;pointer-events:auto;width:40px;height:40px;min-width:40px;background:#fff;border-radius:50%;border:none;cursor:pointer;display:flex;align-items:center;justify-content:center;box-shadow:0 2px 6px rgba(0,0,0,0.2);color:#34a853;font-size:18px;" title="Synchroniser Google Agenda"><i class="ti ti-refresh"></i></button>
+    <button id="gconnectbtn" style="position:relative;z-index:1000;pointer-events:auto;width:40px;height:40px;min-width:40px;background:#fff;border-radius:50%;border:none;cursor:pointer;display:flex;align-items:center;justify-content:center;box-shadow:0 2px 6px rgba(0,0,0,0.2);color:#5f6368;font-size:15px;font-weight:bold;margin-left:6px;" title="Se connecter à un compte Google">G</button>
     <button id="monthbtn" style="position:relative;z-index:1000;pointer-events:auto;width:40px;height:40px;min-width:40px;background:#fff;border-radius:50%;border:none;cursor:pointer;display:flex;align-items:center;justify-content:center;box-shadow:0 2px 6px rgba(0,0,0,0.2);color:#1a73e8;font-size:18px;margin-left:6px;" title="Vue mensuelle"><i class="ti ti-calendar-month"></i></button>
     <button id="jfonlybtn" style="position:relative;z-index:1000;pointer-events:auto;width:40px;height:40px;min-width:40px;background:#fff;border-radius:50%;border:none;cursor:pointer;display:flex;align-items:center;justify-content:center;box-shadow:0 2px 6px rgba(0,0,0,0.2);color:#1a73e8;font-size:16px;font-weight:bold;margin-left:6px;" title="Afficher uniquement l'agenda de JF">JF</button>
   </div>
@@ -73,6 +88,20 @@ window.syncAllCalendars = syncAllCalendars;
     <div style="display:flex;align-items:baseline;gap:3px;">
       <span id="eta-d" style="font-size:22px;font-weight:500;color:#1a73e8;">—</span>
       <span id="eta-u" style="font-size:12px;color:#5f6368;">jours</span>
+    </div>
+  </div>
+  <div id="gcal-overlay">
+    <div id="gcal-box">
+      <h3>Agendas Google à afficher</h3>
+      <p class="hint">Coche les agendas de ton compte Google à importer, et choisis à quel côté (JF ou Anne) les associer. Rien n'est enregistré ailleurs que dans ce navigateur.</p>
+      <div id="gcal-list">Chargement…</div>
+      <div id="gcal-actions">
+        <button id="gcal-logout">Déconnexion</button>
+        <div>
+          <button id="gcal-cancel">Annuler</button>
+          <button id="gcal-validate">Valider</button>
+        </div>
+      </div>
     </div>
   </div>
 </div>
@@ -3182,6 +3211,250 @@ async function syncAllCalendars(){
 }
 
 document.getElementById('syncbtn').addEventListener('click', window.syncAllCalendars);
+
+
+// ===== CONNEXION GOOGLE (compte de l'utilisateur, rien n'est en dur) =====
+// Prototype: OAuth 100% côté navigateur via Google Identity Services (token client),
+// sans backend ni secret. Chaque visiteur se connecte avec SON PROPRE compte Google
+// et choisit SES agendas ; rien n'est stocké ailleurs que dans son navigateur (localStorage).
+//
+// ⚠️ Pour activer réellement la connexion, il faut créer un identifiant OAuth "Application Web"
+// dans Google Cloud Console (API Google Calendar activée, origine JS autorisée = l'URL du site)
+// et coller sa valeur ci-dessous. Voir PROPOSITION_GOOGLE_AUTH.md pour la marche à suivre complète.
+const GOOGLE_CLIENT_ID = 'REMPLACER_PAR_VOTRE_CLIENT_ID.apps.googleusercontent.com';
+const GOOGLE_SCOPES = 'https://www.googleapis.com/auth/calendar.readonly';
+const GOOGLE_ORIGIN = new Date('2023-01-01T00:00:00Z');
+const GCAL_CONFIG_KEY = 'agendaJF_googleCalConfig';
+
+let googleAccessToken = null;
+let googleTokenClient = null;
+let googleCalendars = [];
+let selectedCalendarConfig = null;
+try{ selectedCalendarConfig = JSON.parse(localStorage.getItem(GCAL_CONFIG_KEY) || 'null'); }catch(e){ selectedCalendarConfig = null; }
+
+function initGoogleAuth(){
+  if(googleTokenClient) return true;
+  if(!window.google || !google.accounts || !google.accounts.oauth2) return false;
+  googleTokenClient = google.accounts.oauth2.initTokenClient({
+    client_id: GOOGLE_CLIENT_ID,
+    scope: GOOGLE_SCOPES,
+    callback: onGoogleTokenReceived
+  });
+  return true;
+}
+
+function updateGoogleButton(){
+  const btn = document.getElementById('gconnectbtn');
+  if(!btn) return;
+  if(googleAccessToken){
+    btn.title = 'Compte Google connecté — cliquer pour changer les agendas';
+    btn.style.color = '#34a853';
+  } else {
+    btn.title = 'Se connecter à un compte Google';
+    btn.style.color = '#5f6368';
+  }
+}
+
+function connectGoogleAccount(promptType){
+  if(GOOGLE_CLIENT_ID.startsWith('REMPLACER_')){
+    alert("Connexion Google non configurée : ouvre index.html et renseigne GOOGLE_CLIENT_ID avec l'identifiant OAuth créé dans Google Cloud Console (voir PROPOSITION_GOOGLE_AUTH.md).");
+    return;
+  }
+  if(!initGoogleAuth()){
+    alert("Le service d'authentification Google n'est pas encore chargé, réessaie dans un instant.");
+    return;
+  }
+  googleTokenClient.requestAccessToken({ prompt: promptType !== undefined ? promptType : (googleAccessToken ? '' : 'consent') });
+}
+
+async function onGoogleTokenReceived(resp){
+  if(resp.error){
+    if(resp.error !== 'interaction_required' && resp.error !== 'access_denied'){
+      console.error('Erreur OAuth Google:', resp.error);
+    }
+    return;
+  }
+  googleAccessToken = resp.access_token;
+  updateGoogleButton();
+  if(selectedCalendarConfig && Object.keys(selectedCalendarConfig).length > 0){
+    await syncFromGoogle();
+  } else {
+    await openCalendarPicker();
+  }
+}
+
+async function fetchGoogleCalendarList(){
+  const resp = await fetch('https://www.googleapis.com/calendar/v3/users/me/calendarList?minAccessRole=reader', {
+    headers: { Authorization: 'Bearer ' + googleAccessToken }
+  });
+  if(!resp.ok) throw new Error('HTTP ' + resp.status);
+  const data = await resp.json();
+  return (data.items || []).map(c => ({
+    id: c.id,
+    name: c.summaryOverride || c.summary,
+    color: c.backgroundColor || '#1a73e8',
+    primary: !!c.primary
+  }));
+}
+
+function renderCalendarPickerList(){
+  const container = document.getElementById('gcal-list');
+  container.innerHTML = '';
+  const saved = selectedCalendarConfig || {};
+  googleCalendars.forEach(cal => {
+    const checked = saved[cal.id] !== undefined;
+    const side = saved[cal.id] || (cal.primary ? 'right' : 'left');
+    const row = document.createElement('div');
+    row.className = 'gcal-row';
+    row.innerHTML =
+      '<input type="checkbox" class="gcal-check" data-id="' + cal.id + '" ' + (checked ? 'checked' : '') + '>' +
+      '<div class="gcal-dot" style="background:' + cal.color + '"></div>' +
+      '<div class="gcal-name" title="' + cal.name + '">' + cal.name + '</div>' +
+      '<select class="gcal-side" data-id="' + cal.id + '">' +
+        '<option value="right"' + (side === 'right' ? ' selected' : '') + '>JF</option>' +
+        '<option value="left"' + (side === 'left' ? ' selected' : '') + '>Anne</option>' +
+      '</select>';
+    container.appendChild(row);
+  });
+}
+
+async function openCalendarPicker(){
+  const overlay = document.getElementById('gcal-overlay');
+  overlay.classList.add('show');
+  document.getElementById('gcal-list').textContent = 'Chargement des agendas…';
+  try{
+    googleCalendars = await fetchGoogleCalendarList();
+    renderCalendarPickerList();
+  }catch(err){
+    document.getElementById('gcal-list').textContent = 'Erreur: ' + err.message;
+    console.error(err);
+  }
+}
+
+async function fetchGoogleEventsForCalendar(calendarId){
+  const timeMin = GOOGLE_ORIGIN.toISOString();
+  const timeMax = new Date(GOOGLE_ORIGIN.getTime() + TOTAL_DAYS * 86400000).toISOString();
+  let items = [];
+  let pageToken = '';
+  do{
+    const url = new URL('https://www.googleapis.com/calendar/v3/calendars/' + encodeURIComponent(calendarId) + '/events');
+    url.searchParams.set('timeMin', timeMin);
+    url.searchParams.set('timeMax', timeMax);
+    url.searchParams.set('singleEvents', 'true');
+    url.searchParams.set('orderBy', 'startTime');
+    url.searchParams.set('maxResults', '2500');
+    if(pageToken) url.searchParams.set('pageToken', pageToken);
+    const resp = await fetch(url, { headers: { Authorization: 'Bearer ' + googleAccessToken } });
+    if(!resp.ok) throw new Error('HTTP ' + resp.status + ' pour l\'agenda ' + calendarId);
+    const data = await resp.json();
+    items = items.concat(data.items || []);
+    pageToken = data.nextPageToken || '';
+  } while(pageToken);
+  return items;
+}
+
+async function syncFromGoogle(){
+  if(!selectedCalendarConfig || Object.keys(selectedCalendarConfig).length === 0){
+    alert('Aucun agenda sélectionné.');
+    return;
+  }
+  const btn = document.getElementById('gconnectbtn');
+  btn.style.animation = 'spin 1s linear infinite';
+  try{
+    EVT_JF.length = 0;
+    EVT_ANNE.length = 0;
+
+    for(const [calendarId, side] of Object.entries(selectedCalendarConfig)){
+      const items = await fetchGoogleEventsForCalendar(calendarId);
+      items.forEach(ev => {
+        if(!ev.start) return;
+        const dateStr = ev.start.date || (ev.start.dateTime ? ev.start.dateTime.slice(0, 10) : null);
+        if(!dateStr) return;
+        const evDate = new Date(dateStr + 'T00:00:00Z');
+        const day = Math.round((evDate.getTime() - GOOGLE_ORIGIN.getTime()) / 86400000);
+        if(day < 0 || day > TOTAL_DAYS) return;
+        const label = evDate.getUTCDate() + ' ' + evDate.toLocaleString('fr-FR', { month: 'short', timeZone: 'UTC' });
+        const item = {
+          day: day,
+          label: label,
+          title: (ev.summary || '(Sans titre)').slice(0, 40),
+          color: side === 'right' ? '#1a73e8' : '#e67c73',
+          side: side,
+          who: side === 'right' ? 'JF' : 'Anne'
+        };
+        if(side === 'right') EVT_JF.push(item); else EVT_ANNE.push(item);
+      });
+    }
+
+    ALL_EVENTS.length = 0;
+    [...EVT_JF, ...EVT_ANNE].sort((a, b) => a.day - b.day).forEach(e => ALL_EVENTS.push(e));
+
+    btn.style.animation = '';
+    alert('✓ ' + ALL_EVENTS.length + ' événements importés depuis ton compte Google !');
+  }catch(err){
+    btn.style.animation = '';
+    alert('Erreur de synchronisation Google: ' + err.message);
+    console.error(err);
+  }
+}
+
+document.getElementById('gconnectbtn').addEventListener('click', () => {
+  if(googleAccessToken){
+    openCalendarPicker();
+  } else {
+    connectGoogleAccount('consent');
+  }
+});
+
+document.getElementById('gcal-cancel').addEventListener('click', () => {
+  document.getElementById('gcal-overlay').classList.remove('show');
+});
+
+document.getElementById('gcal-logout').addEventListener('click', () => {
+  if(googleAccessToken && window.google && google.accounts){
+    google.accounts.oauth2.revoke(googleAccessToken, () => {});
+  }
+  googleAccessToken = null;
+  selectedCalendarConfig = null;
+  localStorage.removeItem(GCAL_CONFIG_KEY);
+  document.getElementById('gcal-overlay').classList.remove('show');
+  updateGoogleButton();
+  fetchEventsJson().then(events => {
+    EVT_JF.length = 0; EVT_ANNE.length = 0;
+    events.forEach(ev => {
+      const d = new Date(GOOGLE_ORIGIN.getTime() + ev.day * 86400000);
+      const item = { day: ev.day, label: d.getDate() + ' ' + d.toLocaleString('fr-FR', { month: 'short' }), title: (ev.title || '').slice(0, 40), color: ev.side === 'right' ? '#1a73e8' : '#e67c73', side: ev.side, who: ev.who };
+      if(ev.side === 'right') EVT_JF.push(item); else EVT_ANNE.push(item);
+    });
+    ALL_EVENTS.length = 0;
+    [...EVT_JF, ...EVT_ANNE].sort((a, b) => a.day - b.day).forEach(e => ALL_EVENTS.push(e));
+  }).catch(() => {});
+});
+
+document.getElementById('gcal-validate').addEventListener('click', async () => {
+  const config = {};
+  document.querySelectorAll('.gcal-check').forEach(chk => {
+    if(chk.checked){
+      const id = chk.dataset.id;
+      const sideSel = document.querySelector('.gcal-side[data-id="' + id.replace(/"/g, '\\"') + '"]');
+      config[id] = sideSel ? sideSel.value : 'right';
+    }
+  });
+  selectedCalendarConfig = config;
+  localStorage.setItem(GCAL_CONFIG_KEY, JSON.stringify(config));
+  document.getElementById('gcal-overlay').classList.remove('show');
+  await syncFromGoogle();
+});
+
+updateGoogleButton();
+// Reconnexion silencieuse : ne fonctionne que si la session Google du navigateur est
+// encore active et que l'utilisateur a déjà autorisé l'application (sinon, ne fait rien
+// et l'utilisateur doit recliquer sur le bouton Google).
+window.addEventListener('load', () => {
+  if(selectedCalendarConfig && !GOOGLE_CLIENT_ID.startsWith('REMPLACER_')){
+    setTimeout(() => connectGoogleAccount(''), 800);
+  }
+});
 
 </script>
 </body>

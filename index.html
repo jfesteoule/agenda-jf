@@ -2022,22 +2022,29 @@ function dayToScreen(day){
   const adj=day-MON_SHIFT;
   const week=Math.floor(adj/7);
   const dInWk=((adj%7)+7)%7; // 0=Lundi ... 6..7=Dimanche (continu pendant le défilement)
-  const frac=dInWk/7;
   const A=snakeAmp();
-  // Le dimanche (dInWk entre 6 et 7) est le raccord courbe vers la semaine suivante :
-  // la route s'y déplace de xr(semaine) vers xr(semaine+1), donc le marcheur doit suivre.
-  const xrCur=W/2 + A*snakeFrac(week);
-  let xr=xrCur;
-  if(dInWk>6){
-    const t=dInWk-6;
-    const xrNext=W/2 + A*snakeFrac(week+1);
-    xr=xrCur+(xrNext-xrCur)*t;
-  }
   const dir=(Math.floor(week/4)%2===0)?1:-1; // 1=segment qui part vers la droite, -1=vers la gauche
   // scrollY contrôle tout : le bas de semaine 0 est à yr=H*0.65 quand scrollY=0
   // scrollY augmente → tout monte (passé descend, futur/le bonhomme montent)
   const weekBaseY=H*0.65 - week*lh + scrollY; // yr du lundi (bas de la semaine), avant perspective
-  const yr=weekBaseY - frac*lh;
+
+  if(dInWk>6){
+    // Dimanche : le raccord dessiné (drawAllLanes) est un segment DROIT, tracé après
+    // projection, entre le haut de la semaine courante et le bas de la semaine suivante.
+    // On doit interpoler dans le même espace (écran), pas avant la perspective, sinon
+    // le marcheur/les tracés dérivent hors de la route dans les virages serrés.
+    const t=dInWk-6;
+    const xrCur=W/2 + A*snakeFrac(week);
+    const xrNext=W/2 + A*snakeFrac(week+1);
+    const yTop=weekBaseY-(6/7)*lh, yBotNext=weekBaseY-lh;
+    const pA=project(xrCur,yTop), pB=project(xrNext,yBotNext);
+    const x=pA.x+(pB.x-pA.x)*t, y=pA.y+(pB.y-pA.y)*t;
+    const s=pA.s+(pB.s-pA.s)*t;
+    return{x,y,lane:week,dir,hw:hwRaw*s,dInWk};
+  }
+
+  const xr=W/2 + A*snakeFrac(week);
+  const yr=weekBaseY - (dInWk/7)*lh;
   const p=project(xr,yr);
   return{x:p.x,y:p.y,lane:week,dir,hw:hwRaw*p.s,dInWk};
 }

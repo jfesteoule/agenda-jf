@@ -3221,7 +3221,7 @@ function rrFill(c,x,y,w,h,r){
 }
 
 function updateEta(){
-  const upcoming=visibleEvents().filter(e=>e.day>camDay).sort((a,b)=>a.day-b.day);
+  const upcoming=visibleEvents().filter(e=>e.day>camDay);
   if(upcoming.length){
     const n=upcoming[0],diff=Math.max(0,Math.round(n.day-camDay));
     document.getElementById('eta-who').textContent=`Prochain — ${n.who}`;
@@ -3234,6 +3234,7 @@ function updateEta(){
     document.getElementById('eta-who').style.color='#5f6368';
     document.getElementById('eta-name').textContent='31 décembre 2027';
     document.getElementById('eta-d').textContent='—';
+    document.getElementById('eta-u').textContent='';
   }
 }
 

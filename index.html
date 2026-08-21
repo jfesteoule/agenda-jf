@@ -48,7 +48,7 @@ window.syncAllCalendars = syncAllCalendars;
     </div>
     <button id="syncbtn" style="position:relative;z-index:1000;pointer-events:auto;width:40px;height:40px;min-width:40px;background:#fff;border-radius:50%;border:none;cursor:pointer;display:flex;align-items:center;justify-content:center;box-shadow:0 2px 6px rgba(0,0,0,0.2);color:#34a853;font-size:18px;" title="Synchroniser Google Agenda"><i class="ti ti-refresh"></i></button>
     <button id="monthbtn" style="position:relative;z-index:1000;pointer-events:auto;width:40px;height:40px;min-width:40px;background:#fff;border-radius:50%;border:none;cursor:pointer;display:flex;align-items:center;justify-content:center;box-shadow:0 2px 6px rgba(0,0,0,0.2);color:#1a73e8;font-size:18px;margin-left:6px;" title="Vue mensuelle"><i class="ti ti-calendar-month"></i></button>
-    <button id="jfonlybtn" style="position:relative;z-index:1000;pointer-events:auto;width:40px;height:40px;min-width:40px;background:#fff;border-radius:50%;border:none;cursor:pointer;display:flex;align-items:center;justify-content:center;box-shadow:0 2px 6px rgba(0,0,0,0.2);color:#1a73e8;font-size:16px;font-weight:bold;margin-left:6px;" title="Afficher uniquement l'agenda de JF">JF</button>
+    <button id="jfonlybtn" style="position:relative;z-index:1000;pointer-events:auto;width:40px;height:40px;min-width:40px;background:#fff;border-radius:50%;border:none;cursor:pointer;display:flex;align-items:center;justify-content:center;box-shadow:0 2px 6px rgba(0,0,0,0.2);color:#1a73e8;font-size:16px;font-weight:bold;margin-left:6px;" title="Masquer l'agenda de JF">JF</button>
   </div>
   <div id="speeds">
     <button class="sp" data-s="0.2">×⅕</button>
@@ -59,8 +59,8 @@ window.syncAllCalendars = syncAllCalendars;
     <button class="sp" data-s="30">×30</button>
   </div>
   <div id="legend">
-    <div class="leg"><div class="legdot" style="background:#1a73e8"></div>JF</div>
-    <div class="leg"><div class="legdot" style="background:#e67c73"></div>Anne</div>
+    <button id="legjf" class="leg" style="cursor:pointer;user-select:none;border:none;font:inherit;color:inherit;text-align:left;" title="Masquer l'agenda de JF"><div class="legdot" style="background:#1a73e8"></div>JF</button>
+    <button id="leganne" class="leg" style="cursor:pointer;user-select:none;border:none;font:inherit;color:inherit;text-align:left;" title="Masquer l'agenda d'Anne"><div class="legdot" style="background:#e67c73"></div>Anne</button>
     <div class="leg"><div class="legline"></div>Samedi</div>
   </div>
   <div id="zbx">
@@ -1346,6 +1346,11 @@ const EVT_JF=[
   {day:1220,label:'5 May',title:'CDG38 Expertises',color:'#1a73e8',side:'right',who:'JF'},
   {day:1222,label:'7 May',title:'CDG 38 CM restreint',color:'#0b8043',side:'right',who:'JF'},
   {day:1227,label:'12 May',title:'CDG38 Expertises',color:'#1a73e8',side:'right',who:'JF'},
+  {day:1346,label:'8 Sep',title:'CDG38 Expertises',color:'#1a73e8',side:'right',who:'JF'},
+  {day:1353,label:'15 Sep',title:'CDG38 Expertises',color:'#1a73e8',side:'right',who:'JF'},
+  {day:1367,label:'29 Sep',title:'CDG38 Expertises',color:'#1a73e8',side:'right',who:'JF'},
+  {day:1374,label:'6 Oct',title:'CDG38 Expertises',color:'#1a73e8',side:'right',who:'JF'},
+  {day:1381,label:'13 Oct',title:'CDG38 Expertises',color:'#1a73e8',side:'right',who:'JF'},
   {day:1234,label:'19 May',title:'COMITE RESTREINT Marie Reynoard',color:'#e67c73',side:'right',who:'JF'},
   {day:1235,label:'20 May',title:'Cm ddets expertise',color:'#0b8043',side:'right',who:'JF'},
   {day:1237,label:'22 May',title:'Valence expertises 9h',color:'#0b8043',side:'right',who:'JF'},
@@ -1356,10 +1361,15 @@ const EVT_JF=[
   {day:1262,label:'16 Jun',title:'CDG38 Expertises',color:'#1a73e8',side:'right',who:'JF'},
   {day:1269,label:'23 Jun',title:'CDG38 Expertises',color:'#1a73e8',side:'right',who:'JF'},
   {day:1270,label:'24 Jun',title:'Ddets cm expertises',color:'#0b8043',side:'right',who:'JF'},
+  {day:1361,label:'23 Sep',title:'DDETS Expertises CM',color:'#0b8043',side:'right',who:'JF'},
+  {day:1375,label:'7 Oct',title:'DDETS Expertises CM',color:'#0b8043',side:'right',who:'JF'},
+  {day:1403,label:'4 Nov',title:'DDETS Expertises CM',color:'#0b8043',side:'right',who:'JF'},
+  {day:1424,label:'25 Nov',title:'DDETS Expertises CM',color:'#0b8043',side:'right',who:'JF'},
   {day:1276,label:'30 Jun',title:'COMITE RESTREINT Marie Reynoard',color:'#e67c73',side:'right',who:'JF'},
   {day:1279,label:'3 Jul',title:'CDG 38 CM restreint',color:'#0b8043',side:'right',who:'JF'},
   {day:1342,label:'4 Sep',title:'CDG 38 CM restreint',color:'#0b8043',side:'right',who:'JF'},
   {day:1347,label:'9 Sep',title:'Uga 9h',color:'#33b679',side:'right',who:'JF'},
+  {day:1348,label:'10 Sep',title:'DDETS Expertises CM',color:'#0b8043',side:'right',who:'JF'},
   {day:1355,label:'17 Sep',title:'COMITE PLENIERE Marie Reynoard',color:'#e67c73',side:'right',who:'JF'},
   {day:1370,label:'2 Oct',title:'CDG 38 CM restreint',color:'#0b8043',side:'right',who:'JF'},
   {day:1388,label:'20 Oct',title:'COMITE RESTREINT Marie Reynoard',color:'#e67c73',side:'right',who:'JF'},
@@ -1918,9 +1928,19 @@ const PHOTOS=[
   ,{day:1255, side:'right', legende:'CDG38 Expertises', src:EXPCDG38_PHOTO_SRC}
   ,{day:1262, side:'right', legende:'CDG38 Expertises', src:EXPCDG38_PHOTO_SRC}
   ,{day:1269, side:'right', legende:'CDG38 Expertises', src:EXPCDG38_PHOTO_SRC}
+  ,{day:1346, side:'right', legende:'CDG38 Expertises', src:EXPCDG38_PHOTO_SRC}
+  ,{day:1353, side:'right', legende:'CDG38 Expertises', src:EXPCDG38_PHOTO_SRC}
+  ,{day:1367, side:'right', legende:'CDG38 Expertises', src:EXPCDG38_PHOTO_SRC}
+  ,{day:1374, side:'right', legende:'CDG38 Expertises', src:EXPCDG38_PHOTO_SRC}
+  ,{day:1381, side:'right', legende:'CDG38 Expertises', src:EXPCDG38_PHOTO_SRC}
   ,{day:1144, side:'right', legende:'DDETS Expertises CM', src:DDETS_PHOTO_SRC}
   ,{day:1235, side:'right', legende:'DDETS Expertises CM', src:DDETS_PHOTO_SRC}
   ,{day:1270, side:'right', legende:'DDETS Expertises CM', src:DDETS_PHOTO_SRC}
+  ,{day:1361, side:'right', legende:'DDETS Expertises CM', src:DDETS_PHOTO_SRC}
+  ,{day:1375, side:'right', legende:'DDETS Expertises CM', src:DDETS_PHOTO_SRC}
+  ,{day:1403, side:'right', legende:'DDETS Expertises CM', src:DDETS_PHOTO_SRC}
+  ,{day:1424, side:'right', legende:'DDETS Expertises CM', src:DDETS_PHOTO_SRC}
+  ,{day:1348, side:'right', legende:'DDETS Expertises CM', src:DDETS_PHOTO_SRC}
 ];
 PHOTOS.forEach(p=>{ p.img=new Image(); p.loaded=false; p.img.onload=()=>{p.loaded=true;}; p.img.src=p.src; });
 
@@ -1932,8 +1952,9 @@ let W,H;
 
 let camDay=TODAY_DAY, playing=false, speed=3, lastTs=null, pulse=0, zoom=1;
 let monthViewActive=false;
-let filterJFOnly=false;
-function visibleEvents(){ return filterJFOnly ? ALL_EVENTS.filter(e=>e.side==='right') : ALL_EVENTS; }
+let showJF=true, showAnne=true;
+function isVisibleSide(side){ return side==='right' ? showJF : showAnne; }
+function visibleEvents(){ return ALL_EVENTS.filter(e=>isVisibleSide(e.side)); }
 let scrollY=0; // recalculé après resize() pour partir pile sur aujourd'hui
 const PPD=90;
 
@@ -2680,7 +2701,7 @@ function refreshAutoMultiDay(){
 }
 
 function drawMultiDayEvents(){
-  const multi = filterJFOnly ? MULTI_EVENTS.filter(e=>e.side==='right') : MULTI_EVENTS;
+  const multi = MULTI_EVENTS.filter(e=>isVisibleSide(e.side));
   [...multi,...AUTO_RUNS].forEach(ev=>{
     const d1=Math.max(0,Math.min(TOTAL_DAYS,ev.day1));
     const d2=Math.max(0,Math.min(TOTAL_DAYS,ev.day2));
@@ -3144,12 +3165,34 @@ document.getElementById('monthbtn').addEventListener('click',()=>{
   btn.style.background=monthViewActive?'#1a73e8':'#fff';
   btn.style.color=monthViewActive?'#fff':'#1a73e8';
 });
+function updateCalendarToggleUI(){
+  const jfBtn=document.getElementById('jfonlybtn');
+  jfBtn.style.background=showJF?'#fff':'#f1f3f4';
+  jfBtn.style.color=showJF?'#1a73e8':'#9aa0a6';
+  jfBtn.style.opacity=showJF?'1':'0.55';
+  jfBtn.title=showJF?"Masquer l'agenda de JF":"Afficher l'agenda de JF";
+
+  const legJF=document.getElementById('legjf');
+  legJF.style.opacity=showJF?'1':'0.4';
+  legJF.title=showJF?"Masquer l'agenda de JF":"Afficher l'agenda de JF";
+
+  const legAnne=document.getElementById('leganne');
+  legAnne.style.opacity=showAnne?'1':'0.4';
+  legAnne.title=showAnne?"Masquer l'agenda d'Anne":"Afficher l'agenda d'Anne";
+}
 document.getElementById('jfonlybtn').addEventListener('click',()=>{
-  filterJFOnly=!filterJFOnly;
-  const btn=document.getElementById('jfonlybtn');
-  btn.style.background=filterJFOnly?'#1a73e8':'#fff';
-  btn.style.color=filterJFOnly?'#fff':'#1a73e8';
+  showJF=!showJF;
+  updateCalendarToggleUI();
 });
+document.getElementById('legjf').addEventListener('click',()=>{
+  showJF=!showJF;
+  updateCalendarToggleUI();
+});
+document.getElementById('leganne').addEventListener('click',()=>{
+  showAnne=!showAnne;
+  updateCalendarToggleUI();
+});
+updateCalendarToggleUI();
 document.getElementById('zi').addEventListener('click',()=>{zoom=Math.min(3,zoom+0.25);});
 document.getElementById('zo').addEventListener('click',()=>{zoom=Math.max(0.3,zoom-0.25);});
 document.querySelectorAll('.sp').forEach(b=>{

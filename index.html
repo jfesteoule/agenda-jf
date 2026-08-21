@@ -13,9 +13,17 @@ body{font-family:'Archivo',Arial,sans-serif;}
 #wrap{position:relative;width:100vw;height:100vh;overflow:hidden;}
 canvas#c{position:absolute;inset:0;width:100%;height:100%;touch-action:none;pointer-events:none;}
 #hud{position:absolute;top:12px;left:12px;right:12px;z-index:1000;display:flex;gap:8px;align-items:center;}
-#sbox{flex:1;min-width:0;height:40px;background:#fff;border:none;border-radius:20px;padding:0 16px 0 40px;font-family:'Oswald',Arial,sans-serif;font-size:13px;color:#2b241c;outline:none;box-shadow:0 2px 6px rgba(0,0,0,0.2);text-overflow:ellipsis;}
+#sbox{display:block;width:100%;height:40px;background:#fff;border:none;border-radius:20px;padding:0 16px 0 40px;font-family:'Oswald',Arial,sans-serif;font-size:13px;color:#2b241c;outline:none;box-shadow:0 2px 6px rgba(0,0,0,0.2);}
 #sico{position:absolute;left:26px;top:50%;transform:translateY(-50%);color:#8a7a5c;font-size:15px;pointer-events:none;}
 #mbtn{width:40px;height:40px;min-width:40px;background:#fff;border-radius:50%;border:none;cursor:pointer;display:flex;align-items:center;justify-content:center;box-shadow:0 2px 6px rgba(0,0,0,0.2);color:#5f6368;}
+#menuPanel{display:none;position:absolute;top:56px;left:12px;z-index:1001;background:#fff;border-radius:12px;box-shadow:0 6px 18px rgba(0,0,0,0.22);overflow:hidden;min-width:230px;flex-direction:column;}
+#menuPanel.open{display:flex;}
+.menuitem{display:flex;align-items:center;gap:10px;padding:12px 16px;background:#fff;border:none;border-bottom:1px solid #eee;font-family:'Archivo',Arial,sans-serif;font-size:13px;color:#2b241c;cursor:pointer;text-align:left;}
+.menuitem:last-child{border-bottom:none;}
+.menuitem i{font-size:17px;color:#c1502f;}
+@media (max-width:480px){
+  .hudbtn-top{display:none !important;}
+}
 #speeds{position:absolute;top:62px;left:12px;z-index:20;display:flex;gap:6px;}
 .sp{background:#fff;border:none;border-radius:20px;padding:5px 11px;font-family:'Archivo',Arial,sans-serif;font-size:12px;font-weight:500;cursor:pointer;box-shadow:0 1px 4px rgba(0,0,0,0.18);color:#444;}
 .sp.on{background:#c1502f;color:#fff;}
@@ -48,9 +56,14 @@ window.syncAllCalendars = syncAllCalendars;
       <i class="ti ti-calendar" id="sico"></i>
       <input id="sbox" type="text" value="Route du temps · Jan 2023 › Déc 2027" readonly>
     </div>
-    <button id="syncbtn" style="position:relative;z-index:1000;pointer-events:auto;width:40px;height:40px;min-width:40px;background:#fff;border-radius:50%;border:none;cursor:pointer;display:flex;align-items:center;justify-content:center;box-shadow:0 2px 6px rgba(0,0,0,0.2);color:#4c7a53;font-size:18px;" title="Synchroniser Google Agenda"><i class="ti ti-refresh"></i></button>
-    <button id="monthbtn" style="position:relative;z-index:1000;pointer-events:auto;width:40px;height:40px;min-width:40px;background:#fff;border-radius:50%;border:none;cursor:pointer;display:flex;align-items:center;justify-content:center;box-shadow:0 2px 6px rgba(0,0,0,0.2);color:#c1502f;font-size:18px;margin-left:6px;" title="Vue mensuelle"><i class="ti ti-calendar-month"></i></button>
-    <button id="jfonlybtn" style="position:relative;z-index:1000;pointer-events:auto;width:40px;height:40px;min-width:40px;background:#fff;border-radius:50%;border:none;cursor:pointer;display:flex;align-items:center;justify-content:center;box-shadow:0 2px 6px rgba(0,0,0,0.2);color:#c1502f;font-size:16px;font-weight:bold;margin-left:6px;" title="Masquer l'agenda de JF">JF</button>
+    <button id="syncbtn" class="hudbtn-top" style="position:relative;z-index:1000;pointer-events:auto;width:40px;height:40px;min-width:40px;background:#fff;border-radius:50%;border:none;cursor:pointer;display:flex;align-items:center;justify-content:center;box-shadow:0 2px 6px rgba(0,0,0,0.2);color:#4c7a53;font-size:18px;" title="Synchroniser Google Agenda"><i class="ti ti-refresh"></i></button>
+    <button id="monthbtn" class="hudbtn-top" style="position:relative;z-index:1000;pointer-events:auto;width:40px;height:40px;min-width:40px;background:#fff;border-radius:50%;border:none;cursor:pointer;display:flex;align-items:center;justify-content:center;box-shadow:0 2px 6px rgba(0,0,0,0.2);color:#c1502f;font-size:18px;margin-left:6px;" title="Vue mensuelle"><i class="ti ti-calendar-month"></i></button>
+    <button id="jfonlybtn" class="hudbtn-top" style="position:relative;z-index:1000;pointer-events:auto;width:40px;height:40px;min-width:40px;background:#fff;border-radius:50%;border:none;cursor:pointer;display:flex;align-items:center;justify-content:center;box-shadow:0 2px 6px rgba(0,0,0,0.2);color:#c1502f;font-size:16px;font-weight:bold;margin-left:6px;" title="Masquer l'agenda de JF">JF</button>
+  </div>
+  <div id="menuPanel">
+    <button id="menu-sync" class="menuitem"><i class="ti ti-refresh"></i>Synchroniser Google Agenda</button>
+    <button id="menu-month" class="menuitem"><i class="ti ti-calendar-month"></i>Vue mensuelle</button>
+    <button id="menu-jf" class="menuitem"><i class="ti ti-user"></i>Masquer l'agenda de JF</button>
   </div>
   <div id="speeds">
     <button class="sp" data-s="0.2">×⅕</button>
@@ -2341,6 +2354,13 @@ function seasonColor(field){
   if(t>=0.999) return B[field];
   return lerpHex(A[field],B[field],t);
 }
+function seasonColorAt(field,day){
+  const b=computeSeasonBlend(day);
+  const A=APP_SEASONS[b.a],B=APP_SEASONS[b.b];
+  if(b.t<=0.001) return A[field];
+  if(b.t>=0.999) return B[field];
+  return lerpHex(A[field],B[field],b.t);
+}
 function seasonNum(field){
   const A=APP_SEASONS[seasonBlend.a],B=APP_SEASONS[seasonBlend.b];
   return A[field]+(B[field]-A[field])*seasonBlend.t;
@@ -2607,7 +2627,9 @@ function drawAllLanes(){
     const isCurrentLane=(ln===camWeek);
 
     // === ROUTE PRINCIPALE (trapèze en perspective) ===
-    ctx.fillStyle=seasonColor('road');
+    // Couleur propre à CETTE semaine (pas la saison globale) : plusieurs mois sont
+    // visibles en même temps sur l'écran, la route doit donc changer en avançant.
+    ctx.fillStyle=seasonColorAt('road', ln*7+MON_SHIFT+3);
     ctx.beginPath();
     ctx.moveTo(pTL.x,pTL.y);ctx.lineTo(pTR.x,pTR.y);
     ctx.lineTo(pBR.x,pBR.y);ctx.lineTo(pBL.x,pBL.y);
@@ -3254,6 +3276,8 @@ document.getElementById('monthbtn').addEventListener('click',()=>{
   const btn=document.getElementById('monthbtn');
   btn.style.background=monthViewActive?'#1a73e8':'#fff';
   btn.style.color=monthViewActive?'#fff':'#1a73e8';
+  const menuBtn=document.getElementById('menu-month');
+  menuBtn.lastChild.textContent=monthViewActive?'Revenir à la route':'Vue mensuelle';
 });
 function updateCalendarToggleUI(){
   const jfBtn=document.getElementById('jfonlybtn');
@@ -3269,6 +3293,9 @@ function updateCalendarToggleUI(){
   const legAnne=document.getElementById('leganne');
   legAnne.style.opacity=showAnne?'1':'0.4';
   legAnne.title=showAnne?"Masquer l'agenda d'Anne":"Afficher l'agenda d'Anne";
+
+  const menuJF=document.getElementById('menu-jf');
+  menuJF.lastChild.textContent=showJF?"Masquer l'agenda de JF":"Afficher l'agenda de JF";
 }
 document.getElementById('jfonlybtn').addEventListener('click',()=>{
   showJF=!showJF;
@@ -3451,6 +3478,29 @@ async function syncAllCalendars(){
 }
 
 document.getElementById('syncbtn').addEventListener('click', window.syncAllCalendars);
+
+// === Menu ☰ : sur petit écran, sync/vue mensuelle/filtre JF passent ici pour laisser
+// toute la largeur au titre plutôt que d'être tassés dans la barre du haut. ===
+const menuPanel=document.getElementById('menuPanel');
+document.getElementById('mbtn').addEventListener('click',(e)=>{
+  e.stopPropagation();
+  menuPanel.classList.toggle('open');
+});
+document.getElementById('menu-sync').addEventListener('click',()=>{
+  menuPanel.classList.remove('open');
+  document.getElementById('syncbtn').click();
+});
+document.getElementById('menu-month').addEventListener('click',()=>{
+  menuPanel.classList.remove('open');
+  document.getElementById('monthbtn').click();
+});
+document.getElementById('menu-jf').addEventListener('click',()=>{
+  menuPanel.classList.remove('open');
+  document.getElementById('jfonlybtn').click();
+});
+document.addEventListener('click',(e)=>{
+  if(!menuPanel.contains(e.target) && e.target.id!=='mbtn') menuPanel.classList.remove('open');
+});
 
 </script>
 </body>

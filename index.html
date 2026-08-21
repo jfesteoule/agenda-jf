@@ -2005,10 +2005,18 @@ function dayToScreen(day){
   const lh=laneH(), hwRaw=roadHW();
   const adj=day-MON_SHIFT;
   const week=Math.floor(adj/7);
-  const dInWk=((adj%7)+7)%7; // 0=Lundi ... 6=Dimanche
+  const dInWk=((adj%7)+7)%7; // 0=Lundi ... 6..7=Dimanche (continu pendant le défilement)
   const frac=dInWk/7;
   const A=snakeAmp();
-  const xr=W/2 + A*snakeFrac(week);
+  // Le dimanche (dInWk entre 6 et 7) est le raccord courbe vers la semaine suivante :
+  // la route s'y déplace de xr(semaine) vers xr(semaine+1), donc le marcheur doit suivre.
+  const xrCur=W/2 + A*snakeFrac(week);
+  let xr=xrCur;
+  if(dInWk>6){
+    const t=dInWk-6;
+    const xrNext=W/2 + A*snakeFrac(week+1);
+    xr=xrCur+(xrNext-xrCur)*t;
+  }
   const dir=(Math.floor(week/4)%2===0)?1:-1; // 1=segment qui part vers la droite, -1=vers la gauche
   // scrollY contrôle tout : le bas de semaine 0 est à yr=H*0.65 quand scrollY=0
   // scrollY augmente → tout monte (passé descend, futur/le bonhomme montent)

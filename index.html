@@ -2255,7 +2255,8 @@ const APP_SEASONS={
     sun:'#eef3f2',sunGlow:'#e9f1f0',
     road:'#c9d4d7',
     coat:'#33454f',scarf:'#c1502f',shirt:'#e7edec',
-    particle:'snow',particleColor:'#ffffff'
+    particle:'snow',particleColor:'#ffffff',
+    treeType:'pine',treeColor:'#33454b',treeColor2:'#eef3f1'
   },
   printemps:{
     skyTop:'#5f93ad',skyBottom:'#dcecd0',ground:'#bcdc98',
@@ -2263,7 +2264,8 @@ const APP_SEASONS={
     sun:'#fff3c9',sunGlow:'#fff3c9',
     road:'#d7d9cd',
     coat:'#3c6b45',scarf:'#e58ab0',shirt:'#f3efe4',
-    particle:'petal',particleColor:'#f4c9d8'
+    particle:'petal',particleColor:'#f4c9d8',
+    treeType:'blossom',treeColor:'#f2c7d6',treeColor2:'#ffffff'
   },
   ete:{
     skyTop:'#3f7fae',skyBottom:'#eee0ae',ground:'#dcb75c',
@@ -2271,7 +2273,8 @@ const APP_SEASONS={
     sun:'#ffe38f',sunGlow:'#ffdc78',
     road:'#ddd2ae',
     coat:'#c98a3e',scarf:'#dba43c',shirt:'#fff8e6',
-    particle:'dust',particleColor:'#fff3cf'
+    particle:'dust',particleColor:'#fff3cf',
+    treeType:'lavender',treeColor:'#6a5a8a',treeColor2:'#8a76ad'
   },
   automne:{
     skyTop:'#6a4a5c',skyBottom:'#e8b177',ground:'#b0723e',
@@ -2279,7 +2282,8 @@ const APP_SEASONS={
     sun:'#f4b16b',sunGlow:'#f4b16b',
     road:'#cdb894',
     coat:'#8f3c25',scarf:'#c1502f',shirt:'#f1e2cf',
-    particle:'leaf',particleColor:'#c1502f'
+    particle:'leaf',particleColor:'#c1502f',
+    treeType:'amber',treeColor:'#b8622f',treeColor2:'#e0985a'
   }
 };
 const SEASON_BEFORE_BOUNDARY={1:2,4:5,7:8,10:11}; // fin de mois -> saison suivante
@@ -2419,12 +2423,87 @@ function drawScenery(){
     i=>3+Math.abs(Math.cos(i*1.9+0.6))*9,
     i=>1+Math.abs(Math.sin(i*4.2))*4);
 
+  // === Arbres sur les bas-côtés (silhouette propre à chaque saison) ===
+  drawGroundDecor(baseY);
+
   // === Nuages ===
   ctx.fillStyle='rgba(255,255,255,0.8)';
   [{x:W*0.18,y:Math.max(10,hz-16),s:0.55},{x:W*0.42,y:Math.max(8,hz-22),s:0.42},{x:W*0.62,y:Math.max(10,hz-10),s:0.35}]
     .forEach(c=>drawCloudShape(c.x,c.y,c.s));
 
   drawSeasonParticles();
+}
+
+function groundRnd32(seed){
+  let s=seed>>>0;
+  return function(){
+    s=(s+0x6D2B79F5)|0;
+    let t=Math.imul(s^(s>>>15),1|s);
+    t=(t+Math.imul(t^(t>>>7),61|t))^t;
+    return((t^(t>>>14))>>>0)/4294967296;
+  };
+}
+let groundDecoItems=null;
+function ensureGroundDeco(){
+  if(groundDecoItems) return groundDecoItems;
+  const rnd=groundRnd32(20260819);
+  groundDecoItems=[];
+  for(let i=0;i<28;i++){
+    groundDecoItems.push({fx:rnd(),fy:rnd(),scale:0.4+rnd()*0.8});
+  }
+  return groundDecoItems;
+}
+function drawTree(x,y,scale,cfg){
+  const type=cfg.treeType;
+  if(type==='pine'){
+    ctx.fillStyle='rgba(35,24,18,0.6)';
+    ctx.fillRect(x-scale*0.03,y-scale*0.18,scale*0.06,scale*0.18);
+    const tiers=[0,0.34,0.62];
+    tiers.forEach(frac=>{
+      const tY=y-scale*0.18-frac*scale*0.95, tH=scale*0.62, tW=scale*0.9*(1-frac*0.6);
+      ctx.beginPath();ctx.moveTo(x,tY-tH);ctx.lineTo(x-tW/2,tY);ctx.lineTo(x+tW/2,tY);ctx.closePath();
+      ctx.fillStyle=cfg.treeColor;ctx.fill();
+      ctx.beginPath();ctx.moveTo(x,tY-tH);ctx.lineTo(x-tW*0.24,tY-tH*0.42);ctx.lineTo(x+tW*0.24,tY-tH*0.42);ctx.closePath();
+      ctx.fillStyle=cfg.treeColor2;ctx.fill();
+    });
+  }else if(type==='lavender'){
+    for(let j=0;j<3;j++){
+      const lx=x+(j-1)*scale*0.32;
+      const g=ctx.createLinearGradient(lx,y-scale*0.85,lx,y);
+      g.addColorStop(0,cfg.treeColor2);g.addColorStop(1,cfg.treeColor);
+      ctx.fillStyle=g;
+      ctx.beginPath();ctx.ellipse(lx,y-scale*0.22,scale*0.13,scale*0.62,0,0,Math.PI*2);ctx.fill();
+    }
+  }else{ // blossom / amber : houppier en grappe
+    ctx.fillStyle='#5b4636';
+    ctx.fillRect(x-scale*0.05,y-scale*0.9,scale*0.1,scale*0.9);
+    const blobs=[[-0.32,-0.05,0.36],[0.32,-0.05,0.34],[0,-0.34,0.42]];
+    blobs.forEach(b=>{
+      const bx=x+b[0]*scale, by=y-scale*0.95+b[1]*scale, br=b[2]*scale;
+      ctx.fillStyle=cfg.treeColor;
+      ctx.beginPath();ctx.arc(bx,by,br,0,Math.PI*2);ctx.fill();
+      ctx.fillStyle=cfg.treeColor2;
+      ctx.globalAlpha=0.55;
+      ctx.beginPath();ctx.arc(bx-br*0.25,by-br*0.28,br*0.5,0,Math.PI*2);ctx.fill();
+      ctx.globalAlpha=1;
+    });
+  }
+}
+function drawGroundDecor(baseY){
+  const top=baseY+16;
+  if(H-top<20) return;
+  const cfg=APP_SEASONS[seasonBlend.t>0.5?seasonBlend.b:seasonBlend.a];
+  const items=ensureGroundDeco();
+  const unit=Math.max(16,Math.min(46,H*0.05));
+  items.forEach(it=>{
+    const y=top+it.fy*(H-top);
+    const depth=(y-top)/Math.max(1,H-top);
+    const x=it.fx*W;
+    const scale=(0.35+depth*1.15)*unit*it.scale;
+    ctx.globalAlpha=0.5+depth*0.5;
+    drawTree(x,y,scale,cfg);
+    ctx.globalAlpha=1;
+  });
 }
 
 // === Particules saisonnières : neige, pétales, poussière de chaleur, feuilles ===

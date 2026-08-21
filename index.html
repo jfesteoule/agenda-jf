@@ -5,26 +5,28 @@
 <meta name="viewport" content="width=device-width,initial-scale=1">
 <title>Route du temps 2023-2027</title>
 <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@tabler/icons-webfont@latest/tabler-icons.min.css">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Oswald:wght@500;600;700&family=Archivo:wght@400;500;600&display=swap">
 <style>
 *{box-sizing:border-box;margin:0;padding:0;}
-body{font-family:Arial,sans-serif;}
+body{font-family:'Archivo',Arial,sans-serif;}
 #wrap{position:relative;width:100vw;height:100vh;overflow:hidden;}
 canvas#c{position:absolute;inset:0;width:100%;height:100%;touch-action:none;pointer-events:none;}
 #hud{position:absolute;top:12px;left:12px;right:12px;z-index:1000;display:flex;gap:8px;align-items:center;}
-#sbox{flex:1;height:40px;background:#fff;border:none;border-radius:20px;padding:0 16px 0 40px;font-size:13px;color:#202124;outline:none;box-shadow:0 2px 6px rgba(0,0,0,0.2);}
-#sico{position:absolute;left:26px;top:50%;transform:translateY(-50%);color:#5f6368;font-size:15px;pointer-events:none;}
+#sbox{flex:1;height:40px;background:#fff;border:none;border-radius:20px;padding:0 16px 0 40px;font-family:'Oswald',Arial,sans-serif;font-size:12px;letter-spacing:0.03em;text-transform:uppercase;color:#2b241c;outline:none;box-shadow:0 2px 6px rgba(0,0,0,0.2);}
+#sico{position:absolute;left:26px;top:50%;transform:translateY(-50%);color:#8a7a5c;font-size:15px;pointer-events:none;}
 #mbtn{width:40px;height:40px;min-width:40px;background:#fff;border-radius:50%;border:none;cursor:pointer;display:flex;align-items:center;justify-content:center;box-shadow:0 2px 6px rgba(0,0,0,0.2);color:#5f6368;}
 #speeds{position:absolute;top:62px;left:12px;z-index:20;display:flex;gap:6px;}
-.sp{background:#fff;border:none;border-radius:20px;padding:5px 11px;font-size:12px;font-weight:500;cursor:pointer;box-shadow:0 1px 4px rgba(0,0,0,0.18);color:#444;}
-.sp.on{background:#1a73e8;color:#fff;}
+.sp{background:#fff;border:none;border-radius:20px;padding:5px 11px;font-family:'Archivo',Arial,sans-serif;font-size:12px;font-weight:500;cursor:pointer;box-shadow:0 1px 4px rgba(0,0,0,0.18);color:#444;}
+.sp.on{background:#c1502f;color:#fff;}
 #zbx{position:absolute;right:12px;bottom:130px;z-index:20;display:flex;flex-direction:column;gap:1px;}
 .zb{width:36px;height:36px;background:#fff;border:none;cursor:pointer;font-size:18px;color:#444;display:flex;align-items:center;justify-content:center;box-shadow:0 1px 4px rgba(0,0,0,0.2);}
 .zb:first-child{border-radius:4px 4px 0 0;}.zb:last-child{border-radius:0 0 4px 4px;}
-#playbtn{position:absolute;right:12px;bottom:80px;z-index:20;width:42px;height:42px;background:#1a73e8;border:none;border-radius:50%;cursor:pointer;display:flex;align-items:center;justify-content:center;color:#fff;font-size:20px;box-shadow:0 2px 6px rgba(0,0,0,0.25);}
-#resetbtn{position:absolute;right:60px;bottom:80px;z-index:20;width:42px;height:42px;background:#fff;border:none;border-radius:50%;cursor:pointer;display:flex;align-items:center;justify-content:center;color:#1a73e8;font-size:18px;box-shadow:0 2px 6px rgba(0,0,0,0.2);}
-#todaybtn{position:absolute;right:108px;bottom:80px;z-index:20;width:42px;height:42px;background:#fff;border:none;border-radius:50%;cursor:pointer;display:flex;align-items:center;justify-content:center;color:#e53935;font-size:14px;font-weight:700;box-shadow:0 2px 6px rgba(0,0,0,0.2);}
+#playbtn{position:absolute;right:12px;bottom:80px;z-index:20;width:42px;height:42px;background:#c1502f;border:none;border-radius:50%;cursor:pointer;display:flex;align-items:center;justify-content:center;color:#fff;font-size:20px;box-shadow:0 2px 6px rgba(0,0,0,0.25);}
+#resetbtn{position:absolute;right:60px;bottom:80px;z-index:20;width:42px;height:42px;background:#fff;border:none;border-radius:50%;cursor:pointer;display:flex;align-items:center;justify-content:center;color:#c1502f;font-size:18px;box-shadow:0 2px 6px rgba(0,0,0,0.2);}
+#todaybtn{position:absolute;right:108px;bottom:80px;z-index:20;width:42px;height:42px;background:#fff;border:none;border-radius:50%;cursor:pointer;display:flex;align-items:center;justify-content:center;color:#c1502f;font-family:'Oswald',Arial,sans-serif;font-size:13px;font-weight:600;box-shadow:0 2px 6px rgba(0,0,0,0.2);}
 #legend{position:absolute;top:62px;right:12px;z-index:20;display:flex;flex-direction:column;gap:5px;}
-.leg{background:#fff;border-radius:20px;padding:4px 10px;font-size:11px;font-weight:500;box-shadow:0 1px 4px rgba(0,0,0,0.18);display:flex;align-items:center;gap:6px;}
+.leg{background:#fff;border-radius:20px;padding:4px 10px;font-family:'Archivo',Arial,sans-serif;font-size:11px;font-weight:500;box-shadow:0 1px 4px rgba(0,0,0,0.18);display:flex;align-items:center;gap:6px;}
 .legdot{width:10px;height:10px;border-radius:50%;}
 .legline{width:18px;height:4px;border-radius:2px;background:#9fbfc7;}
 #eta{position:absolute;bottom:12px;left:12px;right:60px;z-index:20;background:#fff;border-radius:12px;padding:10px 14px;display:flex;align-items:center;justify-content:space-between;box-shadow:0 2px 8px rgba(0,0,0,0.18);}
@@ -46,9 +48,9 @@ window.syncAllCalendars = syncAllCalendars;
       <i class="ti ti-calendar" id="sico"></i>
       <input id="sbox" type="text" value="Route du temps · Jan 2023 › Déc 2027" readonly>
     </div>
-    <button id="syncbtn" style="position:relative;z-index:1000;pointer-events:auto;width:40px;height:40px;min-width:40px;background:#fff;border-radius:50%;border:none;cursor:pointer;display:flex;align-items:center;justify-content:center;box-shadow:0 2px 6px rgba(0,0,0,0.2);color:#34a853;font-size:18px;" title="Synchroniser Google Agenda"><i class="ti ti-refresh"></i></button>
-    <button id="monthbtn" style="position:relative;z-index:1000;pointer-events:auto;width:40px;height:40px;min-width:40px;background:#fff;border-radius:50%;border:none;cursor:pointer;display:flex;align-items:center;justify-content:center;box-shadow:0 2px 6px rgba(0,0,0,0.2);color:#1a73e8;font-size:18px;margin-left:6px;" title="Vue mensuelle"><i class="ti ti-calendar-month"></i></button>
-    <button id="jfonlybtn" style="position:relative;z-index:1000;pointer-events:auto;width:40px;height:40px;min-width:40px;background:#fff;border-radius:50%;border:none;cursor:pointer;display:flex;align-items:center;justify-content:center;box-shadow:0 2px 6px rgba(0,0,0,0.2);color:#1a73e8;font-size:16px;font-weight:bold;margin-left:6px;" title="Masquer l'agenda de JF">JF</button>
+    <button id="syncbtn" style="position:relative;z-index:1000;pointer-events:auto;width:40px;height:40px;min-width:40px;background:#fff;border-radius:50%;border:none;cursor:pointer;display:flex;align-items:center;justify-content:center;box-shadow:0 2px 6px rgba(0,0,0,0.2);color:#4c7a53;font-size:18px;" title="Synchroniser Google Agenda"><i class="ti ti-refresh"></i></button>
+    <button id="monthbtn" style="position:relative;z-index:1000;pointer-events:auto;width:40px;height:40px;min-width:40px;background:#fff;border-radius:50%;border:none;cursor:pointer;display:flex;align-items:center;justify-content:center;box-shadow:0 2px 6px rgba(0,0,0,0.2);color:#c1502f;font-size:18px;margin-left:6px;" title="Vue mensuelle"><i class="ti ti-calendar-month"></i></button>
+    <button id="jfonlybtn" style="position:relative;z-index:1000;pointer-events:auto;width:40px;height:40px;min-width:40px;background:#fff;border-radius:50%;border:none;cursor:pointer;display:flex;align-items:center;justify-content:center;box-shadow:0 2px 6px rgba(0,0,0,0.2);color:#c1502f;font-size:16px;font-weight:bold;margin-left:6px;" title="Masquer l'agenda de JF">JF</button>
   </div>
   <div id="speeds">
     <button class="sp" data-s="0.2">×⅕</button>
@@ -72,7 +74,7 @@ window.syncAllCalendars = syncAllCalendars;
   <button id="revbtn" title="Reculer"><i class="ti ti-player-play" style="transform:scaleX(-1);display:inline-block"></i></button><button id="playbtn"><i class="ti ti-player-play" id="pico"></i></button>      <div id="eta-name" style="font-size:14px;font-weight:500;color:#202124;margin-top:1px;">—</div>
     </div>
     <div style="display:flex;align-items:baseline;gap:3px;">
-      <span id="eta-d" style="font-size:22px;font-weight:500;color:#1a73e8;">—</span>
+      <span id="eta-d" style="font-size:22px;font-weight:500;color:#c1502f;">—</span>
       <span id="eta-u" style="font-size:12px;color:#5f6368;">jours</span>
     </div>
   </div>

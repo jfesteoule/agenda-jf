@@ -2368,14 +2368,31 @@ function seasonNum(field){
 function seasonParticleCfg(){
   return seasonBlend.t<0.5 ? APP_SEASONS[seasonBlend.a] : APP_SEASONS[seasonBlend.b];
 }
+function seasonCfgAt(day){
+  const b=computeSeasonBlend(day);
+  return APP_SEASONS[b.t>0.5?b.b:b.a];
+}
+function seasonSnowAt(day){
+  const b=computeSeasonBlend(day);
+  const A=APP_SEASONS[b.a],B=APP_SEASONS[b.b];
+  return A.snowAmt+(B.snowAmt-A.snowAmt)*b.t;
+}
+// Beaucoup de mois sont visibles en même temps à l'écran (route en perspective) :
+// le décor ne peut donc pas se limiter à la saison du jour du marcheur, il doit
+// s'étirer du jour proche (bas de l'écran) au jour lointain (vers l'horizon).
+function farViewDay(){ return camDay + lanesPerScreen()*7*2; }
 
 function drawBackground(){
-  ctx.fillStyle=seasonColor('ground');
+  const farDay=farViewDay();
+  const g=ctx.createLinearGradient(0,0,0,H);
+  g.addColorStop(0,seasonColorAt('ground',farDay));
+  g.addColorStop(1,seasonColorAt('ground',camDay));
+  ctx.fillStyle=g;
   ctx.fillRect(0,0,W,H);
   const skyH=Math.min(60,H*0.10);
   const sky=ctx.createLinearGradient(0,0,0,skyH);
-  sky.addColorStop(0,seasonColor('skyTop'));
-  sky.addColorStop(1,seasonColor('skyBottom'));
+  sky.addColorStop(0,seasonColorAt('skyTop',farDay));
+  sky.addColorStop(1,seasonColorAt('skyBottom',camDay));
   ctx.fillStyle=sky;
   ctx.fillRect(0,0,W,skyH);
 }
@@ -2391,7 +2408,7 @@ function drawCloudShape(cx,cy,scale){
   ctx.fill();
 }
 
-function drawMountainRow(baseY,peaks,colorFar,alpha,heightFn,midHeightFn){
+function drawMountainRow(baseY,peaks,colorFar,alpha,heightFn,midHeightFn,snowAmt){
   const pts=[];
   ctx.beginPath();
   ctx.moveTo(0,baseY+10);
@@ -2413,7 +2430,6 @@ function drawMountainRow(baseY,peaks,colorFar,alpha,heightFn,midHeightFn){
   ctx.fill();
 
   // Neige : calotte au sommet des pics les plus hauts, proportionnelle à la saison
-  const snowAmt=seasonNum('snowAmt');
   if(snowAmt>0.02){
     ctx.fillStyle=hexToRgba('#f4f8f7',Math.min(0.95,alpha+0.4));
     pts.forEach(p=>{
@@ -2444,15 +2460,18 @@ function drawScenery(){
   ctx.fillStyle=seasonColor('sun');
   ctx.beginPath();ctx.arc(sunX,sunY,sunR,0,Math.PI*2);ctx.fill();
 
-  // === Montagnes (trois rangées, teinte + calotte neigeuse selon la saison) ===
+  // === Montagnes (trois rangées, chacune à sa propre "distance temporelle") ===
   const baseY=hz+6;
-  drawMountainRow(baseY+10,10,seasonColor('mtnFar'),0.35,i=>5+Math.abs(Math.sin(i*1.7+0.4))*10);
-  drawMountainRow(baseY+6,9,seasonColor('mtnMid'),0.45,
+  const farDay=farViewDay();
+  const dayFarRow=farDay, dayMidRow=camDay+(farDay-camDay)*0.55, dayNearRow=camDay;
+  drawMountainRow(baseY+10,10,seasonColorAt('mtnFar',dayFarRow),0.35,i=>5+Math.abs(Math.sin(i*1.7+0.4))*10,
+    null,seasonSnowAt(dayFarRow));
+  drawMountainRow(baseY+6,9,seasonColorAt('mtnMid',dayMidRow),0.45,
     i=>6+Math.abs(Math.sin(i*2.3+1.1))*14,
-    i=>3+Math.abs(Math.cos(i*3.1))*7);
-  drawMountainRow(baseY+2,13,seasonColor('mtnNear'),0.55,
+    i=>3+Math.abs(Math.cos(i*3.1))*7,seasonSnowAt(dayMidRow));
+  drawMountainRow(baseY+2,13,seasonColorAt('mtnNear',dayNearRow),0.55,
     i=>3+Math.abs(Math.cos(i*1.9+0.6))*9,
-    i=>1+Math.abs(Math.sin(i*4.2))*4);
+    i=>1+Math.abs(Math.sin(i*4.2))*4,seasonSnowAt(dayNearRow));
 
   // === Arbres sur les bas-côtés (silhouette propre à chaque saison) ===
   drawGroundDecor(baseY);
@@ -2523,13 +2542,15 @@ function drawTree(x,y,scale,cfg){
 function drawGroundDecor(baseY){
   const top=baseY+16;
   if(H-top<20) return;
-  const cfg=APP_SEASONS[seasonBlend.t>0.5?seasonBlend.b:seasonBlend.a];
   const items=ensureGroundDeco();
   const unit=Math.max(16,Math.min(46,H*0.05));
+  const farDay=farViewDay();
   items.forEach(it=>{
     const y=top+it.fy*(H-top);
-    const depth=(y-top)/Math.max(1,H-top);
+    const depth=(y-top)/Math.max(1,H-top); // 0 près de l'horizon (loin dans le temps) .. 1 au premier plan (aujourd'hui)
     const x=it.fx*W;
+    const dayHere=farDay+(camDay-farDay)*depth;
+    const cfg=seasonCfgAt(dayHere);
     const scale=(0.35+depth*1.15)*unit*it.scale;
     ctx.globalAlpha=0.5+depth*0.5;
     drawTree(x,y,scale,cfg);

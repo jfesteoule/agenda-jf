@@ -3451,7 +3451,7 @@ async function fetchEventsJson(){
   }
 }
 
-async function syncAllCalendars(){
+async function syncAllCalendars(silent){
   const btn = document.getElementById('syncbtn');
   btn.style.color='#fbbc04';
   btn.style.animation='spin 1s linear infinite';
@@ -3484,17 +3484,21 @@ async function syncAllCalendars(){
 
     btn.style.color='#34a853';
     btn.style.animation='';
-    alert('✓ ' + events.length + ' événements synchronisés !');
+    if(!silent) alert('✓ ' + events.length + ' événements synchronisés !');
 
   } catch(err) {
     btn.style.color='#ea4335';
     btn.style.animation='';
-    alert('Erreur sync: ' + err.message);
+    if(!silent) alert('Erreur sync: ' + err.message);
     console.error(err);
   }
 }
 
-document.getElementById('syncbtn').addEventListener('click', window.syncAllCalendars);
+document.getElementById('syncbtn').addEventListener('click', ()=>window.syncAllCalendars(false));
+// Chargement automatique au démarrage : les événements embarqués dans la page ne sont
+// qu'un instantané figé au dernier déploiement. On les rafraîchit silencieusement depuis
+// events.json dès l'ouverture, sans attendre que quelqu'un clique sur le bouton de sync.
+syncAllCalendars(true);
 
 // === Menu ☰ : sur petit écran, sync/vue mensuelle/filtre JF passent ici pour laisser
 // toute la largeur au titre plutôt que d'être tassés dans la barre du haut. ===

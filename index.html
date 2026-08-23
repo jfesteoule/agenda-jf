@@ -2223,6 +2223,7 @@ function draw(ts){
   refreshAutoMultiDay();
   drawMultiDayEvents();
   drawEventTexts();
+  computeDayHitboxes();
   drawPhotos();
   drawDayDates();
   drawDayLetters();
@@ -3074,6 +3075,23 @@ function drawPhotos(){
   });
 }
 
+const DAY_HITBOXES=[];
+function computeDayHitboxes(){
+  DAY_HITBOXES.length=0;
+  const lh=laneH(), hwRaw=roadHW(), rowHraw=lh/7;
+  const camWeek=Math.floor((camDay-MON_SHIFT)/7);
+  const lps=lanesPerScreen();
+  for(let ln=camWeek-lps-2; ln<=camWeek+lps+2; ln++){
+    for(let d=0; d<7; d++){
+      const dayIdx=ln*7+MON_SHIFT+d;
+      const{x,y,hw}=dayToScreen(dayIdx+0.5);
+      if(!visible(y)) continue;
+      const rowHscreen=rowHraw*(hw/hwRaw);
+      DAY_HITBOXES.push({day:dayIdx,x0:x-hw,x1:x+hw,y0:y-rowHscreen/2,y1:y+rowHscreen/2});
+    }
+  }
+}
+
 const EVENT_HITBOXES=[];
 function drawEventTexts(){
   EVENT_HITBOXES.length=0;
@@ -3553,8 +3571,11 @@ wrap.addEventListener('click',e=>{
   const cx=(e.clientX-rect.left)*scaleX, cy=(e.clientY-rect.top)*scaleY;
 
   if(monthViewActive){
-    const cell=MONTH_CELL_HITBOXES.find(c=>c.hasEvents && cx>=c.x && cx<=c.x+c.w && cy>=c.y && cy<=c.y+c.h);
-    if(cell) openDayPanel(cell.dayIdx);
+    const cell=MONTH_CELL_HITBOXES.find(c=>cx>=c.x && cx<=c.x+c.w && cy>=c.y && cy<=c.y+c.h);
+    if(cell){
+      if(cell.hasEvents) openDayPanel(cell.dayIdx);
+      else openAddEventModal(cell.dayIdx);
+    }
     return;
   }
 
@@ -3562,7 +3583,9 @@ wrap.addEventListener('click',e=>{
   const hit=PHOTOS.find(p=>p._box && cx>=p._box.x && cx<=p._box.x+p._box.w && cy>=p._box.y && cy<=p._box.y+p._box.h);
   if(hit){ zoomedPhoto=hit; return; }
   const evHit=EVENT_HITBOXES.find(h=>cx>=h.x0 && cx<=h.x1 && cy>=h.y0 && cy<=h.y1);
-  if(evHit) openEventDetail(evHit.ev);
+  if(evHit){ openEventDetail(evHit.ev); return; }
+  const dayHit=DAY_HITBOXES.find(h=>cx>=h.x0 && cx<=h.x1 && cy>=h.y0 && cy<=h.y1);
+  if(dayHit) openAddEventModal(dayHit.day);
 });
 
 // Curseur "cliquable" au survol d'un événement, d'une case du mois ou d'une photo
@@ -3574,10 +3597,11 @@ wrap.addEventListener('pointermove',e=>{
   const cx=(e.clientX-rect.left)*scaleX, cy=(e.clientY-rect.top)*scaleY;
   let clickable=false;
   if(monthViewActive){
-    clickable=MONTH_CELL_HITBOXES.some(c=>c.hasEvents && cx>=c.x && cx<=c.x+c.w && cy>=c.y && cy<=c.y+c.h);
+    clickable=MONTH_CELL_HITBOXES.some(c=>cx>=c.x && cx<=c.x+c.w && cy>=c.y && cy<=c.y+c.h);
   }else{
     clickable=PHOTOS.some(p=>p._box && cx>=p._box.x && cx<=p._box.x+p._box.w && cy>=p._box.y && cy<=p._box.y+p._box.h)
-      || EVENT_HITBOXES.some(h=>cx>=h.x0 && cx<=h.x1 && cy>=h.y0 && cy<=h.y1);
+      || EVENT_HITBOXES.some(h=>cx>=h.x0 && cx<=h.x1 && cy>=h.y0 && cy<=h.y1)
+      || DAY_HITBOXES.some(h=>cx>=h.x0 && cx<=h.x1 && cy>=h.y0 && cy<=h.y1);
   }
   canvas.style.cursor=clickable?'pointer':(monthViewActive?'default':'ns-resize');
 });
@@ -4187,9 +4211,12 @@ function addOneHour(timeStr){
 
 const addEventOverlay = document.getElementById('addEventOverlay');
 const addEvStatus = document.getElementById('addEvStatus');
-function openAddEventModal(){
+function openAddEventModal(dayOverride){
   const dateInput = document.getElementById('addEvDate');
-  if(!dateInput.value){
+  if(typeof dayOverride==='number'){
+    const d = new Date(MONTH_ORIGIN_MS + dayOverride*86400000);
+    dateInput.value = d.toISOString().slice(0,10);
+  }else if(!dateInput.value){
     const d = new Date(MONTH_ORIGIN_MS + Math.round(camDay)*86400000);
     dateInput.value = d.toISOString().slice(0,10);
   }

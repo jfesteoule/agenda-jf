@@ -115,7 +115,7 @@ window.syncAllCalendars = syncAllCalendars;
         <div id="searchEmpty">Aucun événement trouvé.</div>
       </div>
     </div>
-    <button id="addeventbtn" class="hudbtn-top" style="position:relative;z-index:1000;pointer-events:auto;width:40px;height:40px;min-width:40px;background:#fff;border-radius:50%;border:none;cursor:pointer;display:flex;align-items:center;justify-content:center;box-shadow:0 2px 6px rgba(0,0,0,0.2);color:#c1502f;font-size:18px;" title="Ajouter un événement"><i class="ti ti-plus"></i></button>
+    <button id="addeventbtn" class="hudbtn-top" style="position:relative;z-index:1000;pointer-events:auto;width:40px;height:40px;min-width:40px;background:#fff;border-radius:50%;border:none;cursor:pointer;display:flex;align-items:center;justify-content:center;box-shadow:0 2px 6px rgba(0,0,0,0.2);color:#c1502f;font-size:18px;margin-left:auto;" title="Ajouter un événement"><i class="ti ti-plus"></i></button>
     <button id="syncbtn" class="hudbtn-top" style="position:relative;z-index:1000;pointer-events:auto;width:40px;height:40px;min-width:40px;background:#fff;border-radius:50%;border:none;cursor:pointer;display:flex;align-items:center;justify-content:center;box-shadow:0 2px 6px rgba(0,0,0,0.2);color:#4c7a53;font-size:18px;margin-left:6px;" title="Synchroniser Google Agenda"><i class="ti ti-refresh"></i></button>
     <button id="datejumpbtn" class="hudbtn-top" style="position:relative;z-index:1000;pointer-events:auto;width:40px;height:40px;min-width:40px;background:#fff;border-radius:50%;border:none;cursor:pointer;display:flex;align-items:center;justify-content:center;box-shadow:0 2px 6px rgba(0,0,0,0.2);color:#c1502f;font-size:18px;margin-left:6px;" title="Aller à une date"><i class="ti ti-calendar-event"></i></button>
     <button id="monthbtn" class="hudbtn-top" style="position:relative;z-index:1000;pointer-events:auto;width:40px;height:40px;min-width:40px;background:#fff;border-radius:50%;border:none;cursor:pointer;display:flex;align-items:center;justify-content:center;box-shadow:0 2px 6px rgba(0,0,0,0.2);color:#c1502f;font-size:18px;margin-left:6px;" title="Vue mensuelle"><i class="ti ti-calendar-month"></i></button>
@@ -3457,8 +3457,19 @@ document.getElementById('leganne').addEventListener('click',()=>{
   updateCalendarToggleUI();
 });
 updateCalendarToggleUI();
-document.getElementById('zi').addEventListener('click',()=>{zoom=Math.min(3,zoom+0.25);});
-document.getElementById('zo').addEventListener('click',()=>{zoom=Math.max(0.3,zoom-0.25);});
+// laneH() dépend du zoom : changer le zoom sans réajuster scrollY décale la date
+// affichée (scrollY est une distance en pixels, pas un jour). On garde donc le
+// même camDay avant/après en recalculant scrollY avec le nouveau laneH().
+document.getElementById('zi').addEventListener('click',()=>{
+  const day=camDay;
+  zoom=Math.min(3,zoom+0.25);
+  scrollY=day/7*laneH();
+});
+document.getElementById('zo').addEventListener('click',()=>{
+  const day=camDay;
+  zoom=Math.max(0.3,zoom-0.25);
+  scrollY=day/7*laneH();
+});
 document.querySelectorAll('.sp').forEach(b=>{
   b.addEventListener('click',()=>{speed=+b.dataset.s;document.querySelectorAll('.sp').forEach(x=>x.classList.remove('on'));b.classList.add('on');});
 });

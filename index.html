@@ -2068,6 +2068,23 @@ const PHOTOS=[
 ];
 PHOTOS.forEach(p=>{ p.img=new Image(); p.loaded=false; p.img.onload=()=>{p.loaded=true;}; p.img.src=p.src; });
 
+// Photos affichées automatiquement pour tout événement dont le libellé (après réparation
+// des accents) correspond exactement à l'une de ces règles, quel que soit son jour.
+const PHOTO_TITLE_RULES=[
+  {match:'expertises ddets - valence', legende:'Expertises DDETS - Valence', src:DDETS_PHOTO_SRC}
+];
+function applyPhotoTitleRules(events){
+  for(let i=PHOTOS.length-1;i>=0;i--){ if(PHOTOS[i]._fromRule) PHOTOS.splice(i,1); }
+  events.forEach(ev=>{
+    const norm=(ev.title||'').trim().toLowerCase();
+    const rule=PHOTO_TITLE_RULES.find(r=>r.match===norm);
+    if(!rule) return;
+    const p={day:ev.day, side:ev.side, legende:rule.legende, src:rule.src, _fromRule:true};
+    p.img=new Image(); p.loaded=false; p.img.onload=()=>{p.loaded=true;}; p.img.src=p.src;
+    PHOTOS.push(p);
+  });
+}
+
 
 const canvas=document.getElementById('c');
 const ctx=canvas.getContext('2d');
@@ -4097,6 +4114,7 @@ async function syncAllCalendars(silent){
     EVT_JF.length=0;
     EVT_ANNE.length=0;
 
+    const repairedEvents=[];
     events.forEach(ev=>{
       const d = new Date(ORIGIN.getTime() + ev.day*86400000);
       const label = d.getDate() + ' ' + d.toLocaleString('fr-FR',{month:'short'});
@@ -4110,9 +4128,11 @@ async function syncAllCalendars(silent){
         side: ev.side,
         who: ev.who
       };
+      repairedEvents.push({day: ev.day, side: ev.side, title: title});
       if(ev.side==='right') EVT_JF.push(item);
       else EVT_ANNE.push(item);
     });
+    applyPhotoTitleRules(repairedEvents);
 
     ALL_EVENTS.length=0;
     [...EVT_JF,...EVT_ANNE].sort((a,b)=>a.day-b.day).forEach(e=>ALL_EVENTS.push(e));

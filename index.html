@@ -2978,7 +2978,9 @@ function drawEventTexts(){
 
   const rowH=lh/7;
   Object.entries(byDay).forEach(([day,evts])=>{
-    const{x,y,hw}=dayToScreen(+day);
+    // +0.5 : centre du jour, pas sa frontière (dayToScreen(+day) tombe exactement
+    // sur le trait séparateur entre deux jours, le texte passait dessus)
+    const{x,y,hw}=dayToScreen(+day+0.5);
     if(!visible(y)) return;
     if(hw<14) return;
 

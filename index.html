@@ -132,6 +132,7 @@ window.syncAllCalendars = syncAllCalendars;
     <div id="addEventBox">
       <h3>Nouvel événement — Google Agenda de JF</h3>
       <label>Date<input type="date" id="addEvDate"></label>
+      <label>Heure (optionnel)<input type="time" id="addEvTime"></label>
       <label>Titre<input type="text" id="addEvTitle" maxlength="80" placeholder="Ex. Bridge D0301"></label>
       <div id="addEvStatus"></div>
       <div id="addEvActions">
@@ -4167,6 +4168,12 @@ function isoDatePlusOne(dateStr){
   return d.toISOString().slice(0,10);
 }
 
+function addOneHour(timeStr){
+  const [h,m] = timeStr.split(':').map(Number);
+  const total = (h*60 + m + 60) % (24*60);
+  return String(Math.floor(total/60)).padStart(2,'0') + ':' + String(total%60).padStart(2,'0');
+}
+
 const addEventOverlay = document.getElementById('addEventOverlay');
 const addEvStatus = document.getElementById('addEvStatus');
 function openAddEventModal(){
@@ -4191,6 +4198,7 @@ addEventOverlay.addEventListener('click', (e) => { if(e.target===addEventOverlay
 
 document.getElementById('addEvSubmit').addEventListener('click', async () => {
   const dateStr = document.getElementById('addEvDate').value;
+  const timeStr = document.getElementById('addEvTime').value;
   const title = document.getElementById('addEvTitle').value.trim();
   if(!dateStr || !title){
     addEvStatus.textContent = 'Date et titre requis.';
@@ -4209,8 +4217,13 @@ document.getElementById('addEvSubmit').addEventListener('click', async () => {
       headers: { 'Authorization': 'Bearer ' + token, 'Content-Type': 'application/json' },
       body: JSON.stringify({
         summary: title,
-        start: { date: dateStr },
-        end: { date: isoDatePlusOne(dateStr) }
+        ...(timeStr ? {
+          start: { dateTime: dateStr+'T'+timeStr+':00', timeZone: 'Europe/Paris' },
+          end: { dateTime: dateStr+'T'+addOneHour(timeStr)+':00', timeZone: 'Europe/Paris' }
+        } : {
+          start: { date: dateStr },
+          end: { date: isoDatePlusOne(dateStr) }
+        })
       })
     });
     if(!resp.ok){

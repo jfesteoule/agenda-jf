@@ -21,6 +21,17 @@ canvas#c{position:absolute;inset:0;width:100%;height:100%;touch-action:none;poin
 .menuitem{display:flex;align-items:center;gap:10px;padding:12px 16px;background:#fff;border:none;border-bottom:1px solid #eee;font-family:'Archivo',Arial,sans-serif;font-size:13px;color:#2b241c;cursor:pointer;text-align:left;}
 .menuitem:last-child{border-bottom:none;}
 .menuitem i{font-size:17px;color:#c1502f;}
+#addEventOverlay{display:none;position:fixed;inset:0;z-index:2000;background:rgba(20,15,10,0.45);align-items:center;justify-content:center;}
+#addEventOverlay.open{display:flex;}
+#addEventBox{background:#fff;border-radius:14px;padding:20px 22px;width:min(340px,92vw);box-shadow:0 12px 32px rgba(0,0,0,0.3);font-family:'Archivo',Arial,sans-serif;}
+#addEventBox h3{margin:0 0 16px;font-family:'Oswald',Arial,sans-serif;font-size:15px;font-weight:600;color:#2b241c;text-transform:uppercase;letter-spacing:0.02em;}
+#addEventBox label{display:flex;flex-direction:column;gap:4px;font-size:12px;color:#5f6368;margin-bottom:12px;}
+#addEventBox input{font-family:'Archivo',Arial,sans-serif;font-size:14px;padding:8px 10px;border:1px solid #ddd;border-radius:8px;color:#2b241c;}
+#addEvStatus{font-size:12px;min-height:16px;margin-bottom:8px;}
+#addEvStatus.err{color:#c1502f;}
+#addEvStatus.ok{color:#4c7a53;}
+#addEvActions{display:flex;gap:8px;justify-content:flex-end;}
+#addEvActions button{padding:9px 16px;font-size:13px;font-weight:500;cursor:pointer;}
 @media (max-width:480px){
   .hudbtn-top{display:none !important;}
 }
@@ -61,9 +72,22 @@ window.syncAllCalendars = syncAllCalendars;
     <button id="jfonlybtn" class="hudbtn-top" style="position:relative;z-index:1000;pointer-events:auto;width:40px;height:40px;min-width:40px;background:#fff;border-radius:50%;border:none;cursor:pointer;display:flex;align-items:center;justify-content:center;box-shadow:0 2px 6px rgba(0,0,0,0.2);color:#c1502f;font-size:16px;font-weight:bold;margin-left:6px;" title="Masquer l'agenda de JF">JF</button>
   </div>
   <div id="menuPanel">
+    <button id="menu-add" class="menuitem"><i class="ti ti-plus"></i>Ajouter un événement</button>
     <button id="menu-sync" class="menuitem"><i class="ti ti-refresh"></i>Synchroniser Google Agenda</button>
     <button id="menu-month" class="menuitem"><i class="ti ti-calendar-month"></i>Vue mensuelle</button>
     <button id="menu-jf" class="menuitem"><i class="ti ti-user"></i>Masquer l'agenda de JF</button>
+  </div>
+  <div id="addEventOverlay">
+    <div id="addEventBox">
+      <h3>Nouvel événement — Google Agenda de JF</h3>
+      <label>Date<input type="date" id="addEvDate"></label>
+      <label>Titre<input type="text" id="addEvTitle" maxlength="80" placeholder="Ex. Bridge D0301"></label>
+      <div id="addEvStatus"></div>
+      <div id="addEvActions">
+        <button id="addEvCancel" class="menuitem" style="border:1px solid #ddd;border-radius:8px;">Annuler</button>
+        <button id="addEvSubmit" class="menuitem" style="background:#c1502f;color:#fff;border-radius:8px;">Créer</button>
+      </div>
+    </div>
   </div>
   <div id="speeds">
     <button class="sp" data-s="0.2">×⅕</button>
@@ -3852,6 +3876,123 @@ document.getElementById('menu-jf').addEventListener('click',()=>{
 });
 document.addEventListener('click',(e)=>{
   if(!menuPanel.contains(e.target) && e.target.id!=='mbtn') menuPanel.classList.remove('open');
+});
+
+// ===== AJOUT D'ÉVÉNEMENT DANS GOOGLE AGENDA (compte principal JF uniquement) =====
+const GOOGLE_CLIENT_ID = '553155346197-0mocoh81lknfp5hlva9c5s3vvatdaofk.apps.googleusercontent.com';
+const CALENDAR_SCOPE = 'https://www.googleapis.com/auth/calendar.events';
+let googleTokenClient = null;
+let googleAccessToken = null;
+let googleTokenExpiry = 0;
+
+function ensureGoogleTokenClient(){
+  if(googleTokenClient) return googleTokenClient;
+  if(!(window.google && google.accounts && google.accounts.oauth2)){
+    throw new Error("Connexion Google indisponible (script non chargé)");
+  }
+  googleTokenClient = google.accounts.oauth2.initTokenClient({
+    client_id: GOOGLE_CLIENT_ID,
+    scope: CALENDAR_SCOPE,
+    callback: () => {} // remplacé à chaque appel par getGoogleAccessToken
+  });
+  return googleTokenClient;
+}
+
+function getGoogleAccessToken(){
+  return new Promise((resolve, reject) => {
+    if(googleAccessToken && Date.now() < googleTokenExpiry){
+      resolve(googleAccessToken);
+      return;
+    }
+    let client;
+    try { client = ensureGoogleTokenClient(); }
+    catch(err){ reject(err); return; }
+    client.callback = (resp) => {
+      if(resp.error){ reject(new Error(resp.error)); return; }
+      googleAccessToken = resp.access_token;
+      googleTokenExpiry = Date.now() + (Number(resp.expires_in)||3300)*1000;
+      resolve(googleAccessToken);
+    };
+    client.requestAccessToken({ prompt: googleAccessToken ? '' : 'consent' });
+  });
+}
+
+function isoDatePlusOne(dateStr){
+  const d = new Date(dateStr+'T00:00:00Z');
+  d.setUTCDate(d.getUTCDate()+1);
+  return d.toISOString().slice(0,10);
+}
+
+const addEventOverlay = document.getElementById('addEventOverlay');
+const addEvStatus = document.getElementById('addEvStatus');
+function openAddEventModal(){
+  const dateInput = document.getElementById('addEvDate');
+  if(!dateInput.value){
+    const d = new Date(MONTH_ORIGIN_MS + Math.round(camDay)*86400000);
+    dateInput.value = d.toISOString().slice(0,10);
+  }
+  addEvStatus.textContent='';
+  addEvStatus.className='';
+  addEventOverlay.classList.add('open');
+}
+function closeAddEventModal(){ addEventOverlay.classList.remove('open'); }
+
+document.getElementById('menu-add').addEventListener('click', () => {
+  menuPanel.classList.remove('open');
+  openAddEventModal();
+});
+document.getElementById('addEvCancel').addEventListener('click', closeAddEventModal);
+addEventOverlay.addEventListener('click', (e) => { if(e.target===addEventOverlay) closeAddEventModal(); });
+
+document.getElementById('addEvSubmit').addEventListener('click', async () => {
+  const dateStr = document.getElementById('addEvDate').value;
+  const title = document.getElementById('addEvTitle').value.trim();
+  if(!dateStr || !title){
+    addEvStatus.textContent = 'Date et titre requis.';
+    addEvStatus.className = 'err';
+    return;
+  }
+  const btn = document.getElementById('addEvSubmit');
+  btn.disabled = true;
+  addEvStatus.textContent = 'Connexion à Google Agenda…';
+  addEvStatus.className = '';
+  try{
+    const token = await getGoogleAccessToken();
+    addEvStatus.textContent = 'Création…';
+    const resp = await fetch('https://www.googleapis.com/calendar/v3/calendars/primary/events', {
+      method: 'POST',
+      headers: { 'Authorization': 'Bearer ' + token, 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        summary: title,
+        start: { date: dateStr },
+        end: { date: isoDatePlusOne(dateStr) }
+      })
+    });
+    if(!resp.ok){
+      const errBody = await resp.json().catch(()=>({}));
+      throw new Error(errBody.error && errBody.error.message ? errBody.error.message : ('HTTP '+resp.status));
+    }
+    // Ajout optimiste côté app : l'export automatique qui alimente events.json passera plus
+    // tard, mais l'événement doit être visible tout de suite sur la route de JF.
+    const day = Math.round((new Date(dateStr+'T00:00:00Z').getTime() - MONTH_ORIGIN_MS)/86400000);
+    const d = new Date(MONTH_ORIGIN_MS + day*86400000);
+    const label = d.getUTCDate() + ' ' + d.toLocaleString('fr-FR',{month:'short',timeZone:'UTC'});
+    const item = { day, label, title: title.slice(0,40), color:'#1a73e8', side:'right', who:'JF' };
+    EVT_JF.push(item);
+    ALL_EVENTS.push(item);
+    ALL_EVENTS.sort((a,b)=>a.day-b.day);
+
+    addEvStatus.textContent = '✓ Événement créé dans Google Agenda.';
+    addEvStatus.className = 'ok';
+    document.getElementById('addEvTitle').value = '';
+    setTimeout(closeAddEventModal, 900);
+  }catch(err){
+    addEvStatus.textContent = 'Erreur : ' + err.message;
+    addEvStatus.className = 'err';
+    console.error(err);
+  }finally{
+    btn.disabled = false;
+  }
 });
 
 </script>

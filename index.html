@@ -35,6 +35,11 @@ canvas#c{position:absolute;inset:0;width:100%;height:100%;touch-action:none;poin
 @media (max-width:480px){
   .hudbtn-top{display:none !important;}
 }
+@media (min-width:481px){
+  /* Sur grand écran, chaque action a déjà son icône dans la barre du haut :
+     le menu ☰ (qui duplique ces mêmes actions) ne sert qu'aux petits écrans. */
+  #mbtn{display:none !important;}
+}
 #speeds{position:absolute;top:62px;left:12px;z-index:20;display:flex;gap:6px;}
 .sp{background:#fff;border:none;border-radius:20px;padding:5px 11px;font-family:'Archivo',Arial,sans-serif;font-size:12px;font-weight:500;cursor:pointer;box-shadow:0 1px 4px rgba(0,0,0,0.18);color:#444;}
 .sp.on{background:#c1502f;color:#fff;}
@@ -50,7 +55,7 @@ canvas#c{position:absolute;inset:0;width:100%;height:100%;touch-action:none;poin
 .legline{width:18px;height:4px;border-radius:2px;background:#9fbfc7;}
 #eta{position:absolute;bottom:12px;left:12px;right:60px;z-index:20;background:#fff;border-radius:12px;padding:10px 14px;display:flex;align-items:center;justify-content:space-between;box-shadow:0 2px 8px rgba(0,0,0,0.18);}
 
-#searchResults{display:none;position:absolute;top:48px;left:0;right:0;z-index:1002;background:#fff;border-radius:12px;box-shadow:0 6px 18px rgba(0,0,0,0.22);max-height:280px;overflow-y:auto;}
+#searchResults{display:none;position:absolute;top:48px;left:0;right:0;z-index:1002;background:#fff;border-radius:12px;box-shadow:0 6px 18px rgba(0,0,0,0.22);max-height:230px;overflow-y:auto;}
 #searchResults.open{display:block;}
 .searchrow{display:flex;align-items:center;gap:10px;width:100%;padding:10px 14px;background:#fff;border:none;border-bottom:1px solid #eee;font-family:'Archivo',Arial,sans-serif;font-size:13px;color:#2b241c;cursor:pointer;text-align:left;}
 .searchrow:last-child{border-bottom:none;}
@@ -103,13 +108,14 @@ window.syncAllCalendars = syncAllCalendars;
     <button id="mbtn"><i class="ti ti-menu-2" style="font-size:18px"></i></button>
     <div style="position:relative;flex:1;">
       <i class="ti ti-search" id="sico"></i>
-      <input id="sbox" type="text" placeholder="Rechercher un événement…" autocomplete="off">
+      <input id="sbox" type="text" value="Route du temps · Jan 2023 › Déc 2027" placeholder="Rechercher un événement…" autocomplete="off">
       <div id="searchResults">
         <div id="searchList"></div>
         <div id="searchEmpty">Aucun événement trouvé.</div>
       </div>
     </div>
-    <button id="syncbtn" class="hudbtn-top" style="position:relative;z-index:1000;pointer-events:auto;width:40px;height:40px;min-width:40px;background:#fff;border-radius:50%;border:none;cursor:pointer;display:flex;align-items:center;justify-content:center;box-shadow:0 2px 6px rgba(0,0,0,0.2);color:#4c7a53;font-size:18px;" title="Synchroniser Google Agenda"><i class="ti ti-refresh"></i></button>
+    <button id="addeventbtn" class="hudbtn-top" style="position:relative;z-index:1000;pointer-events:auto;width:40px;height:40px;min-width:40px;background:#fff;border-radius:50%;border:none;cursor:pointer;display:flex;align-items:center;justify-content:center;box-shadow:0 2px 6px rgba(0,0,0,0.2);color:#c1502f;font-size:18px;" title="Ajouter un événement"><i class="ti ti-plus"></i></button>
+    <button id="syncbtn" class="hudbtn-top" style="position:relative;z-index:1000;pointer-events:auto;width:40px;height:40px;min-width:40px;background:#fff;border-radius:50%;border:none;cursor:pointer;display:flex;align-items:center;justify-content:center;box-shadow:0 2px 6px rgba(0,0,0,0.2);color:#4c7a53;font-size:18px;margin-left:6px;" title="Synchroniser Google Agenda"><i class="ti ti-refresh"></i></button>
     <button id="datejumpbtn" class="hudbtn-top" style="position:relative;z-index:1000;pointer-events:auto;width:40px;height:40px;min-width:40px;background:#fff;border-radius:50%;border:none;cursor:pointer;display:flex;align-items:center;justify-content:center;box-shadow:0 2px 6px rgba(0,0,0,0.2);color:#c1502f;font-size:18px;margin-left:6px;" title="Aller à une date"><i class="ti ti-calendar-event"></i></button>
     <button id="monthbtn" class="hudbtn-top" style="position:relative;z-index:1000;pointer-events:auto;width:40px;height:40px;min-width:40px;background:#fff;border-radius:50%;border:none;cursor:pointer;display:flex;align-items:center;justify-content:center;box-shadow:0 2px 6px rgba(0,0,0,0.2);color:#c1502f;font-size:18px;margin-left:6px;" title="Vue mensuelle"><i class="ti ti-calendar-month"></i></button>
     <button id="jfonlybtn" class="hudbtn-top" style="position:relative;z-index:1000;pointer-events:auto;width:40px;height:40px;min-width:40px;background:#fff;border-radius:50%;border:none;cursor:pointer;display:flex;align-items:center;justify-content:center;box-shadow:0 2px 6px rgba(0,0,0,0.2);color:#c1502f;font-size:16px;font-weight:bold;margin-left:6px;" title="Masquer l'agenda de JF">JF</button>
@@ -3617,6 +3623,8 @@ function closeDayPanel(){
 document.getElementById('dp-close').addEventListener('click',closeDayPanel);
 document.getElementById('dayPanelScrim').addEventListener('click',closeDayPanel);
 
+const SBOX_TITLE="Route du temps · Jan 2023 › Déc 2027";
+const SBOX_MAX_RESULTS=6;
 const sbox=document.getElementById('sbox');
 const searchResults=document.getElementById('searchResults');
 const searchList=document.getElementById('searchList');
@@ -3625,7 +3633,8 @@ function renderSearchResults(q){
   const query=q.trim().toLowerCase();
   searchList.innerHTML='';
   if(!query){ searchResults.classList.remove('open'); return; }
-  const matches=visibleEvents().filter(ev=>ev.title.toLowerCase().includes(query)).slice(0,20);
+  const all=visibleEvents().filter(ev=>ev.title.toLowerCase().includes(query));
+  const matches=all.slice(0,SBOX_MAX_RESULTS);
   searchEmpty.style.display=matches.length?'none':'block';
   matches.forEach(ev=>{
     const row=document.createElement('button');
@@ -3639,14 +3648,26 @@ function renderSearchResults(q){
       jumpToDay(ev.day);
       openEventDetail(ev);
       searchResults.classList.remove('open');
-      sbox.value='';
+      sbox.value=SBOX_TITLE;
     });
     searchList.appendChild(row);
   });
+  if(all.length>matches.length){
+    const more=document.createElement('div');
+    more.style.cssText="padding:8px 14px;font-family:'Archivo',Arial,sans-serif;font-size:11px;color:#8a7a5c;";
+    more.textContent='+'+(all.length-matches.length)+' autres résultats, affinez la recherche';
+    searchList.appendChild(more);
+  }
   searchResults.classList.add('open');
 }
+sbox.addEventListener('focus',()=>{
+  if(sbox.value===SBOX_TITLE) sbox.value='';
+  if(sbox.value.trim()) renderSearchResults(sbox.value);
+});
+sbox.addEventListener('blur',()=>{
+  if(!sbox.value.trim()) sbox.value=SBOX_TITLE;
+});
 sbox.addEventListener('input',()=>renderSearchResults(sbox.value));
-sbox.addEventListener('focus',()=>{ if(sbox.value.trim()) renderSearchResults(sbox.value); });
 document.addEventListener('click',e=>{
   if(!searchResults.contains(e.target) && e.target!==sbox) searchResults.classList.remove('open');
 });
@@ -4163,6 +4184,7 @@ document.getElementById('menu-add').addEventListener('click', () => {
   menuPanel.classList.remove('open');
   openAddEventModal();
 });
+document.getElementById('addeventbtn').addEventListener('click', openAddEventModal);
 document.getElementById('addEvCancel').addEventListener('click', closeAddEventModal);
 addEventOverlay.addEventListener('click', (e) => { if(e.target===addEventOverlay) closeAddEventModal(); });
 

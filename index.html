@@ -133,6 +133,11 @@ window.syncAllCalendars = syncAllCalendars;
     </div>
     <button id="addeventbtn" class="hudbtn-top" style="position:relative;z-index:1000;pointer-events:auto;width:40px;height:40px;min-width:40px;background:#fff;border-radius:50%;border:none;cursor:pointer;display:flex;align-items:center;justify-content:center;box-shadow:0 2px 6px rgba(0,0,0,0.2);color:#c1502f;font-size:18px;margin-left:auto;" title="Ajouter un événement"><i class="ti ti-plus"></i></button>
     <button id="syncbtn" class="hudbtn-top" style="position:relative;z-index:1000;pointer-events:auto;width:40px;height:40px;min-width:40px;background:#fff;border-radius:50%;border:none;cursor:pointer;display:flex;align-items:center;justify-content:center;box-shadow:0 2px 6px rgba(0,0,0,0.2);color:#4c7a53;font-size:18px;margin-left:6px;" title="Synchroniser Google Agenda"><i class="ti ti-refresh"></i></button>
+    <button id="googleAuthBtn" class="hudbtn-top" style="position:relative;z-index:1000;pointer-events:auto;width:40px;height:40px;min-width:40px;background:#fff;border-radius:50%;border:none;cursor:pointer;display:flex;align-items:center;justify-content:center;box-shadow:0 2px 6px rgba(0,0,0,0.2);color:#9aa0a6;font-size:20px;margin-left:6px;overflow:hidden;padding:0;" title="Non connecté à Google — cliquer pour se connecter et synchroniser en direct">
+      <i class="ti ti-user-circle" id="googleAuthIcon"></i>
+      <img id="googleAuthAvatar" alt="" style="display:none;width:100%;height:100%;border-radius:50%;object-fit:cover;">
+      <span id="googleAuthDot" style="display:none;position:absolute;right:-1px;bottom:-1px;width:12px;height:12px;border-radius:50%;background:#34a853;border:2px solid #fff;"></span>
+    </button>
     <button id="datejumpbtn" class="hudbtn-top" style="position:relative;z-index:1000;pointer-events:auto;width:40px;height:40px;min-width:40px;background:#fff;border-radius:50%;border:none;cursor:pointer;display:flex;align-items:center;justify-content:center;box-shadow:0 2px 6px rgba(0,0,0,0.2);color:#c1502f;font-size:18px;margin-left:6px;" title="Aller à une date"><i class="ti ti-calendar-event"></i></button>
     <button id="monthbtn" class="hudbtn-top" style="position:relative;z-index:1000;pointer-events:auto;width:40px;height:40px;min-width:40px;background:#fff;border-radius:50%;border:none;cursor:pointer;display:flex;align-items:center;justify-content:center;box-shadow:0 2px 6px rgba(0,0,0,0.2);color:#c1502f;font-size:18px;margin-left:6px;" title="Vue mensuelle"><i class="ti ti-calendar-month"></i></button>
     <button id="photosbtn" class="hudbtn-top" style="position:relative;z-index:1000;pointer-events:auto;width:40px;height:40px;min-width:40px;background:#fff;border-radius:50%;border:none;cursor:pointer;display:flex;align-items:center;justify-content:center;box-shadow:0 2px 6px rgba(0,0,0,0.2);color:#c1502f;font-size:18px;margin-left:6px;" title="Photos"><i class="ti ti-photo"></i></button>
@@ -4150,6 +4155,53 @@ async function fetchEventsJson(){
   }
 }
 
+// Remplit EVT_JF / EVT_ANNE / EXPLICIT_RUNS / ALL_EVENTS à partir d'une liste brute
+// {day, title, side, who, day2?} — commune à la synchro events.json (quotidienne,
+// via le script Google Apps Script) et à la synchro Google Agenda en direct.
+function applyEventsData(events){
+  const ORIGIN = new Date('2023-01-01T00:00:00Z');
+
+  EVT_JF.length=0;
+  EVT_ANNE.length=0;
+  EXPLICIT_RUNS.length=0;
+
+  const repairedEvents=[];
+  events.forEach(ev=>{
+    const d = new Date(ORIGIN.getTime() + ev.day*86400000);
+    const label = d.getDate() + ' ' + d.toLocaleString('fr-FR',{month:'short'});
+    const rawTitle = ev.title || '';
+    const title = TITLE_REPAIR[rawTitle] || rawTitle;
+    const item = {
+      day: ev.day,
+      label: label,
+      title: title.slice(0,40),
+      color: ev.side==='right' ? '#1a73e8' : '#e67c73',
+      side: ev.side,
+      who: ev.who
+    };
+    repairedEvents.push({day: ev.day, side: ev.side, title: title});
+    if(ev.side==='right') EVT_JF.push(item);
+    else EVT_ANNE.push(item);
+
+    // Séjour multi-jours : la source (events.json ou l'API Calendar en direct) peut
+    // fournir un day2 optionnel (dernier jour inclus) quand un événement s'étale sur
+    // plusieurs jours. Sans ce champ, rien ne change (comme avant).
+    if(typeof ev.day2==='number' && ev.day2>ev.day){
+      EXPLICIT_RUNS.push({
+        day1: ev.day,
+        day2: ev.day2,
+        title: item.title,
+        side: ev.side,
+        color: ev.side==='right' ? '#001a66' : '#c0392b'
+      });
+    }
+  });
+  applyPhotoTitleRules(repairedEvents);
+
+  ALL_EVENTS.length=0;
+  [...EVT_JF,...EVT_ANNE].sort((a,b)=>a.day-b.day).forEach(e=>ALL_EVENTS.push(e));
+}
+
 async function syncAllCalendars(silent){
   const btn = document.getElementById('syncbtn');
   btn.style.color='#fbbc04';
@@ -4157,48 +4209,7 @@ async function syncAllCalendars(silent){
 
   try {
     const events = await fetchEventsJson();
-
-    const ORIGIN = new Date('2023-01-01T00:00:00Z');
-
-    EVT_JF.length=0;
-    EVT_ANNE.length=0;
-    EXPLICIT_RUNS.length=0;
-
-    const repairedEvents=[];
-    events.forEach(ev=>{
-      const d = new Date(ORIGIN.getTime() + ev.day*86400000);
-      const label = d.getDate() + ' ' + d.toLocaleString('fr-FR',{month:'short'});
-      const rawTitle = ev.title || '';
-      const title = TITLE_REPAIR[rawTitle] || rawTitle;
-      const item = {
-        day: ev.day,
-        label: label,
-        title: title.slice(0,40),
-        color: ev.side==='right' ? '#1a73e8' : '#e67c73',
-        side: ev.side,
-        who: ev.who
-      };
-      repairedEvents.push({day: ev.day, side: ev.side, title: title});
-      if(ev.side==='right') EVT_JF.push(item);
-      else EVT_ANNE.push(item);
-
-      // Séjour multi-jours : events.json peut fournir un day2 optionnel (dernier
-      // jour inclus) quand le script de synchro sait qu'un événement Google Agenda
-      // s'étale sur plusieurs jours. Sans ce champ, rien ne change (comme avant).
-      if(typeof ev.day2==='number' && ev.day2>ev.day){
-        EXPLICIT_RUNS.push({
-          day1: ev.day,
-          day2: ev.day2,
-          title: item.title,
-          side: ev.side,
-          color: ev.side==='right' ? '#001a66' : '#c0392b'
-        });
-      }
-    });
-    applyPhotoTitleRules(repairedEvents);
-
-    ALL_EVENTS.length=0;
-    [...EVT_JF,...EVT_ANNE].sort((a,b)=>a.day-b.day).forEach(e=>ALL_EVENTS.push(e));
+    applyEventsData(events);
 
     btn.style.color='#34a853';
     btn.style.animation='';
@@ -4247,7 +4258,7 @@ document.addEventListener('click',(e)=>{
 
 // ===== AJOUT D'ÉVÉNEMENT DANS GOOGLE AGENDA (compte principal JF uniquement) =====
 const GOOGLE_CLIENT_ID = '553155346197-0mocoh81lknfp5hlva9c5s3vvatdaofk.apps.googleusercontent.com';
-const CALENDAR_SCOPE = 'https://www.googleapis.com/auth/calendar.events';
+const CALENDAR_SCOPE = 'https://www.googleapis.com/auth/calendar.events email profile';
 let googleTokenClient = null;
 let googleAccessToken = null;
 let googleTokenExpiry = 0;
@@ -4410,6 +4421,137 @@ document.getElementById('addEvSubmit').addEventListener('click', async () => {
     btn.disabled = false;
   }
 });
+
+// ===== SYNCHRO GOOGLE AGENDA EN DIRECT =====
+// events.json (via le script Apps Script + jsDelivr) reste la source par défaut au
+// chargement : rapide, sans connexion requise. Ce bouton va chercher les événements
+// directement depuis l'API Google Calendar (donc sans le décalage de la synchro
+// nocturne), avec un petit cache pour éviter de rappeler l'API à chaque clic, et
+// affiche l'avatar du compte Google connecté comme indicateur de statut.
+const LIVE_SYNC_CALENDARS = [
+  {id:'jf.esteoule@gmail.com', side:'right', who:'JF'},
+  {id:'fracchiaanne@gmail.com', side:'left', who:'Anne'}
+];
+const LIVE_SYNC_TIME_MIN = '2023-01-01T00:00:00Z';
+const LIVE_SYNC_TIME_MAX = '2028-01-01T00:00:00Z';
+const LIVE_SYNC_CACHE_KEY = 'liveSyncCache_v1';
+const LIVE_SYNC_CACHE_TTL = 10*60*1000; // 10 minutes
+
+async function fetchGoogleUserProfile(token){
+  const resp = await fetch('https://www.googleapis.com/oauth2/v3/userinfo', {
+    headers: { 'Authorization': 'Bearer ' + token }
+  });
+  if(!resp.ok) throw new Error('HTTP ' + resp.status);
+  return await resp.json(); // {name, email, picture, ...}
+}
+
+function updateGoogleAuthUI(profile){
+  const btn = document.getElementById('googleAuthBtn');
+  const icon = document.getElementById('googleAuthIcon');
+  const avatar = document.getElementById('googleAuthAvatar');
+  const dot = document.getElementById('googleAuthDot');
+  if(profile){
+    icon.style.display = 'none';
+    avatar.src = profile.picture || '';
+    avatar.style.display = 'block';
+    dot.style.display = 'block';
+    btn.title = 'Connecté en tant que ' + (profile.name || profile.email) + ' — cliquer pour forcer la synchro Google Agenda';
+  } else {
+    icon.style.display = '';
+    avatar.style.display = 'none';
+    dot.style.display = 'none';
+    btn.title = 'Non connecté à Google — cliquer pour se connecter et synchroniser en direct';
+  }
+}
+
+function dayIndexFromDateStr(dateStr){
+  return Math.round((new Date(dateStr+'T00:00:00Z').getTime() - MONTH_ORIGIN_MS) / 86400000);
+}
+
+async function fetchCalendarEventsRange(calendarId, token){
+  const items = [];
+  let pageToken = '';
+  do{
+    const url = new URL('https://www.googleapis.com/calendar/v3/calendars/' + encodeURIComponent(calendarId) + '/events');
+    url.searchParams.set('timeMin', LIVE_SYNC_TIME_MIN);
+    url.searchParams.set('timeMax', LIVE_SYNC_TIME_MAX);
+    url.searchParams.set('singleEvents', 'true');
+    url.searchParams.set('orderBy', 'startTime');
+    url.searchParams.set('maxResults', '2500');
+    if(pageToken) url.searchParams.set('pageToken', pageToken);
+    const resp = await fetch(url.toString(), { headers: { 'Authorization': 'Bearer ' + token } });
+    if(!resp.ok){
+      const errBody = await resp.json().catch(()=>({}));
+      throw new Error((errBody.error && errBody.error.message) || ('HTTP ' + resp.status));
+    }
+    const data = await resp.json();
+    items.push(...(data.items || []));
+    pageToken = data.nextPageToken || '';
+  } while(pageToken);
+  return items;
+}
+
+function googleEventToEntry(gev, side, who){
+  if(gev.status === 'cancelled') return null;
+  const title = (gev.summary || '').slice(0, 40);
+  if(gev.start && gev.start.date){
+    // Événement toute la journée : end.date est exclusif côté API Calendar.
+    const day = dayIndexFromDateStr(gev.start.date);
+    const day2 = dayIndexFromDateStr(gev.end.date) - 1;
+    const entry = { day, title, side, who };
+    if(day2 > day) entry.day2 = day2;
+    return entry;
+  }
+  if(gev.start && gev.start.dateTime){
+    // Événement avec heure : on retient le jour local (fuseau Europe/Paris).
+    const dateStr = new Date(gev.start.dateTime).toLocaleDateString('en-CA', {timeZone: 'Europe/Paris'});
+    return { day: dayIndexFromDateStr(dateStr), title, side, who };
+  }
+  return null;
+}
+
+async function liveSyncFromGoogleCalendar(force){
+  const btn = document.getElementById('googleAuthBtn');
+  btn.style.animation = 'spin 1s linear infinite';
+  try{
+    if(!force){
+      const cached = JSON.parse(localStorage.getItem(LIVE_SYNC_CACHE_KEY) || 'null');
+      if(cached && (Date.now() - cached.ts) < LIVE_SYNC_CACHE_TTL){
+        applyEventsData(cached.events);
+        if(cached.profile) updateGoogleAuthUI(cached.profile);
+        btn.style.animation = '';
+        return;
+      }
+    }
+    const token = await getGoogleAccessToken();
+    const profile = await fetchGoogleUserProfile(token);
+    updateGoogleAuthUI(profile);
+
+    const allEntries = [];
+    for(const cal of LIVE_SYNC_CALENDARS){
+      try{
+        const items = await fetchCalendarEventsRange(cal.id, token);
+        items.forEach(gev=>{
+          const entry = googleEventToEntry(gev, cal.side, cal.who);
+          if(entry) allEntries.push(entry);
+        });
+      }catch(err){
+        console.warn('Synchro Google : échec pour ' + cal.id, err);
+      }
+    }
+    if(allEntries.length === 0) throw new Error('Aucun événement récupéré (accès refusé aux agendas ?)');
+
+    applyEventsData(allEntries);
+    localStorage.setItem(LIVE_SYNC_CACHE_KEY, JSON.stringify({ts: Date.now(), events: allEntries, profile}));
+    btn.style.animation = '';
+  }catch(err){
+    btn.style.animation = '';
+    console.error(err);
+    alert('Erreur synchro Google : ' + err.message);
+  }
+}
+
+document.getElementById('googleAuthBtn').addEventListener('click', () => liveSyncFromGoogleCalendar(true));
 
 </script>
 </body>

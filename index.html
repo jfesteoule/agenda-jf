@@ -76,6 +76,11 @@ canvas#c{position:absolute;inset:0;width:100%;height:100%;touch-action:none;poin
 #searchEmpty{display:none;padding:14px 16px;font-family:'Archivo',Arial,sans-serif;font-size:13px;color:#8a7a5c;}
 
 #datejumpPanel{display:none;position:absolute;top:56px;right:12px;z-index:1001;background:#fff;border-radius:12px;box-shadow:0 6px 18px rgba(0,0,0,0.22);padding:14px;width:230px;flex-direction:column;gap:10px;}
+
+.monthnavbtn{display:none;position:absolute;top:10px;z-index:1000;width:36px;height:36px;border-radius:50%;border:none;background:#fff;box-shadow:0 2px 6px rgba(0,0,0,0.2);color:#5f6368;cursor:pointer;align-items:center;justify-content:center;font-size:16px;}
+.monthnavbtn.active{display:flex;}
+#monthPrevBtn{left:calc(50% - 160px);}
+#monthNextBtn{right:calc(50% - 160px);}
 #datejumpPanel.open{display:flex;}
 .jchips{display:flex;gap:6px;flex-wrap:wrap;}
 .jchip{border:1px solid #e7e0d3;background:#fff;border-radius:16px;padding:6px 11px;font-family:'Archivo',Arial,sans-serif;font-size:12px;font-weight:500;color:#2b241c;cursor:pointer;}
@@ -170,6 +175,8 @@ window.syncAllCalendars = syncAllCalendars;
     </div>
     <input type="date" id="djdate">
   </div>
+  <button id="monthPrevBtn" class="monthnavbtn" title="Mois précédent"><i class="ti ti-chevron-left"></i></button>
+  <button id="monthNextBtn" class="monthnavbtn" title="Mois suivant"><i class="ti ti-chevron-right"></i></button>
   <div id="speeds">
     <button class="sp" data-s="0.2">×⅕</button>
     <button class="sp" data-s="0.5">×½</button>
@@ -3484,7 +3491,17 @@ document.getElementById('monthbtn').addEventListener('click',()=>{
   btn.style.color=monthViewActive?'#fff':'#1a73e8';
   const menuBtn=document.getElementById('menu-month');
   menuBtn.lastChild.textContent=monthViewActive?'Revenir à la route':'Vue mensuelle';
+  document.getElementById('monthPrevBtn').classList.toggle('active',monthViewActive);
+  document.getElementById('monthNextBtn').classList.toggle('active',monthViewActive);
 });
+function shiftMonth(delta){
+  const dt=new Date(MONTH_ORIGIN_MS+Math.round(camDay)*86400000);
+  dt.setUTCMonth(dt.getUTCMonth()+delta);
+  camDay=Math.max(0,Math.min(TOTAL_DAYS,Math.round((dt.getTime()-MONTH_ORIGIN_MS)/86400000)));
+  scrollY=camDay/7*laneH();
+}
+document.getElementById('monthPrevBtn').addEventListener('click',()=>shiftMonth(-1));
+document.getElementById('monthNextBtn').addEventListener('click',()=>shiftMonth(1));
 function updateCalendarToggleUI(){
   const jfBtn=document.getElementById('jfonlybtn');
   jfBtn.style.background=showJF?'#fff':'#f1f3f4';

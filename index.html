@@ -3315,7 +3315,9 @@ function drawDayLetters(){
 
   for(let d=Math.max(0,(camWeek-_vl)*7+MON_SHIFT);
          d<=Math.min(TOTAL_DAYS,(camWeek+_vl)*7+MON_SHIFT);d++){
-    const{x,y,hw}=dayToScreen(d);
+    // +0.5 : centre du jour, comme drawEventTexts() — sinon le repère du jour d
+    // tombe sur la frontière avec le jour d-1 et semble étiqueter la mauvaise case.
+    const{x,y,hw}=dayToScreen(d+0.5);
     if(!visible(y)) continue;
     if(hw<12) continue;
 
@@ -3345,7 +3347,8 @@ function drawDayLetters(){
 
 
 function drawTodayMark(){
-  const{x,y,hw}=dayToScreen(TODAY_DAY);
+  // +0.5 : centre du jour, comme drawEventTexts() (voir drawDayLetters)
+  const{x,y,hw}=dayToScreen(TODAY_DAY+0.5);
   if(!visible(y)) return;
   ctx.strokeStyle='#1a73e8'; ctx.lineWidth=Math.max(2,hw*0.07); ctx.setLineDash([5,3]);
   ctx.beginPath();ctx.moveTo(x-hw,y);ctx.lineTo(x+hw,y);ctx.stroke();

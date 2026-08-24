@@ -3362,7 +3362,12 @@ function drawTodayMark(){
   ctx.font=`bold ${fs}px Arial`;
   ctx.textAlign='center'; ctx.textBaseline='bottom';
   ctx.fillStyle='#333';
-  ctx.fillText("Aujourd'hui",x,y-hw-2);
+  // Décalage borné par la hauteur de case (pas par hw, la largeur de route, sans
+  // rapport avec la hauteur d'un jour) : sinon le libellé dérive dans la case du
+  // jour précédent au lieu de rester lisiblement dans celle d'aujourd'hui.
+  const rowH=laneH()/7;
+  const offset=Math.min(hw*0.3, rowH*0.35);
+  ctx.fillText("Aujourd'hui",x,y-offset-2);
 }
 
 function drawPerson(){

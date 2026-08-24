@@ -4308,7 +4308,7 @@ function openPhotosPanel(){
   // Un seul rappel par libellé : la correspondance libellé ↔ photo, pas une ligne par date.
   const uniqueByLegende = new Map();
   PHOTOS.forEach(p=>{ if(!uniqueByLegende.has(p.legende)) uniqueByLegende.set(p.legende, p); });
-  const unique=[...uniqueByLegende.values()];
+  const unique=[...uniqueByLegende.values()].sort((a,b)=>a.legende.localeCompare(b.legende,'fr'));
   empty.style.display = unique.length ? 'none' : 'block';
   unique.forEach(p=>{
     const row = document.createElement('div');

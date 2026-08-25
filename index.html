@@ -3143,7 +3143,12 @@ function drawPhotos(){
       let cardX = p.side==='right' ? x+hw+70 : x-hw-70-cardW;
       cardX = Math.max(pad+4, Math.min(W-cardW-pad-4, cardX)) + i*step*dir;
       cardX = Math.max(pad+4, Math.min(W-cardW-pad-4, cardX));
-      const py = (y-size/2) + i*step;
+      // Suit la ligne de texte exacte de son événement (utile quand plusieurs
+      // événements se partagent le même jour et sont empilés) ; à défaut,
+      // se rabat sur le centre générique du jour. Le décalage i*step ajoute
+      // l'effet d'éventail quand plusieurs photos partagent le même jour/côté.
+      const rowY=getEventRowY(p.day,p.side,p.legende);
+      const py = (rowY!==null?rowY:y)-size/2 + i*step;
       const imgX = cardX+(cardW-size)/2;
 
       p._box={x:cardX-pad, y:py-pad, w:cardW+pad*2, h:size+pad*2+size*0.22};
@@ -3288,6 +3293,30 @@ function drawEventTexts(){
       });
     }
   });
+}
+
+// Position verticale exacte de la ligne de texte d'un événement précis, en reproduisant
+// le même calcul (empilement, groupe centré/à droite) que drawEventTexts() ci-dessus.
+// Utilisé par drawPhotos() pour que la photo suive sa ligne même quand plusieurs
+// événements partagent le même jour. Retourne null si l'événement n'est pas affiché
+// (plus dans les 3 premiers du jour, ou introuvable).
+function getEventRowY(day,side,legende){
+  const{y,hw}=dayToScreen(day+0.5);
+  const rowH=laneH()/7;
+  const fs=Math.max(7,Math.min(12,Math.min(hw*0.30,rowH*0.42)));
+  const lineH=Math.max(fs*1.15,fs+2);
+  const evts=visibleEvents().filter(e=>e.day===day && !AUTO_EXCLUDE.has(e.side+''+e.day+''+e.title));
+  const anneEvts=evts.filter(e=>e.side==='left');
+  const jfEvts=evts.filter(e=>e.side==='right');
+  const useRight=showAnne && (day>=JF_RIGHT_FROM_DAY);
+  const centeredEvts=useRight?anneEvts:[...anneEvts,...jfEvts];
+  const rightEvts=useRight?jfEvts:[];
+  const group=(side==='right'&&useRight)?rightEvts:centeredEvts;
+  const norm=s=>(s||'').trim().toLowerCase();
+  const idx=group.slice(0,3).findIndex(e=>norm(e.title)===norm(legende));
+  if(idx<0) return null;
+  const ty=y-Math.min(rowH*0.4,(group.length*lineH)/2)+lineH*0.5+idx*lineH;
+  return ty;
 }
 
 function drawMonthLabels(){

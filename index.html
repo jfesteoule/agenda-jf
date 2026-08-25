@@ -3111,32 +3111,38 @@ function drawPhotos(){
     if(!visible(y)) return;
     const size=Math.max(50,Math.min(110,hw*1.3));
     const pad=size*0.09;
-    let px = p.side==='right' ? x+hw+70 : x-hw-70-size;
-    px = Math.max(pad+4, Math.min(W-size-pad-4, px));
-    const py = y-size/2;
 
-    p._box={x:px-pad, y:py-pad, w:size+pad*2, h:size+pad*2+size*0.22};
+    // La carte s'élargit pour accueillir le libellé en entier ; on ne tronque
+    // qu'au-delà d'une largeur raisonnable (≈2.2x la photo).
+    ctx.font=`${Math.max(9,size*0.11)}px Arial`;
+    const maxCardW=size*2.2;
+    let label=p.legende;
+    if(ctx.measureText(label).width+pad*2>maxCardW){
+      while(label.length>1 && ctx.measureText(label+'…').width+pad*2>maxCardW) label=label.slice(0,-1);
+      label+='…';
+    }
+    const cardW=Math.max(size,ctx.measureText(label).width+pad*2);
+
+    let cardX = p.side==='right' ? x+hw+70 : x-hw-70-cardW;
+    cardX = Math.max(pad+4, Math.min(W-cardW-pad-4, cardX));
+    const py = y-size/2;
+    const imgX = cardX+(cardW-size)/2;
+
+    p._box={x:cardX-pad, y:py-pad, w:cardW+pad*2, h:size+pad*2+size*0.22};
 
     ctx.save();
     ctx.shadowColor='rgba(0,0,0,0.35)';
     ctx.shadowBlur=6;
     ctx.shadowOffsetY=3;
     ctx.fillStyle='#fff';
-    ctx.fillRect(px-pad, py-pad, size+pad*2, size+pad*2+size*0.22);
+    ctx.fillRect(cardX-pad, py-pad, cardW+pad*2, size+pad*2+size*0.22);
     ctx.shadowColor='transparent';
     ctx.shadowBlur=0;
-    ctx.drawImage(p.img, px, py, size, size);
+    ctx.drawImage(p.img, imgX, py, size, size);
     ctx.fillStyle='#333';
-    ctx.font=`${Math.max(9,size*0.11)}px Arial`;
     ctx.textAlign='center';
     ctx.textBaseline='top';
-    const maxTextWidth=size+pad*1.6;
-    let label=p.legende;
-    if(ctx.measureText(label).width>maxTextWidth){
-      while(label.length>1 && ctx.measureText(label+'…').width>maxTextWidth) label=label.slice(0,-1);
-      label+='…';
-    }
-    ctx.fillText(label, px+size/2, py+size+pad*0.6);
+    ctx.fillText(label, cardX+cardW/2, py+size+pad*0.6);
     ctx.restore();
   });
 }

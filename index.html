@@ -4355,6 +4355,12 @@ const CALENDAR_SCOPE = 'https://www.googleapis.com/auth/calendar.events email pr
 let googleTokenClient = null;
 let googleAccessToken = null;
 let googleTokenExpiry = 0;
+// Le token d'accès GIS n'est jamais persistant (il vit en mémoire JS et disparaît à
+// chaque rafraîchissement de page). Sans ce flag, on retomberait à chaque fois sur
+// prompt:'consent', qui réaffiche l'écran complet de consentement Google. Une fois le
+// compte autorisé une première fois, ce flag survit au rechargement et permet de
+// retenter un renouvellement silencieux (prompt:'') avant d'exiger un nouveau consentement.
+const GOOGLE_CONSENT_KEY = 'googleAuthConsent_v1';
 
 function ensureGoogleTokenClient(){
   if(googleTokenClient) return googleTokenClient;
@@ -4364,17 +4370,13 @@ function ensureGoogleTokenClient(){
   googleTokenClient = google.accounts.oauth2.initTokenClient({
     client_id: GOOGLE_CLIENT_ID,
     scope: CALENDAR_SCOPE,
-    callback: () => {} // remplacé à chaque appel par getGoogleAccessToken
+    callback: () => {} // remplacé à chaque appel par requestGoogleToken
   });
   return googleTokenClient;
 }
 
-function getGoogleAccessToken(){
+function requestGoogleToken(promptMode){
   return new Promise((resolve, reject) => {
-    if(googleAccessToken && Date.now() < googleTokenExpiry){
-      resolve(googleAccessToken);
-      return;
-    }
     let client;
     try { client = ensureGoogleTokenClient(); }
     catch(err){ reject(err); return; }
@@ -4382,10 +4384,25 @@ function getGoogleAccessToken(){
       if(resp.error){ reject(new Error(resp.error)); return; }
       googleAccessToken = resp.access_token;
       googleTokenExpiry = Date.now() + (Number(resp.expires_in)||3300)*1000;
+      try{ localStorage.setItem(GOOGLE_CONSENT_KEY, '1'); }catch(e){}
       resolve(googleAccessToken);
     };
-    client.requestAccessToken({ prompt: googleAccessToken ? '' : 'consent' });
+    client.requestAccessToken({ prompt: promptMode });
   });
+}
+
+async function getGoogleAccessToken(){
+  if(googleAccessToken && Date.now() < googleTokenExpiry) return googleAccessToken;
+  let alreadyConsented = false;
+  try{ alreadyConsented = !!localStorage.getItem(GOOGLE_CONSENT_KEY); }catch(e){}
+  if(!alreadyConsented) return requestGoogleToken('consent');
+  try{
+    return await requestGoogleToken('');
+  }catch(err){
+    // Renouvellement silencieux impossible (accès révoqué, session Google expirée...) :
+    // on retombe sur l'écran de consentement complet, une seule fois.
+    return requestGoogleToken('consent');
+  }
 }
 
 function isoDatePlusOne(dateStr){

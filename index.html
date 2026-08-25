@@ -3128,7 +3128,13 @@ function drawPhotos(){
     ctx.font=`${Math.max(9,size*0.11)}px Arial`;
     ctx.textAlign='center';
     ctx.textBaseline='top';
-    ctx.fillText(p.legende, px+size/2, py+size+pad*0.6);
+    const maxTextWidth=size+pad*1.6;
+    let label=p.legende;
+    if(ctx.measureText(label).width>maxTextWidth){
+      while(label.length>1 && ctx.measureText(label+'…').width>maxTextWidth) label=label.slice(0,-1);
+      label+='…';
+    }
+    ctx.fillText(label, px+size/2, py+size+pad*0.6);
     ctx.restore();
   });
 }
@@ -3656,7 +3662,10 @@ wrap.addEventListener('click',e=>{
   }
 
   if(zoomedPhoto) return; // déjà géré par pointerup pour fermer
-  const hit=PHOTOS.find(p=>p._box && cx>=p._box.x && cx<=p._box.x+p._box.w && cy>=p._box.y && cy<=p._box.y+p._box.h);
+  // Cherche depuis la fin : les photos dessinées en dernier sont au-dessus visuellement
+  // (drawPhotos les peint dans l'ordre du tableau), donc en cas de chevauchement
+  // c'est la dernière qui doit répondre au clic.
+  const hit=[...PHOTOS].reverse().find(p=>p._box && cx>=p._box.x && cx<=p._box.x+p._box.w && cy>=p._box.y && cy<=p._box.y+p._box.h);
   if(hit){ zoomedPhoto=hit; return; }
   const evHit=EVENT_HITBOXES.find(h=>cx>=h.x0 && cx<=h.x1 && cy>=h.y0 && cy<=h.y1);
   if(evHit){ openEventDetail(evHit.ev); return; }

@@ -3140,15 +3140,18 @@ function drawPhotos(){
       }
       const cardW=Math.max(size,ctx.measureText(label).width+pad*2);
 
-      let cardX = p.side==='right' ? x+hw+70 : x-hw-70-cardW;
-      cardX = Math.max(pad+4, Math.min(W-cardW-pad-4, cardX)) + i*step*dir;
-      cardX = Math.max(pad+4, Math.min(W-cardW-pad-4, cardX));
       // Suit la ligne de texte exacte de son événement (utile quand plusieurs
-      // événements se partagent le même jour et sont empilés) ; à défaut,
-      // se rabat sur le centre générique du jour. Le décalage i*step ajoute
-      // l'effet d'éventail quand plusieurs photos partagent le même jour/côté.
+      // événements se partagent le même jour et sont empilés). Cette ligne suffit
+      // déjà à séparer les photos du groupe verticalement ; l'éventail (i*step) ne
+      // sert donc qu'en repli, quand l'événement n'est pas retrouvé (ex. 4e+ événement
+      // du jour, non affiché en texte) et qu'il faut éviter que les cartes se recouvrent.
       const rowY=getEventRowY(p.day,p.side,p.legende);
-      const py = (rowY!==null?rowY:y)-size/2 + i*step;
+      const fanOffset = rowY===null ? i*step : 0;
+
+      let cardX = p.side==='right' ? x+hw+70 : x-hw-70-cardW;
+      cardX = Math.max(pad+4, Math.min(W-cardW-pad-4, cardX)) + fanOffset*dir;
+      cardX = Math.max(pad+4, Math.min(W-cardW-pad-4, cardX));
+      const py = (rowY!==null?rowY:y)-size/2 + fanOffset;
       const imgX = cardX+(cardW-size)/2;
 
       p._box={x:cardX-pad, y:py-pad, w:cardW+pad*2, h:size+pad*2+size*0.22};

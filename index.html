@@ -3105,7 +3105,9 @@ function drawPhotos(){
   PHOTOS.forEach(p=>{
     if(!p.loaded) return;
     if(dayMonthKey(Math.round(camDay))!==dayMonthKey(p.day)) return;
-    const{x,y,hw}=dayToScreen(p.day);
+    // +0.5 : centre du jour, comme drawEventTexts() — sinon la photo tombe sur la
+    // frontière entre deux jours et se décale visuellement de l'événement qu'elle illustre.
+    const{x,y,hw}=dayToScreen(p.day+0.5);
     if(!visible(y)) return;
     const size=Math.max(50,Math.min(110,hw*1.3));
     const pad=size*0.09;

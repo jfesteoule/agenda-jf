@@ -3185,7 +3185,9 @@ function drawEventTexts(){
     ctx.font=`bold ${fs}px Arial`;
     const maxTextW=hw*1.85;
 
-    const useRight=(+day>=JF_RIGHT_FROM_DAY);
+    // Si Anne est masquée, plus besoin de pousser JF sur le côté pour lui faire de la
+    // place : JF reprend la position centrée dans la case, quelle que soit la date.
+    const useRight=showAnne && (+day>=JF_RIGHT_FROM_DAY);
     const centeredEvts=useRight?anneEvts:[...anneEvts,...jfEvts];
     const rightEvts=useRight?jfEvts:[];
 

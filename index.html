@@ -3104,91 +3104,103 @@ function drawZoomedPhoto(){
   ctx.restore();
 }
 
+function boxesOverlap(a,b){
+  return a.x<b.x+b.w && a.x+a.w>b.x && a.y<b.y+b.h && a.y+a.h>b.y;
+}
+
 function drawPhotos(){
   PHOTOS.forEach(p=>{ p._box=null; });
 
-  // Regroupe les photos du même jour ET du même côté : sinon dayToScreen() leur
-  // donne toutes le même point d'ancrage et leurs cartes se recouvrent (illisible
-  // dès qu'un jour a 2 événements photographiés ou plus). Un groupe de plusieurs
-  // photos se déploie en éventail au lieu de s'empiler exactement au même endroit.
-  const groups={};
-  PHOTOS.forEach(p=>{
-    if(!p.loaded) return;
-    if(dayMonthKey(Math.round(camDay))!==dayMonthKey(p.day)) return;
-    const key=p.day+''+p.side;
-    (groups[key]=groups[key]||[]).push(p);
-  });
+  // Deux photos peuvent se chevaucher meme sans etre le meme jour : la route
+  // serpente, et deux jours proches (ou un meme jour, 2 evenements photographies)
+  // peuvent retomber au meme endroit a l'ecran. On place donc les photos une a une
+  // par ordre chronologique, en evitant activement toutes celles deja placees cette
+  // frame - pas seulement celles du meme jour.
+  const candidates=PHOTOS.filter(p=>p.loaded && dayMonthKey(Math.round(camDay))===dayMonthKey(p.day));
+  candidates.sort((a,b)=>a.day-b.day);
 
-  Object.values(groups).forEach(group=>{
-    const first=group[0];
-    // +0.5 : centre du jour, comme drawEventTexts() — sinon le point d'ancrage
-    // tombe sur la frontière entre deux jours.
-    const{x,y,hw}=dayToScreen(first.day+0.5);
+  const placedBoxes=[];
+
+  candidates.forEach(p=>{
+    const{x,y,hw}=dayToScreen(p.day+0.5);
     if(!visible(y)) return;
 
-    const solo=group.length===1;
-    const size=solo ? Math.max(50,Math.min(110,hw*1.3)) : Math.max(38,Math.min(72,hw*0.85));
+    const size=Math.max(50,Math.min(110,hw*1.3));
     const pad=size*0.09;
-    const step=size*0.75; // décalage entre deux cartes d'un même éventail
 
-    group.forEach((p,i)=>{
-      // La carte s'élargit pour accueillir le libellé en entier ; on ne tronque
-      // qu'au-delà d'une largeur raisonnable (≈2.2x la photo).
-      ctx.font=`${Math.max(9,size*0.11)}px Arial`;
-      const maxCardW=size*2.2;
-      let label=p.legende;
-      if(ctx.measureText(label).width+pad*2>maxCardW){
-        while(label.length>1 && ctx.measureText(label+'…').width+pad*2>maxCardW) label=label.slice(0,-1);
-        label+='…';
+    // La carte s'elargit pour accueillir le libelle en entier ; on ne tronque
+    // qu'au-dela d'une largeur raisonnable (~2.2x la photo).
+    ctx.font=`${Math.max(9,size*0.11)}px Arial`;
+    const maxCardW=size*2.2;
+    let label=p.legende;
+    if(ctx.measureText(label).width+pad*2>maxCardW){
+      while(label.length>1 && ctx.measureText(label+'…').width+pad*2>maxCardW) label=label.slice(0,-1);
+      label+='…';
+    }
+    const cardW=Math.max(size,ctx.measureText(label).width+pad*2);
+    const cardH=size+pad*2+size*0.22;
+
+    // Suit la ligne de texte exacte de son evenement quand elle est retrouvee
+    // (utile quand plusieurs evenements se partagent le meme jour) ; sinon le
+    // centre du jour.
+    const rowY=getEventRowY(p.day,p.side,p.legende);
+    const baseY=(rowY!==null?rowY:y)-size/2;
+    const step=size*0.75;
+    const otherSide=p.side==='right' ? 'left' : 'right';
+
+    function boxAt(side,vOffset){
+      let cx = side==='right' ? x+hw+70 : x-hw-70-cardW;
+      cx = Math.max(pad+4, Math.min(W-cardW-pad-4, cx));
+      const cy = baseY+vOffset;
+      return {cardX:cx, py:cy, x:cx-pad, y:cy-pad, w:cardW+pad*2, h:cardH};
+    }
+
+    // Essaie d'abord sa place naturelle, puis l'autre cote de la route (presque
+    // toujours libre), puis alterne les deux cotes en descendant par paliers -
+    // jusqu'a trouver une case libre parmi les photos deja posees cette frame.
+    let chosen=null;
+    let naturalMatch=false;
+    for(let n=0;n<24 && !chosen;n++){
+      const side=n%2===0 ? p.side : otherSide;
+      const vOffset=Math.floor(n/2)*step;
+      const cand=boxAt(side,vOffset);
+      if(!placedBoxes.some(b=>boxesOverlap(cand,b))){
+        chosen=cand;
+        naturalMatch=(n===0);
       }
-      const cardW=Math.max(size,ctx.measureText(label).width+pad*2);
+    }
+    if(!chosen){ chosen=boxAt(p.side,0); naturalMatch=true; } // repli : la place naturelle, au pire chevauche
 
-      // Suit la ligne de texte exacte de son événement (utile quand plusieurs
-      // événements se partagent le même jour et sont empilés). Mais l'écart entre
-      // deux lignes de texte reste bien plus petit que la hauteur d'une carte photo :
-      // une photo sur deux passe donc de l'autre côté de la route plutôt que de
-      // risquer de chevaucher la précédente (ce côté est presque toujours libre).
-      // L'éventail (i*step) ne sert qu'en repli, quand l'événement n'est pas
-      // retrouvé (ex. 4e+ événement du jour, non affiché en texte).
-      const rowY=getEventRowY(p.day,p.side,p.legende);
-      const fanOffset = rowY===null ? i*step : 0;
-      const placeSide=(i%2===0) ? p.side : (p.side==='right'?'left':'right');
-      const dir=placeSide==='right' ? 1 : -1;
+    placedBoxes.push(chosen);
+    const{cardX,py}=chosen;
+    const imgX=cardX+(cardW-size)/2;
+    p._box=chosen;
 
-      let cardX = placeSide==='right' ? x+hw+70 : x-hw-70-cardW;
-      cardX = Math.max(pad+4, Math.min(W-cardW-pad-4, cardX)) + fanOffset*dir;
-      cardX = Math.max(pad+4, Math.min(W-cardW-pad-4, cardX));
-      const py = (rowY!==null?rowY:y)-size/2 + fanOffset;
-      const imgX = cardX+(cardW-size)/2;
-
-      p._box={x:cardX-pad, y:py-pad, w:cardW+pad*2, h:size+pad*2+size*0.22};
-
-      if(!solo){
-        ctx.save();
-        ctx.strokeStyle='rgba(0,0,0,0.28)';
-        ctx.lineWidth=1;
-        ctx.beginPath();
-        ctx.moveTo(x,y);
-        ctx.lineTo(cardX+cardW/2, py+size/2);
-        ctx.stroke();
-        ctx.restore();
-      }
-
+    if(!naturalMatch){
       ctx.save();
-      ctx.shadowColor='rgba(0,0,0,0.35)';
-      ctx.shadowBlur=6;
-      ctx.shadowOffsetY=3;
-      ctx.fillStyle='#fff';
-      ctx.fillRect(cardX-pad, py-pad, cardW+pad*2, size+pad*2+size*0.22);
-      ctx.shadowColor='transparent';
-      ctx.shadowBlur=0;
-      ctx.drawImage(p.img, imgX, py, size, size);
-      ctx.fillStyle='#333';
-      ctx.textAlign='center';
-      ctx.textBaseline='top';
-      ctx.fillText(label, cardX+cardW/2, py+size+pad*0.6);
+      ctx.strokeStyle='rgba(0,0,0,0.28)';
+      ctx.lineWidth=1;
+      ctx.beginPath();
+      ctx.moveTo(x,y);
+      ctx.lineTo(cardX+cardW/2, py+size/2);
+      ctx.stroke();
       ctx.restore();
-    });
+    }
+
+    ctx.save();
+    ctx.shadowColor='rgba(0,0,0,0.35)';
+    ctx.shadowBlur=6;
+    ctx.shadowOffsetY=3;
+    ctx.fillStyle='#fff';
+    ctx.fillRect(cardX-pad, py-pad, cardW+pad*2, cardH);
+    ctx.shadowColor='transparent';
+    ctx.shadowBlur=0;
+    ctx.drawImage(p.img, imgX, py, size, size);
+    ctx.fillStyle='#333';
+    ctx.textAlign='center';
+    ctx.textBaseline='top';
+    ctx.fillText(label, cardX+cardW/2, py+size+pad*0.6);
+    ctx.restore();
   });
 }
 

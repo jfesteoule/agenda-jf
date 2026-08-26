@@ -3201,6 +3201,12 @@ function drawPhotos(){
     ctx.fillRect(cardX-pad, py-pad, cardW+pad*2, cardH);
     ctx.shadowColor='transparent';
     ctx.shadowBlur=0;
+    // Bandeau rouge sur le haut de la carte (habituellement blanc) pour repérer
+    // d'un coup d'œil les photos d'événements DDETS.
+    if(/ddets/i.test(p.legende)){
+      ctx.fillStyle='#e53935';
+      ctx.fillRect(cardX-pad, py-pad, cardW+pad*2, pad);
+    }
     ctx.drawImage(p.img, imgX, py, size, size);
     ctx.fillStyle='#333';
     ctx.textAlign='center';

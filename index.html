@@ -3202,9 +3202,13 @@ function drawPhotos(){
     ctx.shadowColor='transparent';
     ctx.shadowBlur=0;
     // Bandeau sur le haut de la carte (habituellement blanc) pour repérer d'un
-    // coup d'œil certaines familles d'événements : rouge pour DDETS, vert pour
-    // CDG 38 (espace optionnel : "CDG 38" et "CDG38" doivent matcher).
-    if(/ddets/i.test(p.legende)){
+    // coup d'œil certaines familles d'événements : violet pour DDETS + Valence
+    // (plus spécifique, prioritaire), rouge pour DDETS seul, vert pour CDG 38
+    // (espace optionnel : "CDG 38" et "CDG38" doivent matcher).
+    if(/ddets/i.test(p.legende) && /valence/i.test(p.legende)){
+      ctx.fillStyle='#8e24aa';
+      ctx.fillRect(cardX-pad, py-pad, cardW+pad*2, pad);
+    }else if(/ddets/i.test(p.legende)){
       ctx.fillStyle='#e53935';
       ctx.fillRect(cardX-pad, py-pad, cardW+pad*2, pad);
     }else if(/cdg\s*38/i.test(p.legende)){

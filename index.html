@@ -3497,13 +3497,16 @@ function drawPerson(){
   const swing=playing?Math.sin(pulse*2.2)*0.42:0;
   ctx.lineCap='round'; ctx.lineJoin='round'; ctx.setLineDash([]);
 
+  // Tenue vacances le week-end (samedi/dimanche) : short + chemise claire, sans écharpe
+  const wknd=isSat(Math.floor(camDay))||isSun(Math.floor(camDay));
+
   // Shadow
   ctx.fillStyle='rgba(0,0,0,0.12)';
   ctx.beginPath();ctx.ellipse(cx+s*0.04,cy+s*0.06,s*0.22,s*0.07,0,0,Math.PI*2);ctx.fill();
 
-  // Legs
+  // Legs (jambes nues en tenue vacances, sinon base du pantalon)
   const llx=cx-s*0.11-s*0.06*Math.sin(swing), lly=cy+s*0.55+s*0.10*Math.sin(swing);
-  ctx.strokeStyle='#1a3a7a'; ctx.lineWidth=s*0.14;
+  ctx.strokeStyle=wknd?'#e8a882':'#1a3a7a'; ctx.lineWidth=s*0.14;
   ctx.beginPath();ctx.moveTo(cx-s*0.07,cy-s*0.06);
   ctx.quadraticCurveTo(cx-s*0.12,cy+s*0.28,llx,lly);ctx.stroke();
   const rlx=cx+s*0.11+s*0.06*Math.sin(swing), rly=cy+s*0.55-s*0.10*Math.sin(swing);
@@ -3515,19 +3518,33 @@ function drawPerson(){
   ctx.beginPath();ctx.ellipse(llx,lly+s*0.04,s*0.10,s*0.05,-swing*0.3,0,Math.PI*2);ctx.fill();
   ctx.beginPath();ctx.ellipse(rlx,rly+s*0.04,s*0.10,s*0.05,swing*0.3,0,Math.PI*2);ctx.fill();
 
-  // Jean
-  ctx.strokeStyle='#2a4a7a'; ctx.lineWidth=s*0.13;
-  ctx.beginPath();ctx.moveTo(cx-s*0.09,cy+s*0.12);
-  ctx.quadraticCurveTo(cx-s*0.12,cy+s*0.35,llx,lly);ctx.stroke();
-  ctx.beginPath();ctx.moveTo(cx+s*0.09,cy+s*0.12);
-  ctx.quadraticCurveTo(cx+s*0.12,cy+s*0.35,rlx,rly);ctx.stroke();
+  // Jean (ou short en tenue vacances : arrêté à mi-cuisse)
+  ctx.strokeStyle=wknd?'#d9c08a':'#2a4a7a'; ctx.lineWidth=wknd?s*0.15:s*0.13;
+  if(wknd){
+    // Sous-courbe (De Casteljau) de la jambe pour s'arrêter à mi-cuisse
+    const p0={x:cx-s*0.09,y:cy+s*0.12}, p1={x:cx-s*0.12,y:cy+s*0.35}, p2={x:llx,y:lly};
+    const q1={x:p0.x+(p1.x-p0.x)*0.45,y:p0.y+(p1.y-p0.y)*0.45};
+    const r1={x:p1.x+(p2.x-p1.x)*0.45,y:p1.y+(p2.y-p1.y)*0.45};
+    const q2={x:q1.x+(r1.x-q1.x)*0.45,y:q1.y+(r1.y-q1.y)*0.45};
+    ctx.beginPath();ctx.moveTo(p0.x,p0.y);ctx.quadraticCurveTo(q1.x,q1.y,q2.x,q2.y);ctx.stroke();
+    const p0r={x:cx+s*0.09,y:cy+s*0.12}, p1r={x:cx+s*0.12,y:cy+s*0.35}, p2r={x:rlx,y:rly};
+    const q1r={x:p0r.x+(p1r.x-p0r.x)*0.45,y:p0r.y+(p1r.y-p0r.y)*0.45};
+    const r1r={x:p1r.x+(p2r.x-p1r.x)*0.45,y:p1r.y+(p2r.y-p1r.y)*0.45};
+    const q2r={x:q1r.x+(r1r.x-q1r.x)*0.45,y:q1r.y+(r1r.y-q1r.y)*0.45};
+    ctx.beginPath();ctx.moveTo(p0r.x,p0r.y);ctx.quadraticCurveTo(q1r.x,q1r.y,q2r.x,q2r.y);ctx.stroke();
+  }else{
+    ctx.beginPath();ctx.moveTo(cx-s*0.09,cy+s*0.12);
+    ctx.quadraticCurveTo(cx-s*0.12,cy+s*0.35,llx,lly);ctx.stroke();
+    ctx.beginPath();ctx.moveTo(cx+s*0.09,cy+s*0.12);
+    ctx.quadraticCurveTo(cx+s*0.12,cy+s*0.35,rlx,rly);ctx.stroke();
+  }
 
   // Hip
-  ctx.fillStyle='#2a4a7a';
+  ctx.fillStyle=wknd?'#d9c08a':'#2a4a7a';
   ctx.beginPath();ctx.ellipse(cx,cy+s*0.02,s*0.18,s*0.10,0,0,Math.PI*2);ctx.fill();
 
-  // Manteau (couleur selon la saison)
-  const coatColor=seasonColor('shirt');
+  // Manteau/chemise (couleur selon la saison, ou couleur vacances le week-end)
+  const coatColor=wknd?'#2bb3a3':seasonColor('shirt');
   ctx.fillStyle=coatColor;
   ctx.beginPath();
   ctx.moveTo(cx-s*0.22,cy-s*0.08);ctx.lineTo(cx+s*0.22,cy-s*0.08);
@@ -3541,11 +3558,13 @@ function drawPerson(){
     ctx.lineTo(ox,cy-s*0.38);ctx.lineTo(ox,cy-s*0.57);
     ctx.closePath();ctx.fill();
   });
-  // Écharpe : accessoire qui change de couleur avec la saison
-  ctx.fillStyle=seasonColor('scarf');
-  ctx.beginPath();ctx.ellipse(cx,cy-s*0.60,s*0.15,s*0.065,0,0,Math.PI*2);ctx.fill();
-  ctx.beginPath();ctx.moveTo(cx-s*0.045,cy-s*0.58);ctx.lineTo(cx+s*0.045,cy-s*0.58);
-  ctx.lineTo(cx+s*0.04,cy-s*0.38);ctx.lineTo(cx-s*0.04,cy-s*0.38);ctx.closePath();ctx.fill();
+  // Écharpe : accessoire qui change de couleur avec la saison (absente en tenue vacances)
+  if(!wknd){
+    ctx.fillStyle=seasonColor('scarf');
+    ctx.beginPath();ctx.ellipse(cx,cy-s*0.60,s*0.15,s*0.065,0,0,Math.PI*2);ctx.fill();
+    ctx.beginPath();ctx.moveTo(cx-s*0.045,cy-s*0.58);ctx.lineTo(cx+s*0.045,cy-s*0.58);
+    ctx.lineTo(cx+s*0.04,cy-s*0.38);ctx.lineTo(cx-s*0.04,cy-s*0.38);ctx.closePath();ctx.fill();
+  }
 
   // Arms
   ctx.strokeStyle='#e8a882'; ctx.lineWidth=s*0.11;
@@ -3575,6 +3594,15 @@ function drawPerson(){
   hairG.addColorStop(0,'#5a3a20');hairG.addColorStop(1,'#2a1808');
   ctx.fillStyle=hairG;
   ctx.beginPath();ctx.arc(cx,hcy-s*0.05,s*0.18,Math.PI+0.45,-0.45);ctx.fill();
+
+  // Lunettes de soleil, tenue vacances le week-end
+  if(wknd){
+    ctx.fillStyle='#222';
+    ctx.beginPath();ctx.ellipse(cx-s*0.085,hcy+s*0.01,s*0.075,s*0.055,0,0,Math.PI*2);ctx.fill();
+    ctx.beginPath();ctx.ellipse(cx+s*0.085,hcy+s*0.01,s*0.075,s*0.055,0,0,Math.PI*2);ctx.fill();
+    ctx.strokeStyle='#222'; ctx.lineWidth=s*0.02;
+    ctx.beginPath();ctx.moveTo(cx-s*0.015,hcy+s*0.01);ctx.lineTo(cx+s*0.015,hcy+s*0.01);ctx.stroke();
+  }
 
   // Pulse ring
   ctx.strokeStyle=`rgba(26,115,232,${0.15+0.07*Math.sin(pulse)})`;

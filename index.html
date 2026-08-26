@@ -141,6 +141,7 @@ window.syncAllCalendars = syncAllCalendars;
     <button id="datejumpbtn" class="hudbtn-top" style="position:relative;z-index:1000;pointer-events:auto;width:40px;height:40px;min-width:40px;background:#fff;border-radius:50%;border:none;cursor:pointer;display:flex;align-items:center;justify-content:center;box-shadow:0 2px 6px rgba(0,0,0,0.2);color:#c1502f;font-size:18px;margin-left:6px;" title="Aller à une date"><i class="ti ti-calendar-event"></i></button>
     <button id="monthbtn" class="hudbtn-top" style="position:relative;z-index:1000;pointer-events:auto;width:40px;height:40px;min-width:40px;background:#fff;border-radius:50%;border:none;cursor:pointer;display:flex;align-items:center;justify-content:center;box-shadow:0 2px 6px rgba(0,0,0,0.2);color:#c1502f;font-size:18px;margin-left:6px;" title="Vue mensuelle"><i class="ti ti-calendar-month"></i></button>
     <button id="photosbtn" class="hudbtn-top" style="position:relative;z-index:1000;pointer-events:auto;width:40px;height:40px;min-width:40px;background:#fff;border-radius:50%;border:none;cursor:pointer;display:flex;align-items:center;justify-content:center;box-shadow:0 2px 6px rgba(0,0,0,0.2);color:#c1502f;font-size:18px;margin-left:6px;" title="Photos"><i class="ti ti-photo"></i></button>
+    <button id="photorevealbtn" class="hudbtn-top" style="position:relative;z-index:1000;pointer-events:auto;width:40px;height:40px;min-width:40px;background:#fff;border-radius:50%;border:none;cursor:pointer;display:flex;align-items:center;justify-content:center;box-shadow:0 2px 6px rgba(0,0,0,0.2);color:#c1502f;font-size:18px;margin-left:6px;" title="N'afficher une photo que quand le marcheur passe sur sa date"><i class="ti ti-walk"></i></button>
     <button id="jfonlybtn" class="hudbtn-top" style="position:relative;z-index:1000;pointer-events:auto;width:40px;height:40px;min-width:40px;background:#fff;border-radius:50%;border:none;cursor:pointer;display:flex;align-items:center;justify-content:center;box-shadow:0 2px 6px rgba(0,0,0,0.2);color:#c1502f;font-size:16px;font-weight:bold;margin-left:6px;" title="Masquer l'agenda de JF">JF</button>
   </div>
   <div id="menuPanel">
@@ -149,6 +150,7 @@ window.syncAllCalendars = syncAllCalendars;
     <button id="menu-datejump" class="menuitem"><i class="ti ti-calendar-event"></i>Aller à une date</button>
     <button id="menu-month" class="menuitem"><i class="ti ti-calendar-month"></i>Vue mensuelle</button>
     <button id="menu-photos" class="menuitem"><i class="ti ti-photo"></i>Photos</button>
+    <button id="menu-photoreveal" class="menuitem"><i class="ti ti-walk"></i>Photos au passage du marcheur</button>
     <button id="menu-jf" class="menuitem"><i class="ti ti-user"></i>Masquer l'agenda de JF</button>
   </div>
   <div id="photosOverlay">
@@ -3116,7 +3118,12 @@ function drawPhotos(){
   // peuvent retomber au meme endroit a l'ecran. On place donc les photos une a une
   // par ordre chronologique, en evitant activement toutes celles deja placees cette
   // frame - pas seulement celles du meme jour.
-  const candidates=PHOTOS.filter(p=>p.loaded && dayMonthKey(Math.round(camDay))===dayMonthKey(p.day));
+  // Par défaut : toute photo du mois affiché. Avec photoRevealOnly, seulement
+  // celle du jour exact où se trouve le marcheur — elle apparaît à son passage
+  // et disparaît dès qu'il l'a dépassée.
+  const candidates=PHOTOS.filter(p=>p.loaded && (photoRevealOnly
+    ? Math.floor(camDay)===p.day
+    : dayMonthKey(Math.round(camDay))===dayMonthKey(p.day)));
   candidates.sort((a,b)=>a.day-b.day);
 
   const placedBoxes=[];
@@ -4486,6 +4493,23 @@ function closePhotosPanel(){ photosOverlay.classList.remove('open'); }
 document.getElementById('photosbtn').addEventListener('click', openPhotosPanel);
 document.getElementById('photos-close').addEventListener('click', closePhotosPanel);
 photosOverlay.addEventListener('click', (e) => { if(e.target===photosOverlay) closePhotosPanel(); });
+
+// Par défaut une photo reste visible tant qu'on est dans son mois. Activé, elle
+// n'apparaît qu'au moment précis où le marcheur passe sur sa date, et disparaît
+// dès qu'il l'a dépassée — un effet de décor qui se révèle au fil de la route.
+let photoRevealOnly=false;
+document.getElementById('photorevealbtn').addEventListener('click',()=>{
+  photoRevealOnly=!photoRevealOnly;
+  const btn=document.getElementById('photorevealbtn');
+  btn.style.background=photoRevealOnly?'#1a73e8':'#fff';
+  btn.style.color=photoRevealOnly?'#fff':'#1a73e8';
+  const menuBtn=document.getElementById('menu-photoreveal');
+  menuBtn.lastChild.textContent=photoRevealOnly?"Revenir à l'affichage du mois entier":'Photos au passage du marcheur';
+});
+document.getElementById('menu-photoreveal').addEventListener('click',()=>{
+  menuPanel.classList.remove('open');
+  document.getElementById('photorevealbtn').click();
+});
 
 document.getElementById('addEvSubmit').addEventListener('click', async () => {
   const dateStr = document.getElementById('addEvDate').value;

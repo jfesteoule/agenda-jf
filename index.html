@@ -132,7 +132,7 @@ window.syncAllCalendars = syncAllCalendars;
       </div>
     </div>
     <button id="addeventbtn" class="hudbtn-top" style="position:relative;z-index:1000;pointer-events:auto;width:40px;height:40px;min-width:40px;background:#fff;border-radius:50%;border:none;cursor:pointer;display:flex;align-items:center;justify-content:center;box-shadow:0 2px 6px rgba(0,0,0,0.2);color:#c1502f;font-size:18px;margin-left:auto;" title="Ajouter un événement"><i class="ti ti-plus"></i></button>
-    <button id="syncbtn" class="hudbtn-top" style="position:relative;z-index:1000;pointer-events:auto;width:40px;height:40px;min-width:40px;background:#fff;border-radius:50%;border:none;cursor:pointer;display:flex;align-items:center;justify-content:center;box-shadow:0 2px 6px rgba(0,0,0,0.2);color:#4c7a53;font-size:18px;margin-left:6px;" title="Synchroniser Google Agenda"><i class="ti ti-refresh"></i></button>
+    <button id="syncbtn" style="position:relative;z-index:1000;pointer-events:auto;width:40px;height:40px;min-width:40px;background:#fff;border-radius:50%;border:none;cursor:pointer;display:flex;align-items:center;justify-content:center;box-shadow:0 2px 6px rgba(0,0,0,0.2);color:#4c7a53;font-size:18px;margin-left:6px;flex:none;" title="Synchroniser Google Agenda"><i class="ti ti-refresh"></i></button>
     <button id="googleAuthBtn" class="hudbtn-top" style="position:relative;z-index:1000;pointer-events:auto;width:40px;height:40px;min-width:40px;background:#fff;border-radius:50%;border:none;cursor:pointer;display:flex;align-items:center;justify-content:center;box-shadow:0 2px 6px rgba(0,0,0,0.2);color:#9aa0a6;font-size:20px;margin-left:6px;overflow:hidden;padding:0;" title="Non connecté à Google — cliquer pour se connecter et synchroniser en direct">
       <i class="ti ti-user-circle" id="googleAuthIcon"></i>
       <img id="googleAuthAvatar" alt="" style="display:none;width:100%;height:100%;border-radius:50%;object-fit:cover;">
@@ -146,7 +146,6 @@ window.syncAllCalendars = syncAllCalendars;
   </div>
   <div id="menuPanel">
     <button id="menu-add" class="menuitem"><i class="ti ti-plus"></i>Ajouter un événement</button>
-    <button id="menu-sync" class="menuitem"><i class="ti ti-refresh"></i>Synchroniser Google Agenda</button>
     <button id="menu-datejump" class="menuitem"><i class="ti ti-calendar-event"></i>Aller à une date</button>
     <button id="menu-month" class="menuitem"><i class="ti ti-calendar-month"></i>Vue mensuelle</button>
     <button id="menu-photos" class="menuitem"><i class="ti ti-photo"></i>Photos</button>
@@ -4363,10 +4362,6 @@ const menuPanel=document.getElementById('menuPanel');
 document.getElementById('mbtn').addEventListener('click',(e)=>{
   e.stopPropagation();
   menuPanel.classList.toggle('open');
-});
-document.getElementById('menu-sync').addEventListener('click',()=>{
-  menuPanel.classList.remove('open');
-  document.getElementById('syncbtn').click();
 });
 document.getElementById('menu-month').addEventListener('click',()=>{
   menuPanel.classList.remove('open');

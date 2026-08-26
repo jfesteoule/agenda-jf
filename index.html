@@ -64,7 +64,7 @@ canvas#c{position:absolute;inset:0;width:100%;height:100%;touch-action:none;poin
 #legend{position:absolute;top:62px;right:12px;z-index:20;display:flex;flex-direction:column;gap:5px;}
 .leg{background:#fff;border-radius:20px;padding:4px 10px;font-family:'Archivo',Arial,sans-serif;font-size:11px;font-weight:500;box-shadow:0 1px 4px rgba(0,0,0,0.18);display:flex;align-items:center;gap:6px;}
 .legdot{width:10px;height:10px;border-radius:50%;}
-.legline{width:18px;height:4px;border-radius:2px;background:#9fbfc7;}
+.legline{width:18px;height:4px;border-radius:2px;background:#e8a5a0;}
 #eta{position:absolute;bottom:12px;left:12px;right:60px;z-index:20;background:#fff;border-radius:12px;padding:10px 14px;display:flex;align-items:center;justify-content:space-between;box-shadow:0 2px 8px rgba(0,0,0,0.18);}
 
 #searchResults{display:none;position:absolute;top:48px;left:0;right:0;z-index:1002;background:#fff;border-radius:12px;box-shadow:0 6px 18px rgba(0,0,0,0.22);max-height:230px;overflow-y:auto;}
@@ -2887,14 +2887,14 @@ function drawAllLanes(){
       ctx.closePath();ctx.fill();
     }
 
-    // === SAMEDI ET DIMANCHE EN BLEU CLAIR ===
+    // === SAMEDI ET DIMANCHE EN ROUGE CLAIR ===
     [5,6].forEach(d=>{
       const fS=d/7, fE=Math.min((d+1)/7,6/7);
       if(fE<=fS) return;
       const yS=yrBottom-fS*lh, yE=yrBottom-fE*lh;
       const wBL=project(xr-hwRaw,yS), wBR=project(xr+hwRaw,yS);
       const wTL=project(xr-hwRaw,yE), wTR=project(xr+hwRaw,yE);
-      ctx.fillStyle='#9fbfc7';
+      ctx.fillStyle='#e8a5a0';
       ctx.beginPath();
       ctx.moveTo(wTL.x,wTL.y);ctx.lineTo(wTR.x,wTR.y);
       ctx.lineTo(wBR.x,wBR.y);ctx.lineTo(wBL.x,wBL.y);

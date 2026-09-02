@@ -3366,63 +3366,87 @@ function getEventRowY(day,side,legende){
 }
 
 function drawMonthLabels(){
-  // Affiche mois + année à droite de la route, au raccord entre semaines, reliés par un trait vertical
-  const lh=laneH();
+  // Un panneau de signalisation planté à côté de la route à chaque 1er du mois,
+  // au niveau exact de ce jour (pas juste de la semaine qui le contient).
   const ORIGIN_MS=new Date('2023-01-01T00:00:00Z').getTime();
+  const lh=laneH();
   const camWeek=Math.floor((camDay-MON_SHIFT)/7);
   const _vl=Math.ceil(H/lh)+3;
   const lps=lanesPerScreen();
   const batchStart=camWeek-(camWeek%lps);
 
   let lastMonth=-1;
-  const rx=Math.max(8,margin()*0.3);
-  const points=[];
+  const months=[];
 
   for(let ln=batchStart-_vl; ln<=batchStart+lps+_vl; ln++){
     const firstDay=ln*7+MON_SHIFT;
     if(firstDay>TOTAL_DAYS||firstDay<0) continue;
 
     const dt=new Date(ORIGIN_MS+firstDay*86400000);
-    const month=dt.getUTCMonth();
-    const year=dt.getUTCFullYear();
+    const month=dt.getUTCMonth(), year=dt.getUTCFullYear();
     if(month===lastMonth) continue;
     lastMonth=month;
 
-    const xr1=weekX(ln), yr1=weekBottomY(ln)-(6/7)*lh;   // haut de la semaine ln (brut)
-    const xr0=weekX(ln-1), yr0=weekBottomY(ln-1)-(6/7)*lh; // haut de la semaine ln-1 (brut)
-    const p1=project(xr1,yr1), p0=project(xr0,yr0);
-    if(!visible(p1.y)&&!visible(p0.y)) continue;
-
-    const yMid=(p0.y+p1.y)/2;
-    if(!visible(yMid)) continue;
-
-    const mois=dt.toLocaleDateString('fr-FR',{month:'long'});
-    const label=mois.charAt(0).toUpperCase()+mois.slice(1)+' '+year;
-    points.push({y:yMid,label,fs:Math.max(10,Math.min(16,lh*0.28*p1.s))});
+    // Jour exact du 1er de ce mois (peut retomber dans une semaine adjacente à ln)
+    const day1=Math.round((Date.UTC(year,month,1)-ORIGIN_MS)/86400000);
+    if(day1<0||day1>TOTAL_DAYS) continue;
+    months.push(day1);
   }
 
-  if(!points.length) return;
+  months.forEach(day1=>{
+    const{x,y,hw}=dayToScreen(day1+0.5);
+    if(!visible(y)) return;
+    if(hw<8) return;
 
-  // Trait vertical reliant les repères de mois entre eux
-  ctx.strokeStyle='rgba(45,74,30,0.4)';
-  ctx.lineWidth=1.5;
-  ctx.setLineDash([]);
-  ctx.beginPath();
-  ctx.moveTo(rx,points[0].y);
-  for(let i=1;i<points.length;i++) ctx.lineTo(rx,points[i].y);
-  ctx.stroke();
+    const dt=new Date(ORIGIN_MS+day1*86400000);
+    const mois=dt.toLocaleDateString('fr-FR',{month:'long'});
+    const line1=mois.charAt(0).toUpperCase()+mois.slice(1);
+    const line2=''+dt.getUTCFullYear();
 
-  points.forEach(pt=>{
-    ctx.font=`bold ${pt.fs}px Arial`;
-    ctx.textAlign='left';
-    ctx.textBaseline='middle';
-    ctx.fillStyle='rgba(255,255,255,0.55)';
-    ctx.fillText(pt.label, rx+8+1, pt.y+1);
-    ctx.fillStyle='#2d4a1e';
-    ctx.fillText(pt.label, rx+8, pt.y);
-    // petit repère sur le trait
-    ctx.fillStyle='#2d4a1e';
-    ctx.beginPath();ctx.arc(rx,pt.y,2,0,Math.PI*2);ctx.fill();
+    const fs=Math.max(9,Math.min(14,hw*0.30));
+    ctx.font=`bold ${fs}px Arial`;
+    const w1=ctx.measureText(line1).width, w2=ctx.measureText(line2).width;
+    const padX=fs*0.55, padY=fs*0.32;
+    const lineH=fs*1.18;
+    const panelW=Math.max(w1,w2)+padX*2;
+    const panelH=lineH*2+padY*2;
+
+    // Panneau planté à droite de la route (le repère de jour occupe déjà la gauche)
+    const armLen=Math.max(10,hw*0.25);
+    const px=x+hw+armLen;
+    const py=y-panelH/2;
+
+    // Bras + poteau
+    ctx.strokeStyle='#8a8a8a'; ctx.lineWidth=Math.max(1.5,fs*0.11); ctx.setLineDash([]);
+    ctx.beginPath();ctx.moveTo(x+hw,y);ctx.lineTo(px,y);ctx.stroke();
+    ctx.beginPath();ctx.moveTo(px+panelW*0.18,py+panelH);ctx.lineTo(px+panelW*0.18,py+panelH+fs*0.7);ctx.stroke();
+
+    // Panneau (fond vert signalisation + bordure blanche, coins arrondis)
+    const r=Math.min(5,panelH*0.14);
+    ctx.beginPath();
+    ctx.moveTo(px+r,py);ctx.lineTo(px+panelW-r,py);ctx.arcTo(px+panelW,py,px+panelW,py+r,r);
+    ctx.lineTo(px+panelW,py+panelH-r);ctx.arcTo(px+panelW,py+panelH,px+panelW-r,py+panelH,r);
+    ctx.lineTo(px+r,py+panelH);ctx.arcTo(px,py+panelH,px,py+panelH-r,r);
+    ctx.lineTo(px,py+r);ctx.arcTo(px,py,px+r,py,r);ctx.closePath();
+    ctx.fillStyle='rgba(0,0,0,0.18)';
+    ctx.fill();
+    ctx.save();ctx.translate(-1.5,-1.5);
+    ctx.beginPath();
+    ctx.moveTo(px+r,py);ctx.lineTo(px+panelW-r,py);ctx.arcTo(px+panelW,py,px+panelW,py+r,r);
+    ctx.lineTo(px+panelW,py+panelH-r);ctx.arcTo(px+panelW,py+panelH,px+panelW-r,py+panelH,r);
+    ctx.lineTo(px+r,py+panelH);ctx.arcTo(px,py+panelH,px,py+panelH-r,r);
+    ctx.lineTo(px,py+r);ctx.arcTo(px,py,px+r,py,r);ctx.closePath();
+    ctx.fillStyle='#0e6b42';ctx.fill();
+    ctx.strokeStyle='#fff';ctx.lineWidth=Math.max(1,fs*0.09);ctx.stroke();
+    ctx.restore();
+
+    // Texte (mois + année)
+    ctx.fillStyle='#fff';
+    ctx.textAlign='center';ctx.textBaseline='middle';
+    ctx.font=`bold ${fs}px Arial`;
+    ctx.fillText(line1, px+panelW/2-1.5, py+padY+lineH/2-1.5);
+    ctx.font=`bold ${fs*1.08}px Arial`;
+    ctx.fillText(line2, px+panelW/2-1.5, py+padY+lineH*1.5-1.5);
   });
 }
 

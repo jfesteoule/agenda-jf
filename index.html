@@ -2876,6 +2876,24 @@ function mondayOfDay(day){ return day-((new Date(MONTH_ORIGIN_MS+day*86400000).g
 // === Objets plantés le long de la route : bornes, panneaux d'événement, portique de mois ===
 const DAY_HITBOXES=[];
 const EVENT_HITBOXES=[];
+const EVENT_PHOTO_HITS=[]; // photos affichées cette frame (catalogue PHOTOS ou URL d'événement), pour le clic-zoom
+
+// Cache des photos fournies par URL sur l'événement (pièce jointe Drive, lien Google
+// Photos...) : chargées une fois, réutilisées à chaque frame tant que l'URL ne change pas.
+const EVENT_PHOTO_CACHE=new Map();
+function getEventPhoto(url){
+  if(!url) return null;
+  let entry=EVENT_PHOTO_CACHE.get(url);
+  if(!entry){
+    entry={img:new Image(), loaded:false};
+    entry.img.onload=()=>{ entry.loaded=true; };
+    entry.img.onerror=()=>{ entry.loaded=false; };
+    entry.img.src=url;
+    EVENT_PHOTO_CACHE.set(url,entry);
+  }
+  return entry.loaded ? entry : null;
+}
+
 function drawBorne(it,alpha){
   const lat=RW+1.15;
   const p0=proj(it.dist,lat-0.16,0), p1=proj(it.dist,lat+0.16,1.05);
@@ -3019,16 +3037,26 @@ function drawEventSign(it,alpha){
   ctx.fillStyle=accent;
   ctx.fillRect(pTL.x,pTL.y,Math.max(1.5,w*0.055),h);
 
-  // Photo, si une photo est associée à ce jour + cette personne
-  const photo=PHOTOS.find(p=>p.loaded && p.day===e.day && p.side===e.side
-    && (!photoRevealOnly || Math.floor(camDay)===e.day));
+  // Photo : priorité à une URL fournie directement par l'événement (pièce jointe
+  // Drive ou lien Google Photos, via events.json), sinon repli sur le catalogue
+  // PHOTOS codé en dur (mêmes règles de visibilité que par le passé).
+  const revealOk=(!photoRevealOnly || Math.floor(camDay)===e.day);
+  let photoImg=null, photoLegende=e.title;
+  if(e.photo && revealOk){
+    const cached=getEventPhoto(e.photo);
+    if(cached) photoImg=cached.img;
+  }
+  if(!photoImg){
+    const p=PHOTOS.find(p=>p.loaded && p.day===e.day && p.side===e.side && revealOk);
+    if(p){ photoImg=p.img; photoLegende=p.legende; }
+  }
   const pad=w*0.07;
   let textX=pTL.x+w*0.09, textW=w-w*0.18;
-  if(photo){
+  if(photoImg){
     const imgSize=Math.min(h-pad*2, w*0.38);
     const imgX=pTL.x+w-pad-imgSize, imgY=pTL.y+(h-imgSize)/2;
-    ctx.drawImage(photo.img,imgX,imgY,imgSize,imgSize);
-    photo._box={x:imgX,y:imgY,w:imgSize,h:imgSize};
+    ctx.drawImage(photoImg,imgX,imgY,imgSize,imgSize);
+    EVENT_PHOTO_HITS.push({x:imgX,y:imgY,w:imgSize,h:imgSize,img:photoImg,legende:photoLegende,loaded:true});
     textW=w-w*0.18-imgSize-pad;
   }
 
@@ -3071,7 +3099,7 @@ function drawEventSign(it,alpha){
 function drawRouteObjects(){
   DAY_HITBOXES.length=0;
   EVENT_HITBOXES.length=0;
-  PHOTOS.forEach(p=>{ p._box=null; });
+  EVENT_PHOTO_HITS.length=0;
 
   const dayStart=Math.floor(camDay-2), dayEnd=Math.ceil(camDay+260/SP);
   const items=[];
@@ -3593,10 +3621,9 @@ wrap.addEventListener('click',e=>{
   }
 
   if(zoomedPhoto) return; // déjà géré par pointerup pour fermer
-  // Cherche depuis la fin : les photos dessinées en dernier sont au-dessus visuellement
-  // (drawPhotos les peint dans l'ordre du tableau), donc en cas de chevauchement
-  // c'est la dernière qui doit répondre au clic.
-  const hit=[...PHOTOS].reverse().find(p=>p._box && cx>=p._box.x && cx<=p._box.x+p._box.w && cy>=p._box.y && cy<=p._box.y+p._box.h);
+  // Cherche depuis la fin : les panneaux dessinés en dernier sont au-dessus visuellement,
+  // donc en cas de chevauchement c'est la dernière photo qui doit répondre au clic.
+  const hit=[...EVENT_PHOTO_HITS].reverse().find(p=>cx>=p.x && cx<=p.x+p.w && cy>=p.y && cy<=p.y+p.h);
   if(hit){ zoomedPhoto=hit; return; }
   const evHit=EVENT_HITBOXES.find(h=>cx>=h.x0 && cx<=h.x1 && cy>=h.y0 && cy<=h.y1);
   if(evHit){ openEventDetail(evHit.ev); return; }
@@ -3615,7 +3642,7 @@ wrap.addEventListener('pointermove',e=>{
   if(monthViewActive){
     clickable=MONTH_CELL_HITBOXES.some(c=>cx>=c.x && cx<=c.x+c.w && cy>=c.y && cy<=c.y+c.h);
   }else{
-    clickable=PHOTOS.some(p=>p._box && cx>=p._box.x && cx<=p._box.x+p._box.w && cy>=p._box.y && cy<=p._box.y+p._box.h)
+    clickable=EVENT_PHOTO_HITS.some(p=>cx>=p.x && cx<=p.x+p.w && cy>=p.y && cy<=p.y+p.h)
       || EVENT_HITBOXES.some(h=>cx>=h.x0 && cx<=h.x1 && cy>=h.y0 && cy<=h.y1)
       || DAY_HITBOXES.some(h=>cx>=h.x0 && cx<=h.x1 && cy>=h.y0 && cy<=h.y1);
   }
@@ -4121,7 +4148,11 @@ function applyEventsData(events){
       title: title.slice(0,40),
       color: ev.side==='right' ? '#1a73e8' : '#e67c73',
       side: ev.side,
-      who: ev.who
+      who: ev.who,
+      // URL optionnelle (pièce jointe Drive, ou lien Google Photos extrait de la
+      // description par l'export en amont) : prioritaire sur le catalogue PHOTOS
+      // codé en dur si présente. Voir drawEventSign() / getEventPhoto().
+      photo: ev.photo || null
     };
     repairedEvents.push({day: ev.day, side: ev.side, title: title});
     if(ev.side==='right') EVT_JF.push(item);

@@ -3519,10 +3519,12 @@ updateCalendarToggleUI();
 // SP = mètres de route par jour : zoomer resserre ou étire la chaussée sans
 // changer le jour affiché (camDay ne dépend pas de SP).
 document.getElementById('zi').addEventListener('click',()=>{
-  SP=Math.min(44,SP*1.3);
+  // "+" rapproche/agrandit la route : moins de mètres par jour, les objets
+  // proches occupent plus de place à l'écran.
+  SP=Math.max(5,SP/1.3);
 });
 document.getElementById('zo').addEventListener('click',()=>{
-  SP=Math.max(5,SP/1.3);
+  SP=Math.min(44,SP*1.3);
 });
 document.querySelectorAll('.sp').forEach(b=>{
   b.addEventListener('click',()=>{speed=+b.dataset.s;document.querySelectorAll('.sp').forEach(x=>x.classList.remove('on'));b.classList.add('on');});
@@ -3574,7 +3576,9 @@ wrap.addEventListener('pointermove',e=>{
   if(pinchStart && activePointers.size===2){
     const pts=[...activePointers.values()];
     const d=Math.hypot(pts[0].x-pts[1].x,pts[0].y-pts[1].y);
-    SP=Math.max(5,Math.min(44, pinchStart.sp*(d/Math.max(1,pinchStart.d))));
+    // Écarter les doigts (d augmente) rapproche/agrandit la route (SP diminue),
+    // comme pincer pour zoomer sur une carte.
+    SP=Math.max(5,Math.min(44, pinchStart.sp*(Math.max(1,pinchStart.d)/d)));
     e.preventDefault();
     return;
   }

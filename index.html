@@ -3114,12 +3114,11 @@ function drawRouteObjects(){
     let nL=0,nR=0;
     evs.slice(0,3).forEach(e=>{
       const side=e.side==='right' ? 1 : -1; // JF à droite, Anne à gauche
-      // Position fixe près de la fin du jour (pas au milieu), sans plancher de
-      // distance : le panneau ne suit jamais la voiture, il reste planté à cet
-      // endroit de la route comme les autres repères. Le planter tard dans le
-      // jour le garde visible pendant presque toute la traversée du jour au
-      // lieu de disparaître dès le début.
-      items.push({kind:'sign',dist:dist+SP*0.92,ev:e,side,rank:side>0?nR++:nL++});
+      // Position fixe au milieu du jour, à égale distance entre le joint noir
+      // du jour précédent et celui du jour suivant : le panneau (et sa
+      // bretelle d'accès) ne suit jamais la voiture, il reste planté à cet
+      // endroit de la route comme les autres repères.
+      items.push({kind:'sign',dist:dist+SP*0.5,ev:e,side,rank:side>0?nR++:nL++});
     });
   }
   items.sort((a,b)=>b.dist-a.dist);

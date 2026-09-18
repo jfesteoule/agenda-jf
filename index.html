@@ -2919,6 +2919,20 @@ function mondayOfDay(day){ return day-((new Date(MONTH_ORIGIN_MS+day*86400000).g
 const EVENT_HITBOXES=[];
 const EVENT_PHOTO_HITS=[]; // photos affichées cette frame (catalogue PHOTOS ou URL d'événement), pour le clic-zoom
 
+// Un lien de partage Google Drive classique (file/d/ID/view, open?id=ID,
+// uc?id=ID) ne se charge pas dans une balise <img> : c'est une page HTML, pas
+// l'image elle-même. On le convertit en URL d'image directement servie par
+// Google. Un lien Google Photos ("partager") reste tel quel : il n'existe pas
+// de conversion côté client pour ce format.
+function normalizePhotoUrl(url){
+  const m=url.match(/drive\.google\.com\/(?:file\/d\/([\w-]+)|open\?id=([\w-]+)|uc\?(?:export=\w+&)?id=([\w-]+))/);
+  if(m){
+    const id=m[1]||m[2]||m[3];
+    return `https://drive.google.com/thumbnail?id=${id}&sz=w1000`;
+  }
+  return url;
+}
+
 // Cache des photos fournies par URL sur l'événement (pièce jointe Drive, lien Google
 // Photos...) : chargées une fois, réutilisées à chaque frame tant que l'URL ne change pas.
 const EVENT_PHOTO_CACHE=new Map();
@@ -2927,9 +2941,10 @@ function getEventPhoto(url){
   let entry=EVENT_PHOTO_CACHE.get(url);
   if(!entry){
     entry={img:new Image(), loaded:false};
+    entry.img.referrerPolicy='no-referrer';
     entry.img.onload=()=>{ entry.loaded=true; };
     entry.img.onerror=()=>{ entry.loaded=false; };
-    entry.img.src=url;
+    entry.img.src=normalizePhotoUrl(url);
     EVENT_PHOTO_CACHE.set(url,entry);
   }
   return entry.loaded ? entry : null;

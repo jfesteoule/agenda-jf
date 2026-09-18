@@ -2200,7 +2200,7 @@ function resize(){ const r=wrap.getBoundingClientRect(); W=canvas.width=r.width;
 
 // === ROUTE DE CONDUITE : la caméra avance jour après jour, vue depuis la Méhari ===
 const RW=3.1;     // demi-largeur de chaussée (m)
-const CAMH=2.3;   // hauteur de l'œil (m)
+let CAMH=2.3;   // hauteur de l'œil (m) — ajustable via les boutons +/- (zoom = altitude)
 function curve(d){ const a=26; return a*Math.sin(d*0.0009)+a*0.35*Math.sin(d*0.0031+1.3); }
 function crest(d){ return 2.2*Math.sin(d*0.0017+0.6); }
 
@@ -3510,12 +3510,12 @@ updateCalendarToggleUI();
 // SP = mètres de route par jour : zoomer resserre ou étire la chaussée sans
 // changer le jour affiché (camDay ne dépend pas de SP).
 document.getElementById('zi').addEventListener('click',()=>{
-  // "+" rapproche/agrandit la route : moins de mètres par jour, les objets
-  // proches occupent plus de place à l'écran.
-  SP=Math.max(5,SP/1.3);
+  // "+" abaisse la caméra (comme si on était plus bas en altitude) : la route
+  // se rapproche et paraît plus large à l'écran.
+  CAMH=Math.max(0.7,CAMH/1.25);
 });
 document.getElementById('zo').addEventListener('click',()=>{
-  SP=Math.min(44,SP*1.3);
+  CAMH=Math.min(8,CAMH*1.25);
 });
 document.querySelectorAll('.sp').forEach(b=>{
   b.addEventListener('click',()=>{speed=+b.dataset.s;document.querySelectorAll('.sp').forEach(x=>x.classList.remove('on'));b.classList.add('on');});

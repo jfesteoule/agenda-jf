@@ -247,7 +247,7 @@ window.syncAllCalendars = syncAllCalendars;
     <button id="legjf" class="leg" style="cursor:pointer;user-select:none;border:none;font:inherit;color:inherit;text-align:left;" title="Masquer l'agenda de JF"><div class="legdot" style="background:#1a73e8"></div>JF</button>
     <button id="leganne" class="leg" style="cursor:pointer;user-select:none;border:none;font:inherit;color:inherit;text-align:left;" title="Masquer l'agenda d'Anne"><div class="legdot" style="background:#e67c73"></div>Anne</button>
     <div class="leg"><div class="legline"></div>Week-end</div>
-    <div class="leg"><div class="legline" style="background:none;border-top:3px dashed #ffd600;height:0;"></div>Vacances scolaires</div>
+    <div class="leg"><div class="legline" style="background:#ffd600;"></div>Vacances scolaires</div>
   </div>
   <div id="zbx">
     <button class="zb" id="zi">+</button>
@@ -2712,10 +2712,10 @@ function drawRoadSurface(){
   }
 }
 
-// Trait pointillé jaune le long de la route pour une période de vacances scolaires
+// Trait plein jaune le long de la route pour une période de vacances scolaires
+// (pas de nom écrit, juste le trait qui marque le début et la fin de la période).
 function drawVacancesBLine(){
   ctx.strokeStyle='#ffd600';
-  ctx.setLineDash([7,6]);
   ctx.lineWidth=2.5;
   VACANCES_B.forEach(v=>{
     const d1=Math.max(0,v.start), d2=Math.min(TOTAL_DAYS,v.end);
@@ -2733,7 +2733,6 @@ function drawVacancesBLine(){
     }
     ctx.stroke();
   });
-  ctx.setLineDash([]);
 }
 
 let AUTO_RUNS=[], AUTO_EXCLUDE=new Set();

@@ -2822,7 +2822,10 @@ function drawMultiDayEvents(){
   for(let i=0;i<combined.length;i++){
     for(let j=i+1;j<combined.length;j++){
       const a=combined[i], b=combined[j];
-      if(a.day1<b.day2 && b.day1<a.day2){
+      // <= (et non <) : deux séjours qui se touchent pile sur un jour commun
+      // (le dernier jour de l'un est le premier jour de l'autre) comptent
+      // aussi comme un chevauchement.
+      if(a.day1<=b.day2 && b.day1<=a.day2){
         const laterIdx=a.day1<=b.day1?j:i;
         overlap[laterIdx]=true;
         laneLat[laterIdx]=1.4;

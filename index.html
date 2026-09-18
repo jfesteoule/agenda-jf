@@ -2759,7 +2759,7 @@ function refreshAutoMultiDay(){
       if(prev>start){
         const idx=key.indexOf('\u0001');
         const side=key.slice(0,idx), title=key.slice(idx+1);
-        runs.push({day1:start,day2:prev,title,side,color:side==='right'?'#001a66':'#c0392b'});
+        runs.push({day1:start,day2:prev,title,side});
         for(let d=start; d<=prev; d++) exclude.add(side+'\u0001'+d+'\u0001'+title);
       }
     };
@@ -2774,8 +2774,9 @@ function refreshAutoMultiDay(){
   AUTO_RUNS=runs; AUTO_EXCLUDE=exclude;
 }
 
-// Événements multi-jours : trait pointillé le long du centre de la route entre
-// le jour de départ et d'arrivée, avec le titre affiché aux deux extrémités.
+// Événements multi-jours : trait plein, épais et jaune au centre de la route
+// entre le jour de départ et le jour d'arrivée, avec le titre en jaune écrit
+// au milieu de la route sur ces deux seuls jours (départ et arrivée).
 function drawMultiDayEvents(){
   const multi = MULTI_EVENTS.filter(e=>isVisibleSide(e.side));
   [...multi,...AUTO_RUNS,...EXPLICIT_RUNS.filter(e=>isVisibleSide(e.side))].forEach(ev=>{
@@ -2787,10 +2788,9 @@ function drawMultiDayEvents(){
     const cd1=Math.max(dist1,2), cd2=Math.min(dist2,260);
     if(cd2<=cd1) return;
 
-    const color=ev.color||'#e65100';
-    ctx.strokeStyle=color;
-    ctx.lineWidth=2;
-    ctx.setLineDash([5,4]);
+    ctx.strokeStyle='#ffd600';
+    ctx.lineWidth=6;
+    ctx.lineCap='round';
     ctx.beginPath();
     const n=24;
     for(let i=0;i<=n;i++){
@@ -2799,7 +2799,6 @@ function drawMultiDayEvents(){
       i?ctx.lineTo(p.x,p.y):ctx.moveTo(p.x,p.y);
     }
     ctx.stroke();
-    ctx.setLineDash([]);
 
     function labelAt(dist,align){
       if(dist<9||dist>170) return;
@@ -2809,9 +2808,10 @@ function drawMultiDayEvents(){
       ctx.font=`bold ${fs}px Arial`;
       ctx.textAlign='center';
       ctx.textBaseline=align==='start'?'bottom':'top';
-      ctx.fillStyle='rgba(255,255,255,0.75)';
-      ctx.fillText(ev.title,p.x+0.6,p.y+0.6);
-      ctx.fillStyle=color;
+      ctx.lineWidth=Math.max(2,fs*0.18);
+      ctx.strokeStyle='rgba(0,0,0,0.7)';
+      ctx.strokeText(ev.title,p.x,p.y);
+      ctx.fillStyle='#ffd600';
       ctx.fillText(ev.title,p.x,p.y);
     }
     labelAt(dist1,'start');

@@ -2961,7 +2961,10 @@ function drawEventSign(it,alpha){
   const pGround=proj(it.dist,lat,0);
   const w=pBR.x-pTL.x, h=pBR.y-pTL.y;
   if(w<3||h<2) return;
-  if(pTL.x<2||pBR.x>W-2||pTL.y<H*0.15) return;
+  // Ne masquer que si le panneau est entièrement hors champ (le canvas
+  // découpe déjà le reste tout seul) : sinon il glisse sur le côté en
+  // approche au lieu de disparaître d'un coup pendant que la voiture avance.
+  if(pBR.x<0||pTL.x>W||pBR.y<H*0.14) return;
 
   ctx.save();
   ctx.beginPath(); ctx.rect(0,H*0.14,W,H*0.86-12); ctx.clip();
@@ -3078,7 +3081,7 @@ function drawRouteObjects(){
   for(let k=dayEnd;k>=dayStart;k--){
     if(k<0||k>TOTAL_DAYS) continue;
     const dist=(k-camDay)*SP;
-    if(dist<2||dist>260) continue;
+    if(dist>260) continue;
     const dt=new Date(MONTH_ORIGIN_MS+k*86400000);
     const isFirst=dt.getUTCDate()===1;
     if(isFirst) items.push({kind:'borne',dist,day:k});
@@ -3092,10 +3095,12 @@ function drawRouteObjects(){
     let nL=0,nR=0;
     evs.slice(0,3).forEach(e=>{
       const side=e.side==='right' ? 1 : -1; // JF à droite, Anne à gauche
-      // Position fixe au milieu du jour, sans plancher de distance : le panneau
-      // ne suit jamais la voiture, il reste planté à cet endroit de la route
-      // comme les autres repères, et disparaît naturellement une fois dépassé.
-      items.push({kind:'sign',dist:dist+SP*0.5,ev:e,side,rank:side>0?nR++:nL++});
+      // Position fixe près de la fin du jour (pas au milieu), sans plancher de
+      // distance : le panneau ne suit jamais la voiture, il reste planté à cet
+      // endroit de la route comme les autres repères. Le planter tard dans le
+      // jour le garde visible pendant presque toute la traversée du jour au
+      // lieu de disparaître dès le début.
+      items.push({kind:'sign',dist:dist+SP*0.92,ev:e,side,rank:side>0?nR++:nL++});
     });
   }
   items.sort((a,b)=>b.dist-a.dist);

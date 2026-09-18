@@ -3102,24 +3102,16 @@ function drawRouteObjects(){
   EVENT_PHOTO_HITS.length=0;
 
   const dayStart=Math.floor(camDay-2), dayEnd=Math.ceil(camDay+260/SP);
-  const today=Math.floor(camDay);
   const items=[];
   for(let k=dayEnd;k>=dayStart;k--){
     if(k<0||k>TOTAL_DAYS) continue;
     const dist=(k-camDay)*SP;
-    if(dist>260) continue;
-    if(dist>=2){
-      // Bornes / repères de jour / portique : décor du bord de route, s'effacent
-      // dès qu'ils passent sous le capot, comme avant.
-      const dt=new Date(MONTH_ORIGIN_MS+k*86400000);
-      const isFirst=dt.getUTCDate()===1;
-      if(isFirst) items.push({kind:'borne',dist,day:k});
-      items.push({kind:'jour',dist,day:k});
-      if(isFirst && dist>24) items.push({kind:'gantry',dist,day:k});
-    }
-    // Panneaux d'événement : restent affichés tant que la voiture n'est pas
-    // entièrement passée sur le jour suivant (pas seulement "sous le capot").
-    if(k<today) continue;
+    if(dist<2||dist>260) continue;
+    const dt=new Date(MONTH_ORIGIN_MS+k*86400000);
+    const isFirst=dt.getUTCDate()===1;
+    if(isFirst) items.push({kind:'borne',dist,day:k});
+    items.push({kind:'jour',dist,day:k});
+    if(isFirst && dist>24) items.push({kind:'gantry',dist,day:k});
     const dayEvents=visibleEvents().filter(e=>e.day===k);
     const evs=[];
     dayEvents.forEach(e=>{
@@ -3129,10 +3121,9 @@ function drawRouteObjects(){
     let nL=0,nR=0;
     evs.slice(0,3).forEach(e=>{
       const side=e.side==='right' ? 1 : -1; // JF à droite, Anne à gauche
-      // Distance plancher : le panneau du jour courant reste pleinement visible
-      // (et dans le cadre de l'écran) au lieu de s'estomper avant la fin du jour.
-      const signDist=Math.max(20, dist+SP*0.5);
-      items.push({kind:'sign',dist:signDist,ev:e,side,rank:side>0?nR++:nL++});
+      // Position fixe au milieu du jour : le panneau ne suit pas la voiture,
+      // il reste planté à cet endroit de la route comme les autres repères.
+      items.push({kind:'sign',dist:dist+SP*0.5,ev:e,side,rank:side>0?nR++:nL++});
     });
   }
   items.sort((a,b)=>b.dist-a.dist);

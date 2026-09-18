@@ -2804,9 +2804,15 @@ function paintRoadLabel(dayIdx,text,color){
 // entre le jour de départ et le jour d'arrivée, avec le titre peint en jaune
 // à plat sur la chaussée sur ces deux seuls jours (départ et arrivée) —
 // et non plus écrit en l'air au-dessus de la route.
+// Les vacances scolaires (Toussaint, Noël, hiver, printemps, été...) ont déjà
+// leur propre trait sur le côté (drawVacancesBLine) : on ne les affiche pas
+// aussi comme événement multi-jours au milieu de la route.
+function isSchoolVacationTitle(title){ return /vacances?|congés?/i.test(title); }
 function drawMultiDayEvents(){
-  const multi = MULTI_EVENTS.filter(e=>isVisibleSide(e.side));
-  [...multi,...AUTO_RUNS,...EXPLICIT_RUNS.filter(e=>isVisibleSide(e.side))].forEach(ev=>{
+  const multi = MULTI_EVENTS.filter(e=>isVisibleSide(e.side) && !isSchoolVacationTitle(e.title));
+  [...multi,...AUTO_RUNS,...EXPLICIT_RUNS.filter(e=>isVisibleSide(e.side))]
+    .filter(ev=>!isSchoolVacationTitle(ev.title))
+    .forEach(ev=>{
     const d1=Math.max(0,Math.min(TOTAL_DAYS,ev.day1));
     const d2=Math.max(0,Math.min(TOTAL_DAYS,ev.day2));
     if(d2<=d1) return;

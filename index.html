@@ -3013,12 +3013,14 @@ function drawEventSign(it,alpha){
     ctx.beginPath();ctx.moveTo(a.x,a.y);ctx.lineTo(d.x,d.y);ctx.stroke();
   }
 
-  // poteau + ombre au sol
-  ctx.strokeStyle=night?'#6b6a63':'#8d8b80';
-  ctx.lineWidth=Math.max(1,0.11*pBR.s);
-  ctx.beginPath();ctx.moveTo(pGround.x,pGround.y);ctx.lineTo(pGround.x,pBR.y);ctx.stroke();
-  ctx.fillStyle='rgba(0,0,0,0.18)';
-  ctx.beginPath();ctx.ellipse(pGround.x,pGround.y,Math.max(2,w*0.35),Math.max(1,w*0.09),0,0,Math.PI*2);ctx.fill();
+  // poteau + ombre au sol (uniquement à droite : plus de poteaux côté gauche)
+  if(it.side>0){
+    ctx.strokeStyle=night?'#6b6a63':'#8d8b80';
+    ctx.lineWidth=Math.max(1,0.11*pBR.s);
+    ctx.beginPath();ctx.moveTo(pGround.x,pGround.y);ctx.lineTo(pGround.x,pBR.y);ctx.stroke();
+    ctx.fillStyle='rgba(0,0,0,0.18)';
+    ctx.beginPath();ctx.ellipse(pGround.x,pGround.y,Math.max(2,w*0.35),Math.max(1,w*0.09),0,0,Math.PI*2);ctx.fill();
+  }
 
   // Couleur d'accent du panneau : règles spécifiques (repérage visuel de certaines
   // familles d'événements), puis vacances, puis couleur de la personne par défaut.

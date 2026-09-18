@@ -2815,9 +2815,9 @@ function drawMultiDayEvents(){
     .filter(ev=>!isSchoolVacationTitle(ev.title));
 
   // Quand deux événements multi-jours se chevauchent, celui qui commence le
-  // second est décalé sur le côté (trait + nom) et tracé en bleu, pour que
-  // les deux restent lisibles au lieu de se superposer exactement.
-  const laneLat=new Array(combined.length).fill(0);
+  // second est tracé en bleu (au centre, comme les autres) et son nom de
+  // départ est peint un jour plus tard, pour ne pas coïncider avec le nom
+  // de fin du premier événement au jour partagé.
   const overlap=new Array(combined.length).fill(false);
   for(let i=0;i<combined.length;i++){
     for(let j=i+1;j<combined.length;j++){
@@ -2828,7 +2828,6 @@ function drawMultiDayEvents(){
       if(a.day1<=b.day2 && b.day1<=a.day2){
         const laterIdx=a.day1<=b.day1?j:i;
         overlap[laterIdx]=true;
-        laneLat[laterIdx]=1.4;
       }
     }
   }
@@ -2842,7 +2841,6 @@ function drawMultiDayEvents(){
     const cd1=Math.max(dist1,2), cd2=Math.min(dist2,260);
     if(cd2<=cd1) return;
 
-    const lat=laneLat[idx];
     const color=overlap[idx]?'#1a73e8':'#ffd600';
 
     ctx.strokeStyle=color;
@@ -2852,13 +2850,14 @@ function drawMultiDayEvents(){
     const n=24;
     for(let i=0;i<=n;i++){
       const d=cd1+(cd2-cd1)*(i/n);
-      const p=proj(d,lat,0.05);
+      const p=proj(d,0,0.05);
       i?ctx.lineTo(p.x,p.y):ctx.moveTo(p.x,p.y);
     }
     ctx.stroke();
 
-    paintRoadLabel(d1,ev.title,color,lat);
-    paintRoadLabel(d2,ev.title,color,lat);
+    const startLabelDay=overlap[idx]?Math.min(d2,d1+1):d1;
+    paintRoadLabel(startLabelDay,ev.title,color);
+    paintRoadLabel(d2,ev.title,color);
   });
 }
 

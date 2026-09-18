@@ -2212,7 +2212,7 @@ function proj(dist,lat,hgt){
   const c0=curve(camW), h0=crest(camW);
   const dc0=(curve(camW+1)-curve(camW-1))/2; // cap de la route sous la caméra
   const T=tilt;
-  const camH=CAMH+T*20, pitch=T*0.7854, back=T*15;
+  const camH=CAMH+T*6, pitch=T*0.7854, back=T*3;
   const cp=Math.cos(pitch), sp2=Math.sin(pitch);
   const cx=weekMode ? Math.max(W*0.28,(W-340)/2) : W/2;
   const hz=H*(0.44+0.52*T), f=H*0.95;

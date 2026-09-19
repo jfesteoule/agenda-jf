@@ -2778,7 +2778,12 @@ function refreshAutoMultiDay(){
 function paintRoadLabel(dayIdx,text,color,lat){
   lat=lat||0;
   const d0=dayToDist(dayIdx);
-  const near=d0+SP*0.1, far=d0+SP*0.92;
+  const far=d0+SP*0.92;
+  // Le rapport far/near pilote le cisaillement du texte : proche de la
+  // caméra, l'ancrage "près" naturel (d0+SP*0.1) peut devenir minuscule par
+  // rapport à "loin", et le texte se déforme fortement. On plafonne ce
+  // rapport à 1,7 pour garder une forme stable même quand le texte grandit.
+  const near=Math.max(d0+SP*0.1, far/1.7);
   if(near<9||near>170) return;
   const P0=proj(near,lat-1.7,0), PU=proj(near,lat+1.7,0), PV=proj(far,lat-1.7,0);
   const ux=PU.x-P0.x, uy=PU.y-P0.y;

@@ -4526,21 +4526,35 @@ async function fetchCalendarEventsRange(calendarId, token){
   return items;
 }
 
+// Pièce jointe Drive attachée directement sur l'événement dans Google Agenda
+// (trombone "Ajouter une pièce jointe") : on prend la première image, sinon
+// la première pièce jointe ; fileUrl est ensuite normalisée par
+// normalizePhotoUrl() en URL d'image directement chargeable.
+function extractEventPhoto(gev){
+  const atts = gev.attachments;
+  if(!Array.isArray(atts) || !atts.length) return null;
+  const img = atts.find(a=>a.mimeType && a.mimeType.indexOf('image/')===0) || atts[0];
+  return (img && img.fileUrl) || null;
+}
 function googleEventToEntry(gev, side, who){
   if(gev.status === 'cancelled') return null;
   const title = (gev.summary || '').slice(0, 40);
+  const photo = extractEventPhoto(gev);
   if(gev.start && gev.start.date){
     // Événement toute la journée : end.date est exclusif côté API Calendar.
     const day = dayIndexFromDateStr(gev.start.date);
     const day2 = dayIndexFromDateStr(gev.end.date) - 1;
     const entry = { day, title, side, who };
     if(day2 > day) entry.day2 = day2;
+    if(photo) entry.photo = photo;
     return entry;
   }
   if(gev.start && gev.start.dateTime){
     // Événement avec heure : on retient le jour local (fuseau Europe/Paris).
     const dateStr = new Date(gev.start.dateTime).toLocaleDateString('en-CA', {timeZone: 'Europe/Paris'});
-    return { day: dayIndexFromDateStr(dateStr), title, side, who };
+    const entry = { day: dayIndexFromDateStr(dateStr), title, side, who };
+    if(photo) entry.photo = photo;
+    return entry;
   }
   return null;
 }

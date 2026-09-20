@@ -3066,6 +3066,7 @@ function drawEventSign(it,alpha){
   else if(/ddets/.test(norm)) accent='#e53935';
   else if(/cdg\s*38/.test(norm)) accent='#33b679';
   else if(/uga/.test(norm)) accent='#795548';
+  else if(forceLeftTitle(e.title)) accent='#ffd600';
   else if(isLieVacanceGlobal(e.title)) accent='#e65100';
 
   ctx.fillStyle=night?'#e7e3d6':'#fbf9f2';

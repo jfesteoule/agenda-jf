@@ -163,6 +163,7 @@ window.syncAllCalendars = syncAllCalendars;
       <img id="googleAuthAvatar" alt="" style="display:none;width:100%;height:100%;border-radius:50%;object-fit:cover;">
       <span id="googleAuthDot" style="display:none;position:absolute;right:-1px;bottom:-1px;width:12px;height:12px;border-radius:50%;background:#34a853;border:2px solid #fff;"></span>
     </button>
+    <button id="minicalbtn" class="hudbtn-top" style="position:relative;z-index:1000;pointer-events:auto;width:40px;height:40px;min-width:40px;background:#fff;border-radius:50%;border:none;cursor:pointer;display:flex;align-items:center;justify-content:center;box-shadow:0 2px 6px rgba(0,0,0,0.2);color:#c1502f;font-size:18px;margin-left:6px;" title="Masquer le mini calendrier"><i class="ti ti-calendar" id="minicalIcon"></i></button>
     <button id="datejumpbtn" class="hudbtn-top" style="position:relative;z-index:1000;pointer-events:auto;width:40px;height:40px;min-width:40px;background:#fff;border-radius:50%;border:none;cursor:pointer;display:flex;align-items:center;justify-content:center;box-shadow:0 2px 6px rgba(0,0,0,0.2);color:#c1502f;font-size:18px;margin-left:6px;" title="Aller à une date"><i class="ti ti-calendar-event"></i></button>
     <button id="monthbtn" class="hudbtn-top" style="position:relative;z-index:1000;pointer-events:auto;width:40px;height:40px;min-width:40px;background:#fff;border-radius:50%;border:none;cursor:pointer;display:flex;align-items:center;justify-content:center;box-shadow:0 2px 6px rgba(0,0,0,0.2);color:#c1502f;font-size:18px;margin-left:6px;" title="Vue mensuelle"><i class="ti ti-calendar-month"></i></button>
     <button id="photosbtn" class="hudbtn-top" style="position:relative;z-index:1000;pointer-events:auto;width:40px;height:40px;min-width:40px;background:#fff;border-radius:50%;border:none;cursor:pointer;display:flex;align-items:center;justify-content:center;box-shadow:0 2px 6px rgba(0,0,0,0.2);color:#c1502f;font-size:18px;margin-left:6px;" title="Photos"><i class="ti ti-photo"></i></button>
@@ -174,6 +175,7 @@ window.syncAllCalendars = syncAllCalendars;
   </div>
   <div id="menuPanel">
     <button id="menu-add" class="menuitem"><i class="ti ti-plus"></i>Ajouter un événement</button>
+    <button id="menu-minical" class="menuitem"><i class="ti ti-calendar"></i>Masquer le mini calendrier</button>
     <button id="menu-datejump" class="menuitem"><i class="ti ti-calendar-event"></i>Aller à une date</button>
     <button id="menu-month" class="menuitem"><i class="ti ti-calendar-month"></i>Vue mensuelle</button>
     <button id="menu-photos" class="menuitem"><i class="ti ti-photo"></i>Photos</button>
@@ -3545,6 +3547,29 @@ document.getElementById('leganne').addEventListener('click',()=>{
   updateCalendarToggleUI();
 });
 updateCalendarToggleUI();
+
+// Le mini calendrier en haut à gauche peut gêner la vue sur la route : bouton
+// pour l'afficher/le masquer.
+let miniCalVisible=true;
+function updateMiniCalUI(){
+  const miniCal=document.getElementById('miniCal');
+  const btn=document.getElementById('minicalbtn');
+  const menuItem=document.getElementById('menu-minical');
+  miniCal.style.display=miniCalVisible?'':'none';
+  btn.style.background=miniCalVisible?'#fff':'#c1502f';
+  btn.style.color=miniCalVisible?'#c1502f':'#fff';
+  btn.title=miniCalVisible?'Masquer le mini calendrier':'Afficher le mini calendrier';
+  menuItem.lastChild.textContent=miniCalVisible?'Masquer le mini calendrier':'Afficher le mini calendrier';
+}
+document.getElementById('minicalbtn').addEventListener('click',()=>{
+  miniCalVisible=!miniCalVisible;
+  updateMiniCalUI();
+});
+document.getElementById('menu-minical').addEventListener('click',()=>{
+  menuPanel.classList.remove('open');
+  miniCalVisible=!miniCalVisible;
+  updateMiniCalUI();
+});
 // SP = mètres de route par jour : zoomer resserre ou étire la chaussée sans
 // changer le jour affiché (camDay ne dépend pas de SP).
 document.getElementById('zi').addEventListener('click',()=>{

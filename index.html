@@ -4166,6 +4166,13 @@ async function fetchEventsJson(){
   }
 }
 
+// Titres forcés à gauche de la route quel que soit l'agenda Google d'origine.
+const FORCE_LEFT_KEYWORDS=['vannes','crouesty'];
+function forceLeftTitle(title){
+  const t=(title||'').toLowerCase();
+  return FORCE_LEFT_KEYWORDS.some(k=>t.includes(k));
+}
+
 // Remplit EVT_JF / EVT_ANNE / EXPLICIT_RUNS / ALL_EVENTS à partir d'une liste brute
 // {day, title, side, who, day2?} — commune à la synchro events.json (quotidienne,
 // via le script Google Apps Script) et à la synchro Google Agenda en direct.
@@ -4182,20 +4189,23 @@ function applyEventsData(events){
     const label = d.getDate() + ' ' + d.toLocaleString('fr-FR',{month:'short'});
     const rawTitle = ev.title || '';
     const title = TITLE_REPAIR[rawTitle] || rawTitle;
+    // Certains événements doivent apparaître à gauche de la route quel que
+    // soit l'agenda Google d'origine (ex. le séjour Vannes/Crouesty).
+    const side = forceLeftTitle(title) ? 'left' : ev.side;
     const item = {
       day: ev.day,
       label: label,
       title: title.slice(0,40),
-      color: ev.side==='right' ? '#1a73e8' : '#e67c73',
-      side: ev.side,
+      color: side==='right' ? '#1a73e8' : '#e67c73',
+      side: side,
       who: ev.who,
       // URL optionnelle (pièce jointe Drive, ou lien Google Photos extrait de la
       // description par l'export en amont) : prioritaire sur le catalogue PHOTOS
       // codé en dur si présente. Voir drawEventSign() / getEventPhoto().
       photo: ev.photo || null
     };
-    repairedEvents.push({day: ev.day, side: ev.side, title: title});
-    if(ev.side==='right') EVT_JF.push(item);
+    repairedEvents.push({day: ev.day, side: side, title: title});
+    if(side==='right') EVT_JF.push(item);
     else EVT_ANNE.push(item);
 
     // Séjour multi-jours : la source (events.json ou l'API Calendar en direct) peut
@@ -4206,8 +4216,8 @@ function applyEventsData(events){
         day1: ev.day,
         day2: ev.day2,
         title: item.title,
-        side: ev.side,
-        color: ev.side==='right' ? '#001a66' : '#c0392b'
+        side: side,
+        color: side==='right' ? '#001a66' : '#c0392b'
       });
     }
   });

@@ -4193,7 +4193,7 @@ async function fetchEventsJson(){
 }
 
 // Titres forcés à gauche de la route quel que soit l'agenda Google d'origine.
-const FORCE_LEFT_KEYWORDS=['vannes','crouesty'];
+const FORCE_LEFT_KEYWORDS=['vannes','crouesty','kerners'];
 function forceLeftTitle(title){
   const t=(title||'').toLowerCase();
   return FORCE_LEFT_KEYWORDS.some(k=>t.includes(k));

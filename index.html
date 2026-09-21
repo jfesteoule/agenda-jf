@@ -3020,7 +3020,7 @@ function drawGantry(it,alpha){
 function drawEventSign(it,alpha){
   const e=it.ev;
   const lat=it.side*(RW+3.0+it.rank*4.9);
-  const hTop=1.7+it.rank*1.7;
+  const hTop=0.5+it.rank*1.7;
   const pTL=proj(it.dist,lat-2.15,hTop+1.5), pBR=proj(it.dist,lat+2.15,hTop);
   const pGround=proj(it.dist,lat,0);
   const w=pBR.x-pTL.x, h=pBR.y-pTL.y;

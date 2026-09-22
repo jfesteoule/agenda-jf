@@ -3342,9 +3342,11 @@ function drawMehari(){
 function drawWalker(){
   const T=tilt;
   const CD=9.2+T*4.5;
-  const phase=camDay*14;
+  const phase=camDay*13;
   const stride=Math.sin(phase);
+  const strideL=-stride; // jambe/bras gauche en opposition de phase
   const bounce=Math.abs(Math.cos(phase))*0.05;
+  const lean=stride*0.03; // léger balancement du buste
   const night_=night;
 
   const refL=proj(CD,-0.24,0), refR=proj(CD,0.24,0);
@@ -3352,15 +3354,23 @@ function drawWalker(){
   if(Math.abs(w)<6) return;
   const px=(m)=>Math.abs(w)*(m/0.48);
 
-  const strideLen=0.42;
+  const strideLen=0.68;
+  const liftR=Math.max(0,-Math.cos(phase))*0.13;
+  const liftL=Math.max(0,-Math.cos(phase+Math.PI))*0.13;
   const pGround=proj(CD,0,0);
-  const pFootR=proj(CD+strideLen*stride, 0.11, 0);
-  const pFootL=proj(CD-strideLen*stride,-0.11, 0);
-  const pShL=proj(CD,-0.18,1.42+bounce), pShR=proj(CD,0.18,1.42+bounce);
-  const pHipL=proj(CD,-0.13,0.9+bounce), pHipR=proj(CD,0.13,0.9+bounce);
-  const pHead=proj(CD,0,1.62+bounce);
-  const pHandR=proj(CD-strideLen*0.8*stride, 0.24, 1.05+bounce);
-  const pHandL=proj(CD+strideLen*0.8*stride,-0.24, 1.05+bounce);
+  const pFootR=proj(CD+strideLen*stride, 0.13, liftR);
+  const pFootL=proj(CD+strideLen*strideL,-0.13, liftL);
+  const pKneeR=proj(CD+strideLen*stride*0.4, 0.12, 0.48+liftR*0.5);
+  const pKneeL=proj(CD+strideLen*strideL*0.4,-0.12, 0.48+liftL*0.5);
+  const pHipL=proj(CD+lean*4,-0.14,0.92+bounce), pHipR=proj(CD+lean*4,0.14,0.92+bounce);
+  const pShL=proj(CD+lean*8,-0.19,1.46+bounce), pShR=proj(CD+lean*8,0.19,1.46+bounce);
+  const pNeck=proj(CD+lean*8,0,1.5+bounce);
+  const pHead=proj(CD+lean*10,0,1.63+bounce);
+  const pElbowR=proj(CD-strideLen*0.55*stride, 0.26, 1.18+bounce);
+  const pElbowL=proj(CD-strideLen*0.55*strideL,-0.26, 1.18+bounce);
+  const pHandR=proj(CD-strideLen*0.9*stride, 0.27, 0.92+bounce);
+  const pHandL=proj(CD-strideLen*0.9*strideL,-0.27, 0.92+bounce);
+  const pBackpack=proj(CD-0.22+lean*8,0,1.18+bounce);
 
   const shg=ctx.createRadialGradient(pGround.x,pGround.y,0,pGround.x,pGround.y,Math.abs(w)*1.7);
   shg.addColorStop(0,'rgba(0,0,0,0.35)');
@@ -3369,35 +3379,72 @@ function drawWalker(){
   ctx.beginPath(); ctx.ellipse(pGround.x,pGround.y,Math.abs(w)*1.7,px(0.16),0,0,Math.PI*2); ctx.fill();
 
   ctx.lineCap='round';
-  ctx.strokeStyle=night_?'#33261c':'#4a3324';
-  ctx.lineWidth=Math.max(2,px(0.16));
-  ctx.beginPath(); ctx.moveTo(pHipL.x,pHipL.y); ctx.lineTo(pFootL.x,pFootL.y); ctx.stroke();
-  ctx.beginPath(); ctx.moveTo(pHipR.x,pHipR.y); ctx.lineTo(pFootR.x,pFootR.y); ctx.stroke();
+  ctx.lineJoin='round';
 
-  ctx.fillStyle=night_?'#1c1a17':'#2b2620';
-  [pFootL,pFootR].forEach(p=>{
-    ctx.beginPath(); ctx.ellipse(p.x,p.y-px(0.03),px(0.22),px(0.12),0,0,Math.PI*2); ctx.fill();
+  // jambes : cuisse + tibia, pantalon de randonnée
+  const pantsFar=night_?'#3a3324':'#7d6a49', pantsNear=night_?'#2a2519':'#645537';
+  [[pHipL,pKneeL,pFootL,pantsFar],[pHipR,pKneeR,pFootR,pantsNear]].forEach(([hip,knee,foot,color])=>{
+    ctx.strokeStyle=color;
+    ctx.lineWidth=Math.max(2,px(0.115));
+    ctx.beginPath(); ctx.moveTo(hip.x,hip.y); ctx.lineTo(knee.x,knee.y); ctx.stroke();
+    ctx.lineWidth=Math.max(1.6,px(0.09));
+    ctx.beginPath(); ctx.moveTo(knee.x,knee.y); ctx.lineTo(foot.x,foot.y); ctx.stroke();
   });
 
-  ctx.fillStyle=night_?'#324055':'#3f6a8a';
+  // chaussures de marche
+  ctx.fillStyle=night_?'#1c1a17':'#2b2620';
+  [pFootL,pFootR].forEach(p=>{
+    ctx.beginPath(); ctx.ellipse(p.x,p.y-px(0.02),px(0.2),px(0.11),0,0,Math.PI*2); ctx.fill();
+  });
+
+  // veste (dégradé, plus fidèle que l'aplat précédent)
+  const jgrad=ctx.createLinearGradient(pShL.x,0,pShR.x,0);
+  if(night_){ jgrad.addColorStop(0,'#232c38'); jgrad.addColorStop(0.5,'#324055'); jgrad.addColorStop(1,'#1e2530'); }
+  else{ jgrad.addColorStop(0,'#2c4f6b'); jgrad.addColorStop(0.45,'#4a7ea3'); jgrad.addColorStop(1,'#25445c'); }
+  ctx.fillStyle=jgrad;
   ctx.beginPath();
   ctx.moveTo(pShL.x,pShL.y); ctx.lineTo(pShR.x,pShR.y);
-  ctx.lineTo(pHipR.x,pHipR.y); ctx.lineTo(pHipL.x,pHipL.y);
+  ctx.lineTo(pHipR.x+px(0.02),pHipR.y); ctx.lineTo(pHipL.x-px(0.02),pHipL.y);
   ctx.closePath(); ctx.fill();
+  ctx.strokeStyle=night_?'rgba(255,255,255,0.08)':'rgba(255,255,255,0.22)';
+  ctx.lineWidth=Math.max(1,px(0.025));
+  ctx.beginPath(); ctx.moveTo(pNeck.x,pNeck.y); ctx.lineTo((pHipL.x+pHipR.x)/2,(pHipL.y+pHipR.y)/2); ctx.stroke();
 
-  ctx.strokeStyle=night_?'#324055':'#3f6a8a';
-  ctx.lineWidth=Math.max(1.5,px(0.13));
-  ctx.beginPath(); ctx.moveTo(pShL.x,pShL.y); ctx.lineTo(pHandL.x,pHandL.y); ctx.stroke();
-  ctx.beginPath(); ctx.moveTo(pShR.x,pShR.y); ctx.lineTo(pHandR.x,pHandR.y); ctx.stroke();
-  ctx.fillStyle=night_?'#c9a184':'#e2bb98';
-  [pHandL,pHandR].forEach(p=>{ ctx.beginPath(); ctx.arc(p.x,p.y,Math.max(1.5,px(0.11)),0,Math.PI*2); ctx.fill(); });
+  // sac à dos, porté par-dessus la veste, vu de dos
+  ctx.fillStyle=night_?'#4a3018':'#8a5a24';
+  ctx.beginPath();
+  ctx.ellipse(pBackpack.x,pBackpack.y,px(0.17),px(0.26),0,0,Math.PI*2);
+  ctx.fill();
+  ctx.strokeStyle=night_?'#2e1c0c':'#6a4118'; ctx.lineWidth=Math.max(1,px(0.025));
+  ctx.beginPath(); ctx.moveTo(pShL.x+px(0.03),pShL.y); ctx.lineTo(pBackpack.x-px(0.08),pBackpack.y-px(0.15)); ctx.stroke();
+  ctx.beginPath(); ctx.moveTo(pShR.x-px(0.03),pShR.y); ctx.lineTo(pBackpack.x+px(0.08),pBackpack.y-px(0.15)); ctx.stroke();
+
+  // bras : bras + avant-bras, phase opposée aux jambes
+  const skin=night_?'#c9a184':'#e2bb98';
+  [[pShL,pElbowL,pHandL],[pShR,pElbowR,pHandR]].forEach(([sh,el,hand])=>{
+    ctx.strokeStyle=jgrad;
+    ctx.lineWidth=Math.max(1.6,px(0.15));
+    ctx.beginPath(); ctx.moveTo(sh.x,sh.y); ctx.lineTo(el.x,el.y); ctx.stroke();
+    ctx.strokeStyle=skin;
+    ctx.lineWidth=Math.max(1.4,px(0.12));
+    ctx.beginPath(); ctx.moveTo(el.x,el.y); ctx.lineTo(hand.x,hand.y); ctx.stroke();
+  });
+  ctx.fillStyle=skin;
+  [pHandL,pHandR].forEach(p=>{ ctx.beginPath(); ctx.arc(p.x,p.y,Math.max(1.4,px(0.095)),0,Math.PI*2); ctx.fill(); });
+
+  // cou + tête
+  ctx.strokeStyle=skin; ctx.lineWidth=Math.max(2,px(0.13));
+  ctx.beginPath(); ctx.moveTo(pNeck.x,pNeck.y+px(0.05)); ctx.lineTo(pHead.x,pHead.y+px(0.06)); ctx.stroke();
 
   const hr=Math.max(2,px(0.115));
-  ctx.fillStyle=night_?'#c9a184':'#e2bb98';
+  ctx.fillStyle=skin;
   ctx.beginPath(); ctx.arc(pHead.x,pHead.y,hr,0,Math.PI*2); ctx.fill();
   ctx.fillStyle=night_?'#241b12':'#42301f';
   ctx.beginPath();
-  ctx.arc(pHead.x,pHead.y-hr*0.16,hr*1.04,Math.PI*0.96,Math.PI*2.04);
+  ctx.moveTo(pHead.x-hr*1.05,pHead.y+hr*0.35);
+  ctx.quadraticCurveTo(pHead.x-hr*1.1,pHead.y-hr*1.05,pHead.x,pHead.y-hr*1.12);
+  ctx.quadraticCurveTo(pHead.x+hr*1.1,pHead.y-hr*1.05,pHead.x+hr*1.05,pHead.y+hr*0.35);
+  ctx.quadraticCurveTo(pHead.x,pHead.y-hr*0.15,pHead.x-hr*1.05,pHead.y+hr*0.35);
   ctx.closePath(); ctx.fill();
 }
 

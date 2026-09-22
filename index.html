@@ -2882,37 +2882,67 @@ const VACANCE_KEYWORDS_GLOBAL=['randon','voyage','vacance','séjour','sejour','t
   'dieulefit','gordes','sicile','lucille'];
 function isLieVacanceGlobal(t){ return VACANCE_KEYWORDS_GLOBAL.some(k=>t.toLowerCase().includes(k)); }
 
+let ZOOM_NAV=null; // zones cliquables ‹ › quand la photo zoomée fait partie d'une galerie
 function drawZoomedPhoto(){
-  if(!zoomedPhoto || !zoomedPhoto.loaded) return;
-  const p=zoomedPhoto;
+  if(!zoomedPhoto) return;
+  ZOOM_NAV=null;
+  let img=null, legende=zoomedPhoto.legende;
+  if(zoomedPhoto.urls){
+    const entry=getEventPhoto(zoomedPhoto.urls[zoomedPhoto.index]);
+    if(entry) img=entry.img;
+  } else if(zoomedPhoto.loaded){
+    img=zoomedPhoto.img;
+  }
+
   ctx.save();
   ctx.fillStyle='rgba(0,0,0,0.72)';
   ctx.fillRect(0,0,W,H);
 
-  const maxW=W*0.86, maxH=H*0.78;
-  const iw=p.img.width, ih=p.img.height;
-  const scale=Math.min(maxW/iw, maxH/ih);
-  const dw=iw*scale, dh=ih*scale;
-  const dx=(W-dw)/2, dy=(H-dh)/2-10;
+  if(img){
+    const maxW=W*0.86, maxH=H*0.78;
+    const iw=img.width, ih=img.height;
+    const scale=Math.min(maxW/iw, maxH/ih);
+    const dw=iw*scale, dh=ih*scale;
+    const dx=(W-dw)/2, dy=(H-dh)/2-10;
 
-  ctx.shadowColor='rgba(0,0,0,0.6)';
-  ctx.shadowBlur=20;
-  ctx.fillStyle='#fff';
-  const pad=Math.max(8,dw*0.02);
-  ctx.fillRect(dx-pad,dy-pad,dw+pad*2,dh+pad*2+pad*3);
-  ctx.shadowColor='transparent';
-  ctx.shadowBlur=0;
-  ctx.drawImage(p.img,dx,dy,dw,dh);
+    ctx.shadowColor='rgba(0,0,0,0.6)';
+    ctx.shadowBlur=20;
+    ctx.fillStyle='#fff';
+    const pad=Math.max(8,dw*0.02);
+    ctx.fillRect(dx-pad,dy-pad,dw+pad*2,dh+pad*2+pad*3);
+    ctx.shadowColor='transparent';
+    ctx.shadowBlur=0;
+    ctx.drawImage(img,dx,dy,dw,dh);
 
-  ctx.fillStyle='#333';
-  ctx.font=`bold ${Math.max(14,dw*0.035)}px Arial`;
-  ctx.textAlign='center';
-  ctx.textBaseline='top';
-  ctx.fillText(p.legende, W/2, dy+dh+pad*1.2);
+    ctx.fillStyle='#333';
+    ctx.font=`bold ${Math.max(14,dw*0.035)}px Arial`;
+    ctx.textAlign='center';
+    ctx.textBaseline='top';
+    ctx.fillText(legende, W/2, dy+dh+pad*1.2);
+  }else{
+    ctx.fillStyle='rgba(255,255,255,0.85)';
+    ctx.font='16px Arial'; ctx.textAlign='center'; ctx.textBaseline='middle';
+    ctx.fillText('Chargement…', W/2, H/2);
+  }
+
+  if(zoomedPhoto.urls && zoomedPhoto.urls.length>1){
+    const n=zoomedPhoto.urls.length;
+    const y0=H*0.42, y1=H*0.58;
+    const leftX0=W*0.04, leftX1=W*0.14, rightX0=W*0.86, rightX1=W*0.96;
+    ZOOM_NAV={leftX0,leftX1,rightX0,rightX1,y0,y1};
+    ctx.fillStyle='rgba(255,255,255,0.85)';
+    ctx.font=`${Math.max(24,W*0.03)}px Arial`;
+    ctx.textAlign='center'; ctx.textBaseline='middle';
+    ctx.fillText('‹',(leftX0+leftX1)/2,(y0+y1)/2);
+    ctx.fillText('›',(rightX0+rightX1)/2,(y0+y1)/2);
+    ctx.font='14px Arial';
+    ctx.fillText(`${zoomedPhoto.index+1} / ${n}`, W/2, H*0.92);
+  }
 
   ctx.fillStyle='rgba(255,255,255,0.85)';
   ctx.font='14px Arial';
-  ctx.fillText('Cliquer pour fermer', W/2, dy-pad-20);
+  ctx.textAlign='center'; ctx.textBaseline='top';
+  ctx.fillText('Cliquer pour fermer', W/2, H*0.06);
   ctx.restore();
 }
 
@@ -3086,14 +3116,17 @@ function drawEventSign(it,alpha){
   ctx.fillStyle=accent;
   ctx.fillRect(pTL.x,pTL.y,Math.max(1.5,w*0.055),h);
 
-  // Photo : priorité à une URL fournie directement par l'événement (pièce jointe
-  // Drive ou lien Google Photos, via events.json), sinon repli sur le catalogue
-  // PHOTOS codé en dur (mêmes règles de visibilité que par le passé).
+  // Photo : priorité aux URL fournies directement par l'événement (pièces jointes
+  // Drive ou liens Google Photos, via events.json) — s'il y en a plusieurs, la
+  // vignette du panneau les fait défiler automatiquement et le zoom permet de
+  // naviguer entre toutes ; sinon repli sur le catalogue PHOTOS codé en dur.
   const revealOk=(!photoRevealOnly || Math.floor(camDay)===e.day);
-  let photoImg=null, photoLegende=e.title;
-  if(e.photo && revealOk){
-    const cached=getEventPhoto(e.photo);
-    if(cached) photoImg=cached.img;
+  const photoUrls=(e.photos && e.photos.length) ? e.photos : (e.photo ? [e.photo] : []);
+  let photoImg=null, photoLegende=e.title, photoUrlList=null, photoUrlIdx=0;
+  if(photoUrls.length && revealOk){
+    photoUrlIdx=photoUrls.length>1 ? Math.floor(Date.now()/2500)%photoUrls.length : 0;
+    const cached=getEventPhoto(photoUrls[photoUrlIdx]);
+    if(cached){ photoImg=cached.img; photoUrlList=photoUrls; }
   }
   if(!photoImg){
     const p=PHOTOS.find(p=>p.loaded && p.day===e.day && p.side===e.side && revealOk);
@@ -3105,7 +3138,18 @@ function drawEventSign(it,alpha){
     const imgSize=Math.min(h-pad*2, w*0.38);
     const imgX=pTL.x+w-pad-imgSize, imgY=pTL.y+(h-imgSize)/2;
     ctx.drawImage(photoImg,imgX,imgY,imgSize,imgSize);
-    EVENT_PHOTO_HITS.push({x:imgX,y:imgY,w:imgSize,h:imgSize,img:photoImg,legende:photoLegende,loaded:true});
+    if(photoUrlList && photoUrlList.length>1){
+      const bs=Math.max(9,imgSize*0.22);
+      ctx.fillStyle='rgba(0,0,0,0.6)';
+      ctx.beginPath(); ctx.roundRect ? ctx.roundRect(imgX+imgSize-bs-2,imgY+2,bs+2,bs*0.62,3) : ctx.rect(imgX+imgSize-bs-2,imgY+2,bs+2,bs*0.62);
+      ctx.fill();
+      ctx.fillStyle='#fff';
+      ctx.font=`600 ${(bs*0.5).toFixed(1)}px Archivo, Arial, sans-serif`;
+      ctx.textAlign='center'; ctx.textBaseline='middle';
+      ctx.fillText(`${photoUrlIdx+1}/${photoUrlList.length}`, imgX+imgSize-bs/2-1, imgY+2+bs*0.31);
+      ctx.textAlign='left'; ctx.textBaseline='top';
+    }
+    EVENT_PHOTO_HITS.push({x:imgX,y:imgY,w:imgSize,h:imgSize,img:photoImg,legende:photoLegende,loaded:true,urls:photoUrlList,urlIdx:photoUrlIdx});
     textW=w-w*0.18-imgSize-pad;
   }
 
@@ -3804,6 +3848,16 @@ wrap.addEventListener('pointerup',e=>{
   const wasMoved=pMoved;
   pStartY=null;
   if(!wasMoved && zoomedPhoto){
+    if(ZOOM_NAV){
+      const rect=canvas.getBoundingClientRect();
+      const scaleX=canvas.width/rect.width, scaleY=canvas.height/rect.height;
+      const cx=(e.clientX-rect.left)*scaleX, cy=(e.clientY-rect.top)*scaleY;
+      if(cy>=ZOOM_NAV.y0 && cy<=ZOOM_NAV.y1){
+        const n=zoomedPhoto.urls.length;
+        if(cx>=ZOOM_NAV.leftX0 && cx<=ZOOM_NAV.leftX1){ zoomedPhoto.index=(zoomedPhoto.index-1+n)%n; return; }
+        if(cx>=ZOOM_NAV.rightX0 && cx<=ZOOM_NAV.rightX1){ zoomedPhoto.index=(zoomedPhoto.index+1)%n; return; }
+      }
+    }
     zoomedPhoto=null;
     return;
   }
@@ -3840,7 +3894,12 @@ wrap.addEventListener('click',e=>{
   // Cherche depuis la fin : les panneaux dessinés en dernier sont au-dessus visuellement,
   // donc en cas de chevauchement c'est la dernière photo qui doit répondre au clic.
   const hit=[...EVENT_PHOTO_HITS].reverse().find(p=>cx>=p.x && cx<=p.x+p.w && cy>=p.y && cy<=p.y+p.h);
-  if(hit){ zoomedPhoto=hit; return; }
+  if(hit){
+    zoomedPhoto = (hit.urls && hit.urls.length>1)
+      ? { urls: hit.urls, index: hit.urlIdx||0, legende: hit.legende }
+      : hit;
+    return;
+  }
   const evHit=EVENT_HITBOXES.find(h=>cx>=h.x0 && cx<=h.x1 && cy>=h.y0 && cy<=h.y1);
   if(evHit){ openEventDetail(evHit.ev); return; }
 });
@@ -4375,7 +4434,11 @@ function applyEventsData(events){
       // URL optionnelle (pièce jointe Drive, ou lien Google Photos extrait de la
       // description par l'export en amont) : prioritaire sur le catalogue PHOTOS
       // codé en dur si présente. Voir drawEventSign() / getEventPhoto().
-      photo: ev.photo || null
+      photo: ev.photo || null,
+      // Toutes les pièces jointes image, quand il y en a plusieurs (sinon un
+      // tableau à une seule entrée, ou vide) : la vignette du panneau les fait
+      // défiler et le zoom permet de naviguer entre elles.
+      photos: (ev.photos && ev.photos.length) ? ev.photos : (ev.photo ? [ev.photo] : [])
     };
     repairedEvents.push({day: ev.day, side: side, title: title});
     if(side==='right') EVT_JF.push(item);
@@ -4714,34 +4777,35 @@ async function fetchCalendarEventsRange(calendarId, token){
   return items;
 }
 
-// Pièce jointe Drive attachée directement sur l'événement dans Google Agenda
-// (trombone "Ajouter une pièce jointe") : on prend la première image, sinon
-// la première pièce jointe ; fileUrl est ensuite normalisée par
+// Pièces jointes Drive attachées directement sur l'événement dans Google Agenda
+// (trombone "Ajouter une pièce jointe") : on prend toutes les images (pas
+// seulement la première) ; fileUrl est ensuite normalisée par
 // normalizePhotoUrl() en URL d'image directement chargeable.
-function extractEventPhoto(gev){
+function extractEventPhotos(gev){
   const atts = gev.attachments;
-  if(!Array.isArray(atts) || !atts.length) return null;
-  const img = atts.find(a=>a.mimeType && a.mimeType.indexOf('image/')===0) || atts[0];
-  return (img && img.fileUrl) || null;
+  if(!Array.isArray(atts) || !atts.length) return [];
+  const imgs = atts.filter(a=>a.mimeType && a.mimeType.indexOf('image/')===0);
+  const list = imgs.length ? imgs : atts.slice(0,1);
+  return list.map(a=>a.fileUrl).filter(Boolean);
 }
 function googleEventToEntry(gev, side, who){
   if(gev.status === 'cancelled') return null;
   const title = (gev.summary || '').slice(0, 40);
-  const photo = extractEventPhoto(gev);
+  const photos = extractEventPhotos(gev);
   if(gev.start && gev.start.date){
     // Événement toute la journée : end.date est exclusif côté API Calendar.
     const day = dayIndexFromDateStr(gev.start.date);
     const day2 = dayIndexFromDateStr(gev.end.date) - 1;
     const entry = { day, title, side, who };
     if(day2 > day) entry.day2 = day2;
-    if(photo) entry.photo = photo;
+    if(photos.length){ entry.photo = photos[0]; entry.photos = photos; }
     return entry;
   }
   if(gev.start && gev.start.dateTime){
     // Événement avec heure : on retient le jour local (fuseau Europe/Paris).
     const dateStr = new Date(gev.start.dateTime).toLocaleDateString('en-CA', {timeZone: 'Europe/Paris'});
     const entry = { day: dayIndexFromDateStr(dateStr), title, side, who };
-    if(photo) entry.photo = photo;
+    if(photos.length){ entry.photo = photos[0]; entry.photos = photos; }
     return entry;
   }
   return null;

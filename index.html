@@ -2187,7 +2187,9 @@ const wrap=document.getElementById('wrap');
 let W,H;
 
 // === État de la caméra (route de conduite, façon Méhari) ===
-let camDay=TODAY_DAY, playing=false, playingReverse=false, speed=3, lastTs=null;
+// La voiture/le marcheur est positionné un jour avant la date du jour : plus
+// lisible (le panneau du jour même reste bien visible devant, pas juste sous le nez).
+let camDay=TODAY_DAY-1, playing=false, playingReverse=false, speed=3, lastTs=null;
 let SP=14;              // mètres de route par jour (remplace l'ancien zoom en pixels)
 let night=false;
 let aerial=false, tilt=0;   // tilt s'anime vers 1 (drone) ou 0 (conduite)
@@ -3689,7 +3691,7 @@ document.getElementById('revbtn').addEventListener('click',()=>{
   document.getElementById('revbtn').style.color=playingReverse?'#fff':'';
 });
 document.getElementById('resetbtn').addEventListener('click',()=>{playing=false;updatePlay();camDay=0;lastTs=null;});
-document.getElementById('todaybtn').addEventListener('click',()=>{playing=false;updatePlay();camDay=TODAY_DAY;lastTs=null;});
+document.getElementById('todaybtn').addEventListener('click',()=>{playing=false;updatePlay();camDay=TODAY_DAY-1;lastTs=null;});
 document.getElementById('monthbtn').addEventListener('click',()=>{
   monthViewActive=!monthViewActive;
   const btn=document.getElementById('monthbtn');
@@ -4033,7 +4035,7 @@ document.getElementById('menu-datejump').addEventListener('click',()=>{
 document.addEventListener('click',e=>{
   if(!datejumpPanel.contains(e.target) && !datejumpbtn.contains(e.target)) datejumpPanel.classList.remove('open');
 });
-document.getElementById('dj-today').addEventListener('click',()=>{ jumpToDay(TODAY_DAY); datejumpPanel.classList.remove('open'); });
+document.getElementById('dj-today').addEventListener('click',()=>{ jumpToDay(TODAY_DAY-1); datejumpPanel.classList.remove('open'); });
 document.getElementById('dj-week').addEventListener('click',()=>{ jumpToDay(Math.round(camDay)+7); datejumpPanel.classList.remove('open'); });
 document.getElementById('dj-month').addEventListener('click',()=>{
   const dt=new Date(MONTH_ORIGIN_MS+Math.round(camDay)*86400000);

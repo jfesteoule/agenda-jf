@@ -169,6 +169,7 @@ window.syncAllCalendars = syncAllCalendars;
     <button id="photosbtn" class="hudbtn-top" style="position:relative;z-index:1000;pointer-events:auto;width:40px;height:40px;min-width:40px;background:#fff;border-radius:50%;border:none;cursor:pointer;display:flex;align-items:center;justify-content:center;box-shadow:0 2px 6px rgba(0,0,0,0.2);color:#c1502f;font-size:18px;margin-left:6px;" title="Photos"><i class="ti ti-photo"></i></button>
     <button id="photorevealbtn" style="position:relative;z-index:1000;pointer-events:auto;width:40px;height:40px;min-width:40px;background:#fff;border-radius:50%;border:none;cursor:pointer;display:flex;align-items:center;justify-content:center;box-shadow:0 2px 6px rgba(0,0,0,0.2);color:#c1502f;font-size:18px;margin-left:6px;flex:none;" title="N'afficher une photo que quand la Méhari passe sur sa date"><i class="ti ti-car"></i></button>
     <button id="aerialbtn" class="hudbtn-top" style="position:relative;z-index:1000;pointer-events:auto;width:40px;height:40px;min-width:40px;background:#fff;border-radius:50%;border:none;cursor:pointer;display:flex;align-items:center;justify-content:center;box-shadow:0 2px 6px rgba(0,0,0,0.2);color:#c1502f;font-size:18px;margin-left:6px;" title="Vue à 45° au-dessus"><i class="ti ti-drone"></i></button>
+    <button id="walkbtn" class="hudbtn-top" style="position:relative;z-index:1000;pointer-events:auto;width:40px;height:40px;min-width:40px;background:#fff;border-radius:50%;border:none;cursor:pointer;display:flex;align-items:center;justify-content:center;box-shadow:0 2px 6px rgba(0,0,0,0.2);color:#c1502f;font-size:18px;margin-left:6px;" title="Marcher à pied au lieu de conduire"><i class="ti ti-walk"></i></button>
     <button id="weekbtn" class="hudbtn-top" style="position:relative;z-index:1000;pointer-events:auto;width:40px;height:40px;min-width:40px;background:#fff;border-radius:50%;border:none;cursor:pointer;display:flex;align-items:center;justify-content:center;box-shadow:0 2px 6px rgba(0,0,0,0.2);color:#c1502f;font-size:18px;margin-left:6px;" title="Volet hebdomadaire"><i class="ti ti-calendar-week"></i></button>
     <button id="nightbtn" class="hudbtn-top" style="position:relative;z-index:1000;pointer-events:auto;width:40px;height:40px;min-width:40px;background:#fff;border-radius:50%;border:none;cursor:pointer;display:flex;align-items:center;justify-content:center;box-shadow:0 2px 6px rgba(0,0,0,0.2);color:#c1502f;font-size:18px;margin-left:6px;" title="Nuit / jour"><i class="ti ti-sun" id="nightIcon"></i></button>
     <button id="jfonlybtn" class="hudbtn-top" style="position:relative;z-index:1000;pointer-events:auto;width:40px;height:40px;min-width:40px;background:#fff;border-radius:50%;border:none;cursor:pointer;display:flex;align-items:center;justify-content:center;box-shadow:0 2px 6px rgba(0,0,0,0.2);color:#c1502f;font-size:16px;font-weight:bold;margin-left:6px;" title="Masquer l'agenda de JF">JF</button>
@@ -180,6 +181,7 @@ window.syncAllCalendars = syncAllCalendars;
     <button id="menu-month" class="menuitem"><i class="ti ti-calendar-month"></i>Vue mensuelle</button>
     <button id="menu-photos" class="menuitem"><i class="ti ti-photo"></i>Photos</button>
     <button id="menu-aerial" class="menuitem"><i class="ti ti-drone"></i>Vue à 45°</button>
+    <button id="menu-walk" class="menuitem"><i class="ti ti-walk"></i>Marcher à pied</button>
     <button id="menu-week" class="menuitem"><i class="ti ti-calendar-week"></i>Volet hebdomadaire</button>
     <button id="menu-night" class="menuitem"><i class="ti ti-sun"></i>Nuit / jour</button>
     <button id="menu-jf" class="menuitem"><i class="ti ti-user"></i>Masquer l'agenda de JF</button>
@@ -2189,6 +2191,7 @@ let camDay=TODAY_DAY, playing=false, playingReverse=false, speed=3, lastTs=null;
 let SP=14;              // mètres de route par jour (remplace l'ancien zoom en pixels)
 let night=false;
 let aerial=false, tilt=0;   // tilt s'anime vers 1 (drone) ou 0 (conduite)
+let walkMode=false;   // remplace la voiture par un marcheur et la route par un chemin
 let weekMode=false;
 let monthViewActive=false;
 let showJF=true, showAnne=true;
@@ -2284,7 +2287,7 @@ function draw(ts){
   drawMultiDayEvents();
   drawVacancesBLine();
   drawRouteObjects();
-  drawMehari();
+  if(walkMode) drawWalker(); else drawMehari();
   drawHaze();
   drawZoomedPhoto();
   requestAnimationFrame(draw);
@@ -2624,29 +2627,34 @@ function drawRoadSurface(){
   ctx.fillStyle=night?'#3a382e':'#a1957c';
   ctx.fill();
 
-  // chaussée
+  // chaussée (ou chemin de terre en mode marche à pied)
   ctx.beginPath();
   for(let i=dists.length-1;i>=0;i--){ const p=proj(dists[i],-RW,0); i===dists.length-1?ctx.moveTo(p.x,p.y):ctx.lineTo(p.x,p.y); }
   for(let i=0;i<dists.length;i++){ const p=proj(dists[i],RW,0); ctx.lineTo(p.x,p.y); }
   ctx.closePath();
   ctx.save(); ctx.clip();
   const asph=ctx.createLinearGradient(0,hzL,0,H);
-  if(night){ asph.addColorStop(0,'#2e3238'); asph.addColorStop(1,'#15171b'); }
+  if(walkMode){
+    if(night){ asph.addColorStop(0,'#3a3324'); asph.addColorStop(1,'#211d14'); }
+    else{ asph.addColorStop(0,'#af9868'); asph.addColorStop(0.35,'#98835a'); asph.addColorStop(1,'#7d6a45'); }
+  }else if(night){ asph.addColorStop(0,'#2e3238'); asph.addColorStop(1,'#15171b'); }
   else{ asph.addColorStop(0,'#7c7d78'); asph.addColorStop(0.35,'#565752'); asph.addColorStop(1,'#3b3c39'); }
   ctx.fillStyle=asph; ctx.fillRect(0,hzL-4,W,H-hzL+4);
   ctx.globalAlpha=night?0.05:0.11;
   ctx.fillStyle=ctx.createPattern(ROAD_NOISE,'repeat');
   ctx.fillRect(0,hzL-4,W,H-hzL+4);
   ctx.globalAlpha=1;
-  ctx.strokeStyle=night?'rgba(255,255,255,0.03)':'rgba(0,0,0,0.10)';
-  for(const lane of [-2.1,2.1]){
-    ctx.lineWidth=1; ctx.beginPath();
-    for(let i=0;i<dists.length;i++){
-      const p=proj(dists[i],lane,0);
-      ctx.lineWidth=Math.max(1,1.4*p.s*0.9);
-      i?ctx.lineTo(p.x,p.y):ctx.moveTo(p.x,p.y);
+  if(!walkMode){
+    ctx.strokeStyle=night?'rgba(255,255,255,0.03)':'rgba(0,0,0,0.10)';
+    for(const lane of [-2.1,2.1]){
+      ctx.lineWidth=1; ctx.beginPath();
+      for(let i=0;i<dists.length;i++){
+        const p=proj(dists[i],lane,0);
+        ctx.lineWidth=Math.max(1,1.4*p.s*0.9);
+        i?ctx.lineTo(p.x,p.y):ctx.moveTo(p.x,p.y);
+      }
+      ctx.stroke();
     }
-    ctx.stroke();
   }
   ctx.restore();
 
@@ -2667,11 +2675,13 @@ function drawRoadSurface(){
     if(d1<dN) continue;
     // joint noir entre deux jours
     drawBand(d0-0.16,d0+0.16,-RW+0.42,RW-0.42, night?'#0b0c0e':'#121316', 0.85);
-    // rives continues
-    drawBand(d0,d1,-RW+0.25,-RW+0.42,white,0.95);
-    drawBand(d0,d1,RW-0.42,RW-0.25,white,0.95);
-    // axe discontinu
-    drawBand(d0,d0+SP*0.62,-0.09,0.09,white,0.9);
+    if(!walkMode){
+      // rives continues
+      drawBand(d0,d1,-RW+0.25,-RW+0.42,white,0.95);
+      drawBand(d0,d1,RW-0.42,RW-0.25,white,0.95);
+      // axe discontinu
+      drawBand(d0,d0+SP*0.62,-0.09,0.09,white,0.9);
+    }
     // week-end : bande rouge en travers
     if(k>=0&&k<=TOTAL_DAYS&&(isSat(k)||isSun(k))) drawBand(d0,d0+SP,-RW+0.42,RW-0.42,'#cc3b30',0.5);
     // jour férié : bande jaune
@@ -3328,6 +3338,69 @@ function drawMehari(){
   }
 }
 
+// === Marcheur (remplace la Méhari en mode "marcher à pied") ===
+function drawWalker(){
+  const T=tilt;
+  const CD=9.2+T*4.5;
+  const phase=camDay*14;
+  const stride=Math.sin(phase);
+  const bounce=Math.abs(Math.cos(phase))*0.05;
+  const night_=night;
+
+  const refL=proj(CD,-0.24,0), refR=proj(CD,0.24,0);
+  const w=refR.x-refL.x;
+  if(Math.abs(w)<6) return;
+  const px=(m)=>Math.abs(w)*(m/0.48);
+
+  const strideLen=0.42;
+  const pGround=proj(CD,0,0);
+  const pFootR=proj(CD+strideLen*stride, 0.11, 0);
+  const pFootL=proj(CD-strideLen*stride,-0.11, 0);
+  const pShL=proj(CD,-0.18,1.42+bounce), pShR=proj(CD,0.18,1.42+bounce);
+  const pHipL=proj(CD,-0.13,0.9+bounce), pHipR=proj(CD,0.13,0.9+bounce);
+  const pHead=proj(CD,0,1.62+bounce);
+  const pHandR=proj(CD-strideLen*0.8*stride, 0.24, 1.05+bounce);
+  const pHandL=proj(CD+strideLen*0.8*stride,-0.24, 1.05+bounce);
+
+  const shg=ctx.createRadialGradient(pGround.x,pGround.y,0,pGround.x,pGround.y,Math.abs(w)*1.7);
+  shg.addColorStop(0,'rgba(0,0,0,0.35)');
+  shg.addColorStop(1,'rgba(0,0,0,0)');
+  ctx.fillStyle=shg;
+  ctx.beginPath(); ctx.ellipse(pGround.x,pGround.y,Math.abs(w)*1.7,px(0.16),0,0,Math.PI*2); ctx.fill();
+
+  ctx.lineCap='round';
+  ctx.strokeStyle=night_?'#33261c':'#4a3324';
+  ctx.lineWidth=Math.max(2,px(0.16));
+  ctx.beginPath(); ctx.moveTo(pHipL.x,pHipL.y); ctx.lineTo(pFootL.x,pFootL.y); ctx.stroke();
+  ctx.beginPath(); ctx.moveTo(pHipR.x,pHipR.y); ctx.lineTo(pFootR.x,pFootR.y); ctx.stroke();
+
+  ctx.fillStyle=night_?'#1c1a17':'#2b2620';
+  [pFootL,pFootR].forEach(p=>{
+    ctx.beginPath(); ctx.ellipse(p.x,p.y-px(0.03),px(0.22),px(0.12),0,0,Math.PI*2); ctx.fill();
+  });
+
+  ctx.fillStyle=night_?'#324055':'#3f6a8a';
+  ctx.beginPath();
+  ctx.moveTo(pShL.x,pShL.y); ctx.lineTo(pShR.x,pShR.y);
+  ctx.lineTo(pHipR.x,pHipR.y); ctx.lineTo(pHipL.x,pHipL.y);
+  ctx.closePath(); ctx.fill();
+
+  ctx.strokeStyle=night_?'#324055':'#3f6a8a';
+  ctx.lineWidth=Math.max(1.5,px(0.13));
+  ctx.beginPath(); ctx.moveTo(pShL.x,pShL.y); ctx.lineTo(pHandL.x,pHandL.y); ctx.stroke();
+  ctx.beginPath(); ctx.moveTo(pShR.x,pShR.y); ctx.lineTo(pHandR.x,pHandR.y); ctx.stroke();
+  ctx.fillStyle=night_?'#c9a184':'#e2bb98';
+  [pHandL,pHandR].forEach(p=>{ ctx.beginPath(); ctx.arc(p.x,p.y,Math.max(1.5,px(0.11)),0,Math.PI*2); ctx.fill(); });
+
+  const hr=Math.max(2,px(0.115));
+  ctx.fillStyle=night_?'#c9a184':'#e2bb98';
+  ctx.beginPath(); ctx.arc(pHead.x,pHead.y,hr,0,Math.PI*2); ctx.fill();
+  ctx.fillStyle=night_?'#241b12':'#42301f';
+  ctx.beginPath();
+  ctx.arc(pHead.x,pHead.y-hr*0.16,hr*1.04,Math.PI*0.96,Math.PI*2.04);
+  ctx.closePath(); ctx.fill();
+}
+
 function updateEta(){
   const upcoming=visibleEvents().filter(e=>e.day>camDay);
   if(upcoming.length){
@@ -3466,6 +3539,13 @@ document.getElementById('aerialbtn').addEventListener('click',()=>{
   btn.style.background=aerial?'#c1502f':'#fff';
   btn.style.color=aerial?'#fff':'#c1502f';
 });
+document.getElementById('walkbtn').addEventListener('click',()=>{
+  walkMode=!walkMode;
+  const btn=document.getElementById('walkbtn');
+  btn.style.background=walkMode?'#c1502f':'#fff';
+  btn.style.color=walkMode?'#fff':'#c1502f';
+  btn.title=walkMode?'Reprendre la voiture':'Marcher à pied au lieu de conduire';
+});
 document.getElementById('nightbtn').addEventListener('click',()=>{
   night=!night;
   document.getElementById('nightIcon').className=night?'ti ti-moon':'ti ti-sun';
@@ -3480,6 +3560,7 @@ document.getElementById('weekbtn').addEventListener('click',()=>{
   if(weekMode) renderWeekPanel();
 });
 document.getElementById('menu-aerial').addEventListener('click',()=>{ menuPanel.classList.remove('open'); document.getElementById('aerialbtn').click(); });
+document.getElementById('menu-walk').addEventListener('click',()=>{ menuPanel.classList.remove('open'); document.getElementById('walkbtn').click(); });
 document.getElementById('menu-week').addEventListener('click',()=>{ menuPanel.classList.remove('open'); document.getElementById('weekbtn').click(); });
 document.getElementById('menu-night').addEventListener('click',()=>{ menuPanel.classList.remove('open'); document.getElementById('nightbtn').click(); });
 

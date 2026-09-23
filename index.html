@@ -3204,9 +3204,6 @@ function drawRouteObjects(){
     const isFirst=dt.getUTCDate()===1;
     if(isFirst) items.push({kind:'borne',dist,day:k});
     if(isFirst && dist>24) items.push({kind:'gantry',dist,day:k});
-    // Repère jour/date à gauche, tous les 2 jours, planté au milieu du jour
-    // (comme les panneaux d'événement) et non sur le joint entre deux jours.
-    if(k%2===0) items.push({kind:'daypost',dist:dist+SP*0.5,day:k});
     const dayEvents=visibleEvents().filter(e=>e.day===k);
     const evs=[];
     dayEvents.forEach(e=>{
@@ -3222,6 +3219,12 @@ function drawRouteObjects(){
       // endroit de la route comme les autres repères.
       items.push({kind:'sign',dist:dist+SP*0.5,ev:e,side,rank:side>0?nR++:nL++});
     });
+    // Repère jour/date à gauche, tous les 2 jours, planté au milieu du jour
+    // (comme les panneaux d'événement) et non sur le joint entre deux jours.
+    // Poussé après les panneaux d'événement du même jour pour rester dessiné
+    // devant eux (le tri par distance étant stable, une distance égale garde
+    // l'ordre d'insertion).
+    if(k%2===0) items.push({kind:'daypost',dist:dist+SP*0.5,day:k});
   }
   items.sort((a,b)=>b.dist-a.dist);
 

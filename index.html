@@ -2996,7 +2996,7 @@ function drawBorne(it,alpha){
 // panneau sur poteau simple. Jour de la semaine (3 lettres) + numéro du jour.
 function drawDayPost(it,alpha){
   const lat=-(RW+1.15);
-  const p0=proj(it.dist,lat-0.22,0), p1=proj(it.dist,lat+0.22,1.35);
+  const p0=proj(it.dist,lat-0.44,0), p1=proj(it.dist,lat+0.44,1.35);
   ctx.globalAlpha=alpha;
   const w2=Math.abs(p1.x-p0.x), h2=p0.y-p1.y;
   if(w2<8){ ctx.globalAlpha=1; return; }

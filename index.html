@@ -2694,34 +2694,6 @@ function drawRoadSurface(){
       for(let s=-3;s<=3;s++) drawBand(d0,d0+SP*0.3, s*1.05-0.28, s*1.05+0.28, white, 0.85);
     }
   }
-
-  // week-ends : date peinte en rouge foncé sur la chaussée (cohérent avec la bande)
-  for(let k=dayStart;k<=dayEnd;k++){
-    if(k<0||k>TOTAL_DAYS||!(isSat(k)||isSun(k))) continue;
-    const d0=(k-camDay)*SP;
-    const near=d0+SP*0.22, far=d0+SP*0.86;
-    if(near<9||near>170) continue;
-    const dtk=new Date(MONTH_ORIGIN_MS+k*86400000);
-    const dow=['dim','lun','mar','mer','jeu','ven','sam'][(TODAY_DOW+k)%7];
-    const mois=dtk.toLocaleDateString('fr-FR',{month:'short'}).replace('.','');
-    const label=dow+' '+dtk.getUTCDate()+' '+mois;
-    const P0=proj(near,-1.35,0), PU=proj(near,1.35,0), PV=proj(far,-1.35,0);
-    const ux=PU.x-P0.x, uy=PU.y-P0.y;
-    const vx=PV.x-P0.x, vy=PV.y-P0.y;
-    const wpx=Math.hypot(ux,uy);
-    if(wpx<22||Math.hypot(vx,vy)>H*0.5) continue;
-    ctx.save();
-    ctx.beginPath(); ctx.rect(0,hzL,W,H-hzL); ctx.clip();
-    ctx.font='600 100px Oswald, Arial, sans-serif';
-    const tw=ctx.measureText(label).width;
-    ctx.transform(ux/tw, uy/tw, -vx/100, -vy/100, P0.x, P0.y);
-    ctx.globalAlpha=Math.min(0.95,Math.max(0,(170-near)/100));
-    ctx.fillStyle=night?'#5a1a14':'#6e2119';
-    ctx.textAlign='left'; ctx.textBaseline='alphabetic';
-    ctx.fillText(label,0,0);
-    ctx.restore();
-    ctx.globalAlpha=1;
-  }
 }
 
 // Trait plein jaune le long de la route pour une période de vacances scolaires
@@ -3136,7 +3108,7 @@ function drawEventSign(it,alpha){
   }
   // Rond jour/semaine en bas à droite : on réserve sa place d'abord pour que
   // la photo et le titre ne puissent jamais passer dessous.
-  const dr=Math.max(6,Math.min(13,h*0.15));
+  const dr=Math.max(9,Math.min(20,h*0.24));
   const badgeMargin=Math.max(2,w*0.03);
   const contentH=Math.max(h*0.4,h-dr*2-badgeMargin);
 
@@ -3201,17 +3173,15 @@ function drawEventSign(it,alpha){
     ctx.stroke();
     ctx.fillStyle=night?'#e7e3d6':'#2b241c';
     ctx.textAlign='center'; ctx.textBaseline='middle';
-    if(dr>=9){
-      ctx.font=`600 ${(dr*0.42).toFixed(1)}px Archivo, Arial, sans-serif`;
-      ctx.fillText(dow, dcx, dcy-dr*0.36);
-      ctx.font=`700 ${(dr*0.72).toFixed(1)}px Archivo, Arial, sans-serif`;
-      ctx.fillText(String(dayNum), dcx, dcy+dr*0.28);
+    if(dr>=13){
+      ctx.font=`700 ${(dr*0.52).toFixed(1)}px Archivo, Arial, sans-serif`;
+      ctx.fillText(dow, dcx, dcy-dr*0.4);
+      ctx.font=`800 ${(dr*0.9).toFixed(1)}px Archivo, Arial, sans-serif`;
+      ctx.fillText(String(dayNum), dcx, dcy+dr*0.32);
     }else{
-      ctx.font=`600 ${(dr*1.05).toFixed(1)}px Archivo, Arial, sans-serif`;
+      ctx.font=`700 ${(dr*1.2).toFixed(1)}px Archivo, Arial, sans-serif`;
       ctx.fillText(String(dayNum), dcx, dcy+dr*0.06);
     }
-    ctx.textAlign='left'; ctx.textBaseline='top';
-    ctx.fillText(String(dayNum), dcx, dcy+dr*0.06);
     ctx.textAlign='left'; ctx.textBaseline='top';
   }
   ctx.restore();

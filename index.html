@@ -3093,11 +3093,16 @@ function drawEventSign(it,alpha){
 
   // poteau + ombre au sol (uniquement à droite : plus de poteaux côté gauche)
   if(it.side>0){
-    ctx.strokeStyle=night?'#6b6a63':'#8d8b80';
-    ctx.lineWidth=Math.max(1,0.11*pBR.s);
-    ctx.beginPath();ctx.moveTo(pGround.x,pGround.y);ctx.lineTo(pGround.x,pBR.y);ctx.stroke();
-    ctx.fillStyle='rgba(0,0,0,0.18)';
-    ctx.beginPath();ctx.ellipse(pGround.x,pGround.y,Math.max(2,w*0.35),Math.max(1,w*0.09),0,0,Math.PI*2);ctx.fill();
+    const postW=Math.max(3,0.36*pBR.s);
+    ctx.fillStyle=night?'#4a4943':'#6b6a63';
+    ctx.fillRect(pGround.x-postW/2,pBR.y,postW,pGround.y-pBR.y);
+    ctx.fillStyle=night?'rgba(255,255,255,0.07)':'rgba(255,255,255,0.25)';
+    ctx.fillRect(pGround.x-postW/2,pBR.y,postW*0.32,pGround.y-pBR.y);
+    ctx.strokeStyle=night?'#221f1c':'#403f3a';
+    ctx.lineWidth=Math.max(1,postW*0.09);
+    ctx.strokeRect(pGround.x-postW/2,pBR.y,postW,pGround.y-pBR.y);
+    ctx.fillStyle='rgba(0,0,0,0.22)';
+    ctx.beginPath();ctx.ellipse(pGround.x,pGround.y,Math.max(2,w*0.42),Math.max(1,w*0.11),0,0,Math.PI*2);ctx.fill();
   }
 
   // Couleur d'accent du panneau : règles spécifiques (repérage visuel de certaines

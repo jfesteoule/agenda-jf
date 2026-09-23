@@ -43,6 +43,14 @@ canvas#c{position:absolute;inset:0;width:100%;height:100%;touch-action:none;poin
 .photorow:last-child{border-bottom:none;}
 .photorow img{width:48px;height:48px;border-radius:8px;object-fit:cover;flex:none;background:#f4f1ea;}
 .photorow .pr-title{font-size:13px;font-weight:500;color:#2b241c;overflow:hidden;text-overflow:ellipsis;}
+#videoOverlay{display:none;position:fixed;inset:0;z-index:2000;align-items:center;justify-content:center;flex-direction:column;background:transparent;}
+#videoOverlay.open{display:flex;}
+#videoOverlay iframe{width:min(86vw,900px);height:min(78vh,560px);border:0;border-radius:6px;box-shadow:0 10px 40px rgba(0,0,0,0.6);background:#000;}
+#videoOverlay .vidCaption{color:#fff;margin-top:12px;font-family:Arial,sans-serif;font-size:14px;text-align:center;max-width:80vw;text-shadow:0 1px 3px rgba(0,0,0,0.8);}
+#videoOverlay .vidNav{position:absolute;top:50%;transform:translateY(-50%);color:rgba(255,255,255,0.85);font-size:34px;font-family:Arial,sans-serif;cursor:pointer;padding:10px 18px;user-select:none;}
+#videoOverlay .vidNav.left{left:2px;}
+#videoOverlay .vidNav.right{right:2px;}
+#videoOverlay .vidCount{position:absolute;bottom:14px;left:0;right:0;text-align:center;color:rgba(255,255,255,0.75);font-family:Arial,sans-serif;font-size:13px;}
 @media (max-width:480px){
   .hudbtn-top{display:none !important;}
 }
@@ -214,6 +222,13 @@ window.syncAllCalendars = syncAllCalendars;
       <div id="photosList"></div>
       <div id="photosEmpty">Aucune photo pour le moment.</div>
     </div>
+  </div>
+  <div id="videoOverlay">
+    <span class="vidNav left" id="videoPrev">‹</span>
+    <span class="vidNav right" id="videoNext">›</span>
+    <iframe id="videoFrame" allow="autoplay; encrypted-media" allowfullscreen></iframe>
+    <div class="vidCaption" id="videoCaption"></div>
+    <div class="vidCount" id="videoCount"></div>
   </div>
   <div id="addEventOverlay">
     <div id="addEventBox">
@@ -2897,59 +2912,71 @@ function isLieVacanceGlobal(t){ return VACANCE_KEYWORDS_GLOBAL.some(k=>t.toLower
 
 let ZOOM_NAV=null; // zones cliquables ‹ › quand la photo zoomée fait partie d'une galerie
 function drawZoomedPhoto(){
-  if(!zoomedPhoto) return;
+  if(!zoomedPhoto){ hideVideoOverlay(); return; }
   ZOOM_NAV=null;
-  let img=null, legende=zoomedPhoto.legende;
-  if(zoomedPhoto.urls){
-    const entry=getEventPhoto(zoomedPhoto.urls[zoomedPhoto.index]);
-    if(entry) img=entry.img;
-  } else if(zoomedPhoto.loaded){
-    img=zoomedPhoto.img;
-  }
+  const current=zoomedPhoto.urls ? zoomedPhoto.urls[zoomedPhoto.index] : null;
+  const isVideo=!!(current && current.isVideo);
 
   ctx.save();
   ctx.fillStyle='rgba(0,0,0,0.72)';
   ctx.fillRect(0,0,W,H);
 
-  if(img){
-    const maxW=W*0.86, maxH=H*0.78;
-    const iw=img.width, ih=img.height;
-    const scale=Math.min(maxW/iw, maxH/ih);
-    const dw=iw*scale, dh=ih*scale;
-    const dx=(W-dw)/2, dy=(H-dh)/2-10;
+  if(isVideo){
+    // La vidéo est lue par un lecteur Google Drive intégré (iframe) affiché
+    // au-dessus du canvas — voir renderVideoOverlay() — qui gère aussi sa
+    // propre navigation ‹ › et sa légende, indépendamment des zones cliquables
+    // du canvas ci-dessous (réservées aux photos).
+    renderVideoOverlay(current, zoomedPhoto.legende);
+  } else {
+    hideVideoOverlay();
+    let img=null, legende=zoomedPhoto.legende;
+    if(zoomedPhoto.urls){
+      const entry=getEventPhoto(current.url);
+      if(entry) img=entry.img;
+    } else if(zoomedPhoto.loaded){
+      img=zoomedPhoto.img;
+    }
 
-    ctx.shadowColor='rgba(0,0,0,0.6)';
-    ctx.shadowBlur=20;
-    ctx.fillStyle='#fff';
-    const pad=Math.max(8,dw*0.02);
-    ctx.fillRect(dx-pad,dy-pad,dw+pad*2,dh+pad*2+pad*3);
-    ctx.shadowColor='transparent';
-    ctx.shadowBlur=0;
-    ctx.drawImage(img,dx,dy,dw,dh);
+    if(img){
+      const maxW=W*0.86, maxH=H*0.78;
+      const iw=img.width, ih=img.height;
+      const scale=Math.min(maxW/iw, maxH/ih);
+      const dw=iw*scale, dh=ih*scale;
+      const dx=(W-dw)/2, dy=(H-dh)/2-10;
 
-    ctx.fillStyle='#333';
-    ctx.font=`bold ${Math.max(14,dw*0.035)}px Arial`;
-    ctx.textAlign='center';
-    ctx.textBaseline='top';
-    ctx.fillText(legende, W/2, dy+dh+pad*1.2);
-  }else{
-    ctx.fillStyle='rgba(255,255,255,0.85)';
-    ctx.font='16px Arial'; ctx.textAlign='center'; ctx.textBaseline='middle';
-    ctx.fillText('Chargement…', W/2, H/2);
-  }
+      ctx.shadowColor='rgba(0,0,0,0.6)';
+      ctx.shadowBlur=20;
+      ctx.fillStyle='#fff';
+      const pad=Math.max(8,dw*0.02);
+      ctx.fillRect(dx-pad,dy-pad,dw+pad*2,dh+pad*2+pad*3);
+      ctx.shadowColor='transparent';
+      ctx.shadowBlur=0;
+      ctx.drawImage(img,dx,dy,dw,dh);
 
-  if(zoomedPhoto.urls && zoomedPhoto.urls.length>1){
-    const n=zoomedPhoto.urls.length;
-    const y0=H*0.42, y1=H*0.58;
-    const leftX0=W*0.04, leftX1=W*0.14, rightX0=W*0.86, rightX1=W*0.96;
-    ZOOM_NAV={leftX0,leftX1,rightX0,rightX1,y0,y1};
-    ctx.fillStyle='rgba(255,255,255,0.85)';
-    ctx.font=`${Math.max(24,W*0.03)}px Arial`;
-    ctx.textAlign='center'; ctx.textBaseline='middle';
-    ctx.fillText('‹',(leftX0+leftX1)/2,(y0+y1)/2);
-    ctx.fillText('›',(rightX0+rightX1)/2,(y0+y1)/2);
-    ctx.font='14px Arial';
-    ctx.fillText(`${zoomedPhoto.index+1} / ${n}`, W/2, H*0.92);
+      ctx.fillStyle='#333';
+      ctx.font=`bold ${Math.max(14,dw*0.035)}px Arial`;
+      ctx.textAlign='center';
+      ctx.textBaseline='top';
+      ctx.fillText(legende, W/2, dy+dh+pad*1.2);
+    }else{
+      ctx.fillStyle='rgba(255,255,255,0.85)';
+      ctx.font='16px Arial'; ctx.textAlign='center'; ctx.textBaseline='middle';
+      ctx.fillText('Chargement…', W/2, H/2);
+    }
+
+    if(zoomedPhoto.urls && zoomedPhoto.urls.length>1){
+      const n=zoomedPhoto.urls.length;
+      const y0=H*0.42, y1=H*0.58;
+      const leftX0=W*0.04, leftX1=W*0.14, rightX0=W*0.86, rightX1=W*0.96;
+      ZOOM_NAV={leftX0,leftX1,rightX0,rightX1,y0,y1};
+      ctx.fillStyle='rgba(255,255,255,0.85)';
+      ctx.font=`${Math.max(24,W*0.03)}px Arial`;
+      ctx.textAlign='center'; ctx.textBaseline='middle';
+      ctx.fillText('‹',(leftX0+leftX1)/2,(y0+y1)/2);
+      ctx.fillText('›',(rightX0+rightX1)/2,(y0+y1)/2);
+      ctx.font='14px Arial';
+      ctx.fillText(`${zoomedPhoto.index+1} / ${n}`, W/2, H*0.92);
+    }
   }
 
   ctx.fillStyle='rgba(255,255,255,0.85)';
@@ -3168,11 +3195,11 @@ function drawEventSign(it,alpha){
   // naviguer entre toutes ; sinon repli sur le catalogue PHOTOS codé en dur.
   const revealOk=(!photoRevealOnly || Math.floor(camDay)===e.day);
   const photoUrls=(e.photos && e.photos.length) ? e.photos : (e.photo ? [e.photo] : []);
-  let photoImg=null, photoLegende=e.title, photoUrlList=null, photoUrlIdx=0;
+  let photoImg=null, photoLegende=e.title, photoUrlList=null, photoUrlIdx=0, photoIsVideo=false;
   if(photoUrls.length && revealOk){
     photoUrlIdx=photoUrls.length>1 ? Math.floor(Date.now()/2500)%photoUrls.length : 0;
-    const cached=getEventPhoto(photoUrls[photoUrlIdx]);
-    if(cached){ photoImg=cached.img; photoUrlList=photoUrls; }
+    const cached=getEventPhoto(photoUrls[photoUrlIdx].url);
+    if(cached){ photoImg=cached.img; photoUrlList=photoUrls; photoIsVideo=!!photoUrls[photoUrlIdx].isVideo; }
   }
   if(!photoImg){
     const p=PHOTOS.find(p=>p.loaded && p.day===e.day && p.side===e.side && revealOk);
@@ -3184,6 +3211,19 @@ function drawEventSign(it,alpha){
     const imgSize=Math.min(h-pad*2, w*0.38);
     const imgX=pTL.x+w-pad-imgSize, imgY=pTL.y+(h-imgSize)/2;
     ctx.drawImage(photoImg,imgX,imgY,imgSize,imgSize);
+    if(photoIsVideo){
+      // Petit triangle "lecture" au centre de la vignette, pour signaler que le
+      // clic ouvre un lecteur vidéo plutôt qu'un simple zoom photo.
+      const cx2=imgX+imgSize/2, cy2=imgY+imgSize/2, r=imgSize*0.18;
+      ctx.fillStyle='rgba(0,0,0,0.45)';
+      ctx.beginPath(); ctx.arc(cx2,cy2,r,0,Math.PI*2); ctx.fill();
+      ctx.fillStyle='#fff';
+      ctx.beginPath();
+      ctx.moveTo(cx2-r*0.42,cy2-r*0.55);
+      ctx.lineTo(cx2-r*0.42,cy2+r*0.55);
+      ctx.lineTo(cx2+r*0.6,cy2);
+      ctx.closePath(); ctx.fill();
+    }
     if(photoUrlList && photoUrlList.length>1){
       const bs=Math.max(9,imgSize*0.22);
       ctx.fillStyle='rgba(0,0,0,0.6)';
@@ -3847,7 +3887,7 @@ wrap.addEventListener('pointerdown',e=>{
   // Les calques (fiche détail, panneau du jour, recherche, date, ajout d'événement...) ne doivent pas
   // capturer le pointeur : sinon leur propre clic est redirigé vers wrap (voir plus bas)
   // et ne peut plus se fermer au clic sur leur fond.
-  if(e.target.closest('#eventDetail')||e.target.closest('#eventDetailScrim')||e.target.closest('#dayPanel')||e.target.closest('#dayPanelScrim')||e.target.closest('#searchResults')||e.target.closest('#datejumpPanel')||e.target.closest('#addEventOverlay')||e.target.closest('#photosOverlay')) return;
+  if(e.target.closest('#eventDetail')||e.target.closest('#eventDetailScrim')||e.target.closest('#dayPanel')||e.target.closest('#dayPanelScrim')||e.target.closest('#searchResults')||e.target.closest('#datejumpPanel')||e.target.closest('#addEventOverlay')||e.target.closest('#photosOverlay')||e.target.closest('#videoOverlay')) return;
   activePointers.set(e.pointerId,{x:e.clientX,y:e.clientY});
   if(activePointers.size===2){
     const pts=[...activePointers.values()];
@@ -3923,7 +3963,7 @@ wrap.addEventListener('pointercancel',e=>{activePointers.delete(e.pointerId);pin
 
 wrap.addEventListener('click',e=>{
   if(e.target.closest('button')||e.target.closest('input')) return;
-  if(e.target.closest('#eventDetail')||e.target.closest('#eventDetailScrim')||e.target.closest('#dayPanel')||e.target.closest('#dayPanelScrim')||e.target.closest('#searchResults')||e.target.closest('#datejumpPanel')||e.target.closest('#addEventOverlay')||e.target.closest('#photosOverlay')) return;
+  if(e.target.closest('#eventDetail')||e.target.closest('#eventDetailScrim')||e.target.closest('#dayPanel')||e.target.closest('#dayPanelScrim')||e.target.closest('#searchResults')||e.target.closest('#datejumpPanel')||e.target.closest('#addEventOverlay')||e.target.closest('#photosOverlay')||e.target.closest('#videoOverlay')) return;
   const rect=canvas.getBoundingClientRect();
   const scaleX=canvas.width/rect.width, scaleY=canvas.height/rect.height;
   const cx=(e.clientX-rect.left)*scaleX, cy=(e.clientY-rect.top)*scaleY;
@@ -3942,7 +3982,12 @@ wrap.addEventListener('click',e=>{
   // donc en cas de chevauchement c'est la dernière photo qui doit répondre au clic.
   const hit=[...EVENT_PHOTO_HITS].reverse().find(p=>cx>=p.x && cx<=p.x+p.w && cy>=p.y && cy<=p.y+p.h);
   if(hit){
-    zoomedPhoto = (hit.urls && hit.urls.length>1)
+    // hit.urls existe pour toute photo/vidéo d'événement (une seule pièce jointe
+    // comme plusieurs) ; on la met toujours sous la forme galerie {urls,index}
+    // pour que drawZoomedPhoto() sache dans tous les cas quel item est affiché
+    // (et si c'est une vidéo). Seules les photos du catalogue codé en dur
+    // (sans .urls) gardent l'ancien format {img,loaded,legende}.
+    zoomedPhoto = hit.urls
       ? { urls: hit.urls, index: hit.urlIdx||0, legende: hit.legende }
       : hit;
     return;
@@ -4478,13 +4523,14 @@ function applyEventsData(events){
       color: side==='right' ? '#1a73e8' : '#e67c73',
       side: side,
       who: ev.who,
-      // URL optionnelle (pièce jointe Drive, ou lien Google Photos extrait de la
-      // description par l'export en amont) : prioritaire sur le catalogue PHOTOS
-      // codé en dur si présente. Voir drawEventSign() / getEventPhoto().
+      // Pièce jointe optionnelle {url, isVideo} (Drive), prioritaire sur le
+      // catalogue PHOTOS codé en dur si présente. Voir drawEventSign() /
+      // getEventPhoto() / extractEventPhotos().
       photo: ev.photo || null,
-      // Toutes les pièces jointes image, quand il y en a plusieurs (sinon un
-      // tableau à une seule entrée, ou vide) : la vignette du panneau les fait
-      // défiler et le zoom permet de naviguer entre elles.
+      // Toutes les pièces jointes image et vidéo, quand il y en a plusieurs
+      // (sinon un tableau à une seule entrée, ou vide) : la vignette du panneau
+      // les fait défiler et le zoom permet de naviguer entre elles ; une vidéo
+      // s'ouvre dans le lecteur intégré (voir renderVideoOverlay()).
       photos: (ev.photos && ev.photos.length) ? ev.photos : (ev.photo ? [ev.photo] : [])
     };
     repairedEvents.push({day: ev.day, side: side, title: title});
@@ -4686,6 +4732,42 @@ document.getElementById('photosbtn').addEventListener('click', openPhotosPanel);
 document.getElementById('photos-close').addEventListener('click', closePhotosPanel);
 photosOverlay.addEventListener('click', (e) => { if(e.target===photosOverlay) closePhotosPanel(); });
 
+// ===== Lecture vidéo (pièce jointe Drive) : lecteur intégré par-dessus le canvas =====
+// Le zoom photo normal dessine l'image sur le <canvas> (ctx.drawImage), ce qui ne
+// marche pas pour une vraie lecture vidéo. Quand l'item zoomé est une vidéo, on
+// affiche à la place ce petit lecteur Google Drive (iframe /preview) positionné
+// par-dessus le canvas, piloté depuis drawZoomedPhoto().
+const videoOverlay = document.getElementById('videoOverlay');
+const videoFrame = document.getElementById('videoFrame');
+const videoCaption = document.getElementById('videoCaption');
+const videoCount = document.getElementById('videoCount');
+const videoPrev = document.getElementById('videoPrev');
+const videoNext = document.getElementById('videoNext');
+function driveEmbedUrl(url){
+  const m=(url||'').match(/drive\.google\.com\/(?:file\/d\/([\w-]+)|open\?id=([\w-]+)|uc\?(?:export=\w+&)?id=([\w-]+))/);
+  const id=m ? (m[1]||m[2]||m[3]) : null;
+  return id ? `https://drive.google.com/file/d/${id}/preview` : url;
+}
+function hideVideoOverlay(){
+  if(videoOverlay.classList.contains('open')){
+    videoOverlay.classList.remove('open');
+    videoFrame.src='';
+  }
+}
+function renderVideoOverlay(item,legende){
+  const n=zoomedPhoto.urls.length;
+  videoCaption.textContent=legende||'';
+  videoCount.textContent=n>1 ? `${zoomedPhoto.index+1} / ${n}` : '';
+  videoPrev.style.display=n>1 ? '' : 'none';
+  videoNext.style.display=n>1 ? '' : 'none';
+  const src=driveEmbedUrl(item.url);
+  if(videoFrame.src!==src) videoFrame.src=src;
+  videoOverlay.classList.add('open');
+}
+videoOverlay.addEventListener('click', (e)=>{ if(e.target===videoOverlay){ zoomedPhoto=null; hideVideoOverlay(); } });
+videoPrev.addEventListener('click', (e)=>{ e.stopPropagation(); if(zoomedPhoto&&zoomedPhoto.urls){ const n=zoomedPhoto.urls.length; zoomedPhoto.index=(zoomedPhoto.index-1+n)%n; } });
+videoNext.addEventListener('click', (e)=>{ e.stopPropagation(); if(zoomedPhoto&&zoomedPhoto.urls){ const n=zoomedPhoto.urls.length; zoomedPhoto.index=(zoomedPhoto.index+1)%n; } });
+
 // Par défaut une photo reste visible tant qu'on est dans son mois. Activé, elle
 // n'apparaît qu'au moment précis où le marcheur passe sur sa date, et disparaît
 // dès qu'il l'a dépassée — un effet de décor qui se révèle au fil de la route.
@@ -4825,15 +4907,19 @@ async function fetchCalendarEventsRange(calendarId, token){
 }
 
 // Pièces jointes Drive attachées directement sur l'événement dans Google Agenda
-// (trombone "Ajouter une pièce jointe") : on prend toutes les images (pas
-// seulement la première) ; fileUrl est ensuite normalisée par
-// normalizePhotoUrl() en URL d'image directement chargeable.
+// (trombone "Ajouter une pièce jointe") : on prend toutes les images et vidéos
+// (pas seulement la première) ; fileUrl est ensuite normalisé par
+// normalizePhotoUrl() en URL de vignette directement chargeable (Drive fournit
+// une vignette même pour une vidéo). Chaque entrée garde `isVideo` pour savoir,
+// au clic, s'il faut ouvrir le lecteur vidéo intégré plutôt que zoomer l'image.
 function extractEventPhotos(gev){
   const atts = gev.attachments;
   if(!Array.isArray(atts) || !atts.length) return [];
-  const imgs = atts.filter(a=>a.mimeType && a.mimeType.indexOf('image/')===0);
-  const list = imgs.length ? imgs : atts.slice(0,1);
-  return list.map(a=>a.fileUrl).filter(Boolean);
+  const isImg=a=>a.mimeType && a.mimeType.indexOf('image/')===0;
+  const isVid=a=>a.mimeType && a.mimeType.indexOf('video/')===0;
+  const media = atts.filter(a=>isImg(a)||isVid(a));
+  const list = media.length ? media : atts.slice(0,1);
+  return list.map(a=>a.fileUrl ? {url:a.fileUrl, isVideo:isVid(a)} : null).filter(Boolean);
 }
 function googleEventToEntry(gev, side, who){
   if(gev.status === 'cancelled') return null;

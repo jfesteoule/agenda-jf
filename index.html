@@ -3171,8 +3171,7 @@ function drawEventSign(it,alpha){
       else line=test;
     }
     if(lines.length<titleLines && line) lines.push(line);
-    const showDate=maxLines>lines.length;
-    const blockH=(lines.length+(showDate?0.9:0))*fs*1.2;
+    const blockH=lines.length*fs*1.2;
     const y0=pTL.y+(h-blockH)/2;
     lines.forEach((ln,i2)=>{
       let t=ln;
@@ -3180,11 +3179,24 @@ function drawEventSign(it,alpha){
       if(t!==ln) t=t.slice(0,-1)+'…';
       ctx.fillText(t, textX, y0+i2*fs*1.2);
     });
-    if(showDate){
-      ctx.font=`400 ${(fs*0.8).toFixed(1)}px Archivo, Arial, sans-serif`;
-      ctx.fillStyle='#8a7a5c';
-      ctx.fillText(shortDate(e.day), textX, y0+lines.length*fs*1.2+fs*0.1);
-    }
+  }
+
+  // Numéro du jour (sans mois ni année), dans un petit rond en bas à droite du panneau.
+  {
+    const dr=Math.max(5,Math.min(11,h*0.13));
+    const dcx=pTL.x+w-dr-Math.max(2,w*0.03), dcy=pTL.y+h-dr-Math.max(2,h*0.05);
+    const dayNum=new Date(MONTH_ORIGIN_MS+e.day*86400000).getUTCDate();
+    ctx.beginPath(); ctx.arc(dcx,dcy,dr,0,Math.PI*2);
+    ctx.fillStyle=night?'#3a342a':'#fff';
+    ctx.fill();
+    ctx.lineWidth=Math.max(1,dr*0.14);
+    ctx.strokeStyle=accent;
+    ctx.stroke();
+    ctx.fillStyle=night?'#e7e3d6':'#2b241c';
+    ctx.font=`600 ${(dr*1.05).toFixed(1)}px Archivo, Arial, sans-serif`;
+    ctx.textAlign='center'; ctx.textBaseline='middle';
+    ctx.fillText(String(dayNum), dcx, dcy+dr*0.06);
+    ctx.textAlign='left'; ctx.textBaseline='top';
   }
   ctx.restore();
   ctx.globalAlpha=1;

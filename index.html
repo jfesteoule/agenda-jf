@@ -3134,11 +3134,17 @@ function drawEventSign(it,alpha){
     const p=PHOTOS.find(p=>p.loaded && p.day===e.day && p.side===e.side && revealOk);
     if(p){ photoImg=p.img; photoLegende=p.legende; }
   }
+  // Rond jour/semaine en bas à droite : on réserve sa place d'abord pour que
+  // la photo et le titre ne puissent jamais passer dessous.
+  const dr=Math.max(6,Math.min(13,h*0.15));
+  const badgeMargin=Math.max(2,w*0.03);
+  const contentH=Math.max(h*0.4,h-dr*2-badgeMargin);
+
   const pad=w*0.07;
   let textX=pTL.x+w*0.09, textW=w-w*0.18;
   if(photoImg){
-    const imgSize=Math.min(h-pad*2, w*0.38);
-    const imgX=pTL.x+w-pad-imgSize, imgY=pTL.y+(h-imgSize)/2;
+    const imgSize=Math.min(contentH-pad*2, w*0.38);
+    const imgX=pTL.x+w-pad-imgSize, imgY=pTL.y+(contentH-imgSize)/2;
     ctx.drawImage(photoImg,imgX,imgY,imgSize,imgSize);
     if(photoUrlList && photoUrlList.length>1){
       const bs=Math.max(9,imgSize*0.22);
@@ -3155,8 +3161,8 @@ function drawEventSign(it,alpha){
     textW=w-w*0.18-imgSize-pad;
   }
 
-  const fs=Math.min(h*0.3,18);
-  const inner=h*0.84;
+  const fs=Math.min(contentH*0.34,18);
+  const inner=contentH*0.84;
   const maxLines=Math.floor(inner/(fs*1.2));
   if(fs>=8 && maxLines>=1 && textW>10){
     ctx.fillStyle='#2b241c';
@@ -3172,7 +3178,7 @@ function drawEventSign(it,alpha){
     }
     if(lines.length<titleLines && line) lines.push(line);
     const blockH=lines.length*fs*1.2;
-    const y0=pTL.y+(h-blockH)/2;
+    const y0=pTL.y+(contentH-blockH)/2;
     lines.forEach((ln,i2)=>{
       let t=ln;
       while(ctx.measureText(t).width>textW && t.length>1) t=t.slice(0,-1);
@@ -3181,11 +3187,12 @@ function drawEventSign(it,alpha){
     });
   }
 
-  // Numéro du jour (sans mois ni année), dans un petit rond en bas à droite du panneau.
+  // Jour de la semaine (3 lettres) + numéro du jour, sans mois ni année,
+  // dans le petit rond réservé en bas à droite du panneau.
   {
-    const dr=Math.max(5,Math.min(11,h*0.13));
-    const dcx=pTL.x+w-dr-Math.max(2,w*0.03), dcy=pTL.y+h-dr-Math.max(2,h*0.05);
+    const dcx=pTL.x+w-dr-badgeMargin, dcy=pTL.y+h-dr-badgeMargin;
     const dayNum=new Date(MONTH_ORIGIN_MS+e.day*86400000).getUTCDate();
+    const dow=['dim','lun','mar','mer','jeu','ven','sam'][((e.day%7)+7)%7];
     ctx.beginPath(); ctx.arc(dcx,dcy,dr,0,Math.PI*2);
     ctx.fillStyle=night?'#3a342a':'#fff';
     ctx.fill();
@@ -3193,8 +3200,17 @@ function drawEventSign(it,alpha){
     ctx.strokeStyle=accent;
     ctx.stroke();
     ctx.fillStyle=night?'#e7e3d6':'#2b241c';
-    ctx.font=`600 ${(dr*1.05).toFixed(1)}px Archivo, Arial, sans-serif`;
     ctx.textAlign='center'; ctx.textBaseline='middle';
+    if(dr>=9){
+      ctx.font=`600 ${(dr*0.42).toFixed(1)}px Archivo, Arial, sans-serif`;
+      ctx.fillText(dow, dcx, dcy-dr*0.36);
+      ctx.font=`700 ${(dr*0.72).toFixed(1)}px Archivo, Arial, sans-serif`;
+      ctx.fillText(String(dayNum), dcx, dcy+dr*0.28);
+    }else{
+      ctx.font=`600 ${(dr*1.05).toFixed(1)}px Archivo, Arial, sans-serif`;
+      ctx.fillText(String(dayNum), dcx, dcy+dr*0.06);
+    }
+    ctx.textAlign='left'; ctx.textBaseline='top';
     ctx.fillText(String(dayNum), dcx, dcy+dr*0.06);
     ctx.textAlign='left'; ctx.textBaseline='top';
   }

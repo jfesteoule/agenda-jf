@@ -2757,8 +2757,27 @@ function refreshAutoMultiDay(){
   AUTO_RUNS=runs; AUTO_EXCLUDE=exclude;
 }
 
+// Coupe un titre en 2 lignes aussi équilibrées que possible (au niveau des
+// mots) pour réduire l'écrasement horizontal du texte peint au sol : un
+// titre long sur une seule ligne doit être compressé beaucoup plus fort
+// pour tenir dans la largeur de la route, ce qui le rend illisible.
+function wrapRoadLabel(text){
+  const words=(text||'').trim().split(/\s+/);
+  if(words.length<2) return [text];
+  let best=null;
+  for(let i=1;i<words.length;i++){
+    const l1=words.slice(0,i).join(' '), l2=words.slice(i).join(' ');
+    const score=Math.max(ctx.measureText(l1).width,ctx.measureText(l2).width);
+    if(!best||score<best.score) best={l1,l2,score};
+  }
+  return [best.l1,best.l2];
+}
+
 // Peint un texte à plat sur la chaussée, au jour `dayIdx`, déformé en
 // perspective (même technique que la date peinte les jours de week-end).
+// Les titres de plus d'un mot sont répartis sur 2 lignes (l'une derrière
+// l'autre dans le sens de la route) pour limiter l'étirement/l'écrasement
+// du texte quand le titre est long.
 function paintRoadLabel(dayIdx,text,color,lat){
   lat=lat||0;
   const d0=dayToDist(dayIdx);
@@ -2769,23 +2788,35 @@ function paintRoadLabel(dayIdx,text,color,lat){
   // rapport à 1,7 pour garder une forme stable même quand le texte grandit.
   const near=Math.max(d0+SP*0.1, far/1.7);
   if(near<9||near>170) return;
-  const P0=proj(near,lat-1.7,0), PU=proj(near,lat+1.7,0), PV=proj(far,lat-1.7,0);
-  const ux=PU.x-P0.x, uy=PU.y-P0.y;
-  const vx=PV.x-P0.x, vy=PV.y-P0.y;
-  const wpx=Math.hypot(ux,uy);
-  if(wpx<26||Math.hypot(vx,vy)>H*0.5) return;
+
   ctx.save();
   ctx.beginPath(); ctx.rect(0,horizonScreenY(),W,H-horizonScreenY()); ctx.clip();
   ctx.font='700 100px Oswald, Arial, sans-serif';
-  const tw=ctx.measureText(text).width;
-  ctx.transform(ux/tw, uy/tw, -vx/100, -vy/100, P0.x, P0.y);
-  ctx.globalAlpha=Math.min(0.95,Math.max(0,(170-near)/100));
-  ctx.strokeStyle='rgba(0,0,0,0.55)';
-  ctx.lineWidth=9;
-  ctx.textAlign='left'; ctx.textBaseline='alphabetic';
-  ctx.strokeText(text,0,0);
-  ctx.fillStyle=color;
-  ctx.fillText(text,0,0);
+
+  const lines=wrapRoadLabel(text);
+  const mid=(near+far)/2;
+  const segs=lines.length===2 ? [[near,mid],[mid,far]] : [[near,far]];
+  const twMax=Math.max(...lines.map(l=>ctx.measureText(l).width));
+
+  lines.forEach((line,i)=>{
+    const [n0,f0]=segs[i];
+    const P0=proj(n0,lat-1.7,0), PU=proj(n0,lat+1.7,0), PV=proj(f0,lat-1.7,0);
+    const ux=PU.x-P0.x, uy=PU.y-P0.y;
+    const vx=PV.x-P0.x, vy=PV.y-P0.y;
+    const wpx=Math.hypot(ux,uy);
+    if(wpx<26||Math.hypot(vx,vy)>H*0.5) return;
+    ctx.save();
+    ctx.transform(ux/twMax, uy/twMax, -vx/100, -vy/100, P0.x, P0.y);
+    ctx.globalAlpha=Math.min(0.95,Math.max(0,(170-n0)/100));
+    ctx.strokeStyle='rgba(0,0,0,0.55)';
+    ctx.lineWidth=9;
+    ctx.textAlign='left'; ctx.textBaseline='alphabetic';
+    ctx.strokeText(line,0,0);
+    ctx.fillStyle=color;
+    ctx.fillText(line,0,0);
+    ctx.restore();
+  });
+
   ctx.restore();
   ctx.globalAlpha=1;
 }

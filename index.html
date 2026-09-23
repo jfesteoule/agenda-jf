@@ -2787,7 +2787,10 @@ function paintRoadLabel(dayIdx,text,color,lat){
   // rapport à "loin", et le texte se déforme fortement. On plafonne ce
   // rapport à 1,7 pour garder une forme stable même quand le texte grandit.
   const near=Math.max(d0+SP*0.1, far/1.7);
-  if(near<9||near>170) return;
+  // On ne coupe qu'une fois le repère vraiment sous/derrière la caméra
+  // (near<=0) : le nom reste peint et lisible tant que la voiture ou le
+  // bonhomme ne l'a pas complètement dépassé, au lieu de s'effacer trop tôt.
+  if(near<=0||near>170) return;
 
   ctx.save();
   ctx.beginPath(); ctx.rect(0,horizonScreenY(),W,H-horizonScreenY()); ctx.clip();
@@ -2857,23 +2860,28 @@ function drawMultiDayEvents(){
     const d2=Math.max(0,Math.min(TOTAL_DAYS,ev.day2));
     if(d2<=d1) return;
     const dist1=dayToDist(d1), dist2=dayToDist(d2);
-    if(dist2<2||dist1>260) return;
-    const cd1=Math.max(dist1,2), cd2=Math.min(dist2,260);
-    if(cd2<=cd1) return;
+    // Le trait au sol s'arrête peu après le passage de la voiture (comme avant),
+    // mais les noms peints restent tentés indépendamment un peu plus longtemps
+    // (paintRoadLabel décide lui-même jusqu'où) pour ne pas s'effacer dès que
+    // la voiture ou le bonhomme les a dépassés.
+    if(dist2<-60||dist1>260) return;
 
     const color=overlap[idx]?'#1a73e8':'#ffd600';
 
-    ctx.strokeStyle=color;
-    ctx.lineWidth=6;
-    ctx.lineCap='round';
-    ctx.beginPath();
-    const n=24;
-    for(let i=0;i<=n;i++){
-      const d=cd1+(cd2-cd1)*(i/n);
-      const p=proj(d,0,0.05);
-      i?ctx.lineTo(p.x,p.y):ctx.moveTo(p.x,p.y);
+    const cd1=Math.max(dist1,2), cd2=Math.min(dist2,260);
+    if(cd2>cd1){
+      ctx.strokeStyle=color;
+      ctx.lineWidth=6;
+      ctx.lineCap='round';
+      ctx.beginPath();
+      const n=24;
+      for(let i=0;i<=n;i++){
+        const d=cd1+(cd2-cd1)*(i/n);
+        const p=proj(d,0,0.05);
+        i?ctx.lineTo(p.x,p.y):ctx.moveTo(p.x,p.y);
+      }
+      ctx.stroke();
     }
-    ctx.stroke();
 
     const startLabelDay=overlap[idx]?Math.min(d2,d1+1):d1;
     paintRoadLabel(startLabelDay,ev.title,color);

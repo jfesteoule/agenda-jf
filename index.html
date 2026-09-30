@@ -310,7 +310,9 @@ canvas#c{position:absolute;inset:0;width:100%;height:100%;touch-action:none;poin
 </div>
 <script>
 
-const TOTAL_DAYS=1825;
+// Borne initiale de la route (jusqu'à fin 2027) ; prolongée automatiquement
+// par applyEventsData() pour ne jamais s'arrêter (voir plus bas).
+let TOTAL_DAYS=1825;
 const TODAY_DAY=Math.round((new Date().setHours(0,0,0,0)-new Date("2023-01-01T00:00:00Z").getTime())/86400000);
 const TODAY_DOW=0;
 const EVT_JF=[
@@ -2245,6 +2247,10 @@ function shortDate(d){
 // ===== DRAW FUNCTIONS =====
 
 function draw(ts){
+  // Économie de batterie : onglet caché ou app en arrière-plan sur mobile →
+  // on arrête complètement la boucle plutôt que de continuer à redessiner
+  // 60x/seconde pour rien ; elle repart au retour de visibilité (voir plus bas).
+  if(document.hidden) return;
   if(!lastTs)lastTs=ts;
   const dt=Math.min((ts-lastTs)/1000,0.1); lastTs=ts;
 
@@ -2718,7 +2724,15 @@ let AUTO_RUNS=[], AUTO_EXCLUDE=new Set();
 // (dernier jour inclus). Rempli par syncAllCalendars, lu ici pour éviter le double
 // affichage (texte du jour + trait) et pour être tracés comme les autres.
 let EXPLICIT_RUNS=[];
+// Ne dépend ni de camDay ni du temps : le résultat ne change que si les
+// événements ou les bascules JF/Anne changent. On évite donc de tout
+// reconstruire à chaque frame (60x/seconde) en ne relançant le calcul que
+// lorsque cette signature bouge réellement.
+let _autoMultiDaySig=null;
 function refreshAutoMultiDay(){
+  const sig=showJF+'|'+showAnne+'|'+ALL_EVENTS.length+'|'+EXPLICIT_RUNS.length;
+  if(sig===_autoMultiDaySig) return;
+  _autoMultiDaySig=sig;
   // Détecte automatiquement, dans tout l'agenda (EVT_JF + EVT_ANNE),
   // les événements de même titre qui se répètent sur des jours consécutifs :
   // ce sont des événements multi-jours qu'on affichera avec nom au départ,
@@ -3591,7 +3605,8 @@ function updateEta(){
   } else {
     document.getElementById('eta-who').textContent='Fin du parcours';
     document.getElementById('eta-who').style.color='#5f6368';
-    document.getElementById('eta-name').textContent='31 décembre 2027';
+    const endDate=new Date(MONTH_ORIGIN_MS+TOTAL_DAYS*86400000);
+    document.getElementById('eta-name').textContent=endDate.toLocaleDateString('fr-FR',{day:'numeric',month:'long',year:'numeric'});
     document.getElementById('eta-d').textContent='—';
     document.getElementById('eta-u').textContent='';
   }
@@ -3743,6 +3758,11 @@ document.getElementById('menu-week').addEventListener('click',()=>{ menuPanel.cl
 document.getElementById('menu-night').addEventListener('click',()=>{ menuPanel.classList.remove('open'); document.getElementById('nightbtn').click(); });
 
 resize(); requestAnimationFrame(draw); window.addEventListener('resize',resize);
+// Relance la boucle de rendu au retour de visibilité (onglet réactivé, app
+// remise au premier plan) ; draw() s'arrête de lui-même pendant que c'est caché.
+document.addEventListener('visibilitychange',()=>{
+  if(!document.hidden){ lastTs=null; requestAnimationFrame(draw); }
+});
 
 document.getElementById('playbtn').addEventListener('click',()=>{
   if(playingReverse){playingReverse=false;}
@@ -4045,7 +4065,7 @@ function closeDayPanel(){
 document.getElementById('dp-close').addEventListener('click',closeDayPanel);
 document.getElementById('dayPanelScrim').addEventListener('click',closeDayPanel);
 
-const SBOX_TITLE="Route du temps · Jan 2023 › Déc 2027";
+let SBOX_TITLE="Route du temps · Jan 2023 › Déc 2027";
 const SBOX_MAX_RESULTS=6;
 const sbox=document.getElementById('sbox');
 const searchResults=document.getElementById('searchResults');
@@ -4533,6 +4553,26 @@ function applyEventsData(events){
 
   ALL_EVENTS.length=0;
   [...EVT_JF,...EVT_ANNE].sort((a,b)=>a.day-b.day).forEach(e=>ALL_EVENTS.push(e));
+
+  // La route ne doit jamais s'arrêter : on la prolonge pour garder au moins
+  // 2 ans d'avance sur aujourd'hui, et pour couvrir tout événement connu
+  // plus loin dans le futur (ex. le day2 d'un séjour). Ne raccourcit jamais
+  // la route existante, ne fait que l'étendre si besoin.
+  const maxKnownDay=Math.max(0, ...ALL_EVENTS.map(e=>e.day), ...EXPLICIT_RUNS.map(r=>r.day2));
+  TOTAL_DAYS=Math.max(TOTAL_DAYS, TODAY_DAY+730, maxKnownDay+365);
+  updateRouteRangeLabels();
+}
+
+// Libellés qui affichent la plage de la route (titre de page, sous-titre de
+// la recherche), recalculés à partir de TOTAL_DAYS à chaque chargement de
+// données pour ne jamais rester figés sur une date de fin dépassée.
+function updateRouteRangeLabels(){
+  const endDate=new Date(MONTH_ORIGIN_MS+TOTAL_DAYS*86400000);
+  const endYear=endDate.getUTCFullYear();
+  document.title=`Route du temps 2023-${endYear}`;
+  const wasDefault=(typeof sbox!=='undefined' && sbox.value===SBOX_TITLE);
+  SBOX_TITLE=`Route du temps · Jan 2023 › ${endDate.toLocaleDateString('fr-FR',{month:'short',year:'numeric'})}`;
+  if(typeof sbox!=='undefined' && (wasDefault || !sbox.value.trim())) sbox.value=SBOX_TITLE;
 }
 
 async function syncAllCalendars(silent){

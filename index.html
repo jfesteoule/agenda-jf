@@ -151,9 +151,7 @@ canvas#c{position:absolute;inset:0;width:100%;height:100%;touch-action:none;poin
 .wp-evrow{display:flex;align-items:center;gap:9px;width:100%;padding:5px 4px;background:none;border:none;cursor:pointer;text-align:left;font-family:'Archivo',Arial,sans-serif;font-size:13px;color:#2b241c;}
 .wp-empty{padding:3px 4px;font-size:12px;color:#b9b3a5;}
 </style>
-  <script src="https://accounts.google.com/gsi/client" async defer>
-window.syncAllCalendars = syncAllCalendars;
-</script>
+  <script src="https://accounts.google.com/gsi/client" async defer></script>
 
 <style>
 @keyframes spin { from{transform:rotate(0deg)} to{transform:rotate(360deg)} }
@@ -1920,32 +1918,6 @@ const EVT_ANNE=[
   {day:1511,label:'20 Feb',title:'2 alpes immo',color:'#e67c73',side:'left',who:'Anne'}
 ];
 
-const VACANCES_A=[
-  {label:'Noël',start:0,end:2},
-  {label:'Hiver',start:34,end:50},
-  {label:'Printemps',start:97,end:113},
-  {label:'Été',start:188,end:246},
-  {label:'Toussaint',start:293,end:309},
-  {label:'Noël',start:356,end:372},
-  {label:'Hiver',start:405,end:421},
-  {label:'Printemps',start:461,end:477},
-  {label:'Été',start:552,end:610},
-  {label:'Toussaint',start:657,end:673},
-  {label:'Noël',start:720,end:736},
-  {label:'Hiver',start:769,end:785},
-  {label:'Printemps',start:825,end:842},
-  {label:'Été',start:916,end:974},
-  {label:'Toussaint',start:1021,end:1037},
-  {label:'Noël',start:1084,end:1100},
-  {label:'Hiver',start:1133,end:1149},
-  {label:'Printemps',start:1189,end:1205},
-  {label:'Été',start:1280,end:1339},
-  {label:'Toussaint',start:1385,end:1401},
-  {label:'Noël',start:1448,end:1464},
-  {label:'Hiver',start:1497,end:1513},
-  {label:'Printemps',start:1560,end:1576},
-  {label:'Été',start:1644,end:1825}
-];
 const VACANCES_B=[
   {label:'Noël',start:0,end:2},
   {label:'Hiver',start:41,end:57},
@@ -1972,7 +1944,6 @@ const VACANCES_B=[
   {label:'Printemps',start:1567,end:1583},
   {label:'Été',start:1644,end:1825}
 ];
-function isVacanceB(day){ return VACANCES_B.some(v=>day>=v.start&&day<=v.end); }
 const MULTI_EVENTS=[
   {day1:27,day2:29,title:'Saint Vincent tournante annulée',color:'#f6bf26',side:'right',who:'JF'},
   {day1:34,day2:42,title:'Balcons de vaujany',color:'#f6bf26',side:'right',who:'JF'},
@@ -2776,7 +2747,7 @@ function refreshAutoMultiDay(){
     }
     flush();
   });
-  EXPLICIT_RUNS.forEach(r=>exclude.add(r.side+''+r.day1+''+r.title));
+  EXPLICIT_RUNS.forEach(r=>exclude.add(r.side+String.fromCharCode(1)+r.day1+String.fromCharCode(1)+r.title));
   AUTO_RUNS=runs; AUTO_EXCLUDE=exclude;
 }
 

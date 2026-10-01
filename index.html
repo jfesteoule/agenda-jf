@@ -2662,6 +2662,20 @@ function drawHaze(){
   ctx.fillStyle=vg; ctx.fillRect(0,0,W,H);
 }
 
+// Irrégularité organique des bords du chemin de terre (mode marche à pied) :
+// un vrai chemin n'a pas deux bords parfaitement parallèles comme une route
+// goudronnée. Basé sur la position absolue dans le monde (camDay*SP+dist),
+// pas sur la distance à la caméra, pour que les irrégularités restent fixes
+// au même endroit du chemin plutôt que de « nager » en avançant. Un décalage
+// de phase différent entre bord gauche et droit évite un effet de
+// respiration symétrique (largeur qui varie, pas juste tout le chemin qui
+// ondule en bloc).
+function pathEdgeWobble(worldPos,seed){
+  return 0.28*Math.sin(worldPos*0.08+seed)
+       + 0.14*Math.sin(worldPos*0.23+seed*2.1)
+       + 0.07*Math.sin(worldPos*0.55+seed*3.7);
+}
+
 // === CHAUSSÉE : accotement, asphalte, marquages, week-end, jours fériés, 1er du mois ===
 function drawRoadSurface(){
   const hzL=horizonScreenY();
@@ -2688,9 +2702,18 @@ function drawRoadSurface(){
   }
 
   // chaussée (ou chemin de terre en mode marche à pied)
+  const camW_=camDay*SP;
   ctx.beginPath();
-  for(let i=dists.length-1;i>=0;i--){ const p=proj(dists[i],-RW,0); i===dists.length-1?ctx.moveTo(p.x,p.y):ctx.lineTo(p.x,p.y); }
-  for(let i=0;i<dists.length;i++){ const p=proj(dists[i],RW,0); ctx.lineTo(p.x,p.y); }
+  for(let i=dists.length-1;i>=0;i--){
+    const latL=walkMode ? -RW+pathEdgeWobble(camW_+dists[i],0) : -RW;
+    const p=proj(dists[i],latL,0);
+    i===dists.length-1?ctx.moveTo(p.x,p.y):ctx.lineTo(p.x,p.y);
+  }
+  for(let i=0;i<dists.length;i++){
+    const latR=walkMode ? RW+pathEdgeWobble(camW_+dists[i],10) : RW;
+    const p=proj(dists[i],latR,0);
+    ctx.lineTo(p.x,p.y);
+  }
   ctx.closePath();
   ctx.save(); ctx.clip();
   const asph=ctx.createLinearGradient(0,hzL,0,H);

@@ -2596,6 +2596,15 @@ function makeNoiseCanvas(){
 }
 const ROAD_NOISE=makeNoiseCanvas();
 
+// Texture du chemin de terre (mode marche à pied) : pierres et touffes d'herbe,
+// générée avec Canva, plutôt qu'un simple bruit générique partagé avec la route.
+// Fichier séparé (pas de base64 inline) pour ne pas alourdir encore le HTML.
+// Tant qu'elle n'est pas chargée, drawRoadSurface() garde ROAD_NOISE en repli.
+const DIRT_PATH_TEXTURE=new Image();
+let dirtPathTextureLoaded=false;
+DIRT_PATH_TEXTURE.onload=()=>{ dirtPathTextureLoaded=true; };
+DIRT_PATH_TEXTURE.src='dirt-path.jpg';
+
 function drawHaze(){
   const hzL=horizonScreenY();
   const haze=ctx.createLinearGradient(0,hzL-H*0.12,0,hzL+H*0.14);
@@ -2642,10 +2651,17 @@ function drawRoadSurface(){
   }else if(night){ asph.addColorStop(0,'#2e3238'); asph.addColorStop(1,'#15171b'); }
   else{ asph.addColorStop(0,'#7c7d78'); asph.addColorStop(0.35,'#565752'); asph.addColorStop(1,'#3b3c39'); }
   ctx.fillStyle=asph; ctx.fillRect(0,hzL-4,W,H-hzL+4);
-  ctx.globalAlpha=night?0.05:0.11;
-  ctx.fillStyle=ctx.createPattern(ROAD_NOISE,'repeat');
-  ctx.fillRect(0,hzL-4,W,H-hzL+4);
-  ctx.globalAlpha=1;
+  if(walkMode && dirtPathTextureLoaded){
+    ctx.globalAlpha=night?0.5:0.85;
+    ctx.fillStyle=ctx.createPattern(DIRT_PATH_TEXTURE,'repeat');
+    ctx.fillRect(0,hzL-4,W,H-hzL+4);
+    ctx.globalAlpha=1;
+  } else {
+    ctx.globalAlpha=night?0.05:0.11;
+    ctx.fillStyle=ctx.createPattern(ROAD_NOISE,'repeat');
+    ctx.fillRect(0,hzL-4,W,H-hzL+4);
+    ctx.globalAlpha=1;
+  }
   if(!walkMode){
     ctx.strokeStyle=night?'rgba(255,255,255,0.03)':'rgba(0,0,0,0.10)';
     for(const lane of [-2.1,2.1]){

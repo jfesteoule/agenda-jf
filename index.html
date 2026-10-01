@@ -183,7 +183,7 @@ canvas#c{position:absolute;inset:0;width:100%;height:100%;touch-action:none;poin
     <button id="photosbtn" class="hudbtn-top" style="position:relative;z-index:1000;pointer-events:auto;width:40px;height:40px;min-width:40px;background:#fff;border-radius:50%;border:none;cursor:pointer;display:flex;align-items:center;justify-content:center;box-shadow:0 2px 6px rgba(0,0,0,0.2);color:#c1502f;font-size:18px;margin-left:6px;" title="Photos"><i class="ti ti-photo"></i></button>
     <button id="photorevealbtn" style="position:relative;z-index:1000;pointer-events:auto;width:40px;height:40px;min-width:40px;background:#fff;border-radius:50%;border:none;cursor:pointer;display:flex;align-items:center;justify-content:center;box-shadow:0 2px 6px rgba(0,0,0,0.2);color:#c1502f;font-size:18px;margin-left:6px;flex:none;" title="N'afficher une photo que quand la Méhari passe sur sa date"><i class="ti ti-car"></i></button>
     <button id="aerialbtn" class="hudbtn-top" style="position:relative;z-index:1000;pointer-events:auto;width:40px;height:40px;min-width:40px;background:#fff;border-radius:50%;border:none;cursor:pointer;display:flex;align-items:center;justify-content:center;box-shadow:0 2px 6px rgba(0,0,0,0.2);color:#c1502f;font-size:18px;margin-left:6px;" title="Vue à 45° au-dessus"><i class="ti ti-drone"></i></button>
-    <button id="walkbtn" class="hudbtn-top" style="position:relative;z-index:1000;pointer-events:auto;width:40px;height:40px;min-width:40px;background:#fff;border-radius:50%;border:none;cursor:pointer;display:flex;align-items:center;justify-content:center;box-shadow:0 2px 6px rgba(0,0,0,0.2);color:#c1502f;font-size:18px;margin-left:6px;" title="Marcher à pied au lieu de conduire"><i class="ti ti-walk"></i></button>
+    <button id="walkbtn" class="hudbtn-top" style="position:relative;z-index:1000;pointer-events:auto;width:40px;height:40px;min-width:40px;background:#fff;border-radius:50%;border:none;cursor:pointer;display:flex;align-items:center;justify-content:center;box-shadow:0 2px 6px rgba(0,0,0,0.2);color:#c1502f;font-size:18px;margin-left:6px;" title="Rouler en trottinette électrique au lieu de conduire"><i class="ti ti-scooter-electric"></i></button>
     <button id="weekbtn" class="hudbtn-top" style="position:relative;z-index:1000;pointer-events:auto;width:40px;height:40px;min-width:40px;background:#fff;border-radius:50%;border:none;cursor:pointer;display:flex;align-items:center;justify-content:center;box-shadow:0 2px 6px rgba(0,0,0,0.2);color:#c1502f;font-size:18px;margin-left:6px;" title="Volet hebdomadaire"><i class="ti ti-calendar-week"></i></button>
     <button id="nightbtn" class="hudbtn-top" style="position:relative;z-index:1000;pointer-events:auto;width:40px;height:40px;min-width:40px;background:#fff;border-radius:50%;border:none;cursor:pointer;display:flex;align-items:center;justify-content:center;box-shadow:0 2px 6px rgba(0,0,0,0.2);color:#c1502f;font-size:18px;margin-left:6px;" title="Nuit / jour"><i class="ti ti-sun" id="nightIcon"></i></button>
     <button id="jfonlybtn" class="hudbtn-top" style="position:relative;z-index:1000;pointer-events:auto;width:40px;height:40px;min-width:40px;background:#fff;border-radius:50%;border:none;cursor:pointer;display:flex;align-items:center;justify-content:center;box-shadow:0 2px 6px rgba(0,0,0,0.2);color:#c1502f;font-size:16px;font-weight:bold;margin-left:6px;" title="Masquer l'agenda de JF">JF</button>
@@ -195,7 +195,7 @@ canvas#c{position:absolute;inset:0;width:100%;height:100%;touch-action:none;poin
     <button id="menu-month" class="menuitem"><i class="ti ti-calendar-month"></i>Vue mensuelle</button>
     <button id="menu-photos" class="menuitem"><i class="ti ti-photo"></i>Photos</button>
     <button id="menu-aerial" class="menuitem"><i class="ti ti-drone"></i>Vue à 45°</button>
-    <button id="menu-walk" class="menuitem"><i class="ti ti-walk"></i>Marcher à pied</button>
+    <button id="menu-walk" class="menuitem"><i class="ti ti-scooter-electric"></i>Trottinette électrique</button>
     <button id="menu-week" class="menuitem"><i class="ti ti-calendar-week"></i>Volet hebdomadaire</button>
     <button id="menu-night" class="menuitem"><i class="ti ti-sun"></i>Nuit / jour</button>
     <button id="menu-jf" class="menuitem"><i class="ti ti-user"></i>Masquer l'agenda de JF</button>
@@ -2636,10 +2636,11 @@ let dirtPathTextureLoaded=false;
 DIRT_PATH_TEXTURE.onload=()=>{ dirtPathTextureLoaded=true; };
 DIRT_PATH_TEXTURE.src='dirt-path.jpg';
 
-// Photo du marcheur (mode marche à pied), générée avec Canva (fond supprimé) :
-// rendu photo-réaliste plutôt qu'un dessin vectoriel animé. Contrepartie assumée
-// avec l'utilisateur : la posture reste figée (une seule pose), seul un léger
-// rebond/balancement l'anime, au lieu de jambes qui marchent vraiment.
+// Photo du personnage en trottinette électrique (mode piéton), générée avec
+// Canva (fond supprimé) : rendu photo-réaliste plutôt qu'un dessin vectoriel
+// animé. Une pose debout sur une trottinette reste naturelle même figée
+// (contrairement à une foulée de marche arrêtée en plein mouvement), donc le
+// léger rebond/balancement suffit à la rendre moins statique.
 const WALKER_IMG=new Image();
 let walkerImgLoaded=false;
 WALKER_IMG.onload=()=>{ walkerImgLoaded=true; };
@@ -3539,16 +3540,16 @@ function drawWalker(){
   const px=(m)=>Math.abs(w)*(m/0.48);
   const pGround=proj(CD,0,bounce*0.3);
 
-  // ombre au sol, identique à l'ancien bonhomme dessiné
-  const shg=ctx.createRadialGradient(pGround.x,pGround.y,0,pGround.x,pGround.y,Math.abs(w)*1.7);
+  // ombre au sol, identique à l'ancien bonhomme dessiné (agrandie avec le reste)
+  const shg=ctx.createRadialGradient(pGround.x,pGround.y,0,pGround.x,pGround.y,Math.abs(w)*2.1);
   shg.addColorStop(0,'rgba(0,0,0,0.35)');
   shg.addColorStop(1,'rgba(0,0,0,0)');
   ctx.fillStyle=shg;
-  ctx.beginPath(); ctx.ellipse(pGround.x,pGround.y,Math.abs(w)*1.7,px(0.16),0,0,Math.PI*2); ctx.fill();
+  ctx.beginPath(); ctx.ellipse(pGround.x,pGround.y,Math.abs(w)*2.1,px(0.2),0,0,Math.PI*2); ctx.fill();
 
   if(!walkerImgLoaded) return;
   const aspect=WALKER_IMG.naturalHeight/WALKER_IMG.naturalWidth;
-  const drawW=Math.abs(w)*2.6, drawH=drawW*aspect;
+  const drawW=Math.abs(w)*3.3, drawH=drawW*aspect;
   if(night) ctx.filter='brightness(0.55)';
   ctx.drawImage(WALKER_IMG, pGround.x-drawW/2, pGround.y-drawH, drawW, drawH);
   if(night) ctx.filter='none';
@@ -3698,7 +3699,7 @@ document.getElementById('walkbtn').addEventListener('click',()=>{
   const btn=document.getElementById('walkbtn');
   btn.style.background=walkMode?'#c1502f':'#fff';
   btn.style.color=walkMode?'#fff':'#c1502f';
-  btn.title=walkMode?'Reprendre la voiture':'Marcher à pied au lieu de conduire';
+  btn.title=walkMode?'Reprendre la voiture':'Rouler en trottinette électrique au lieu de conduire';
 });
 document.getElementById('nightbtn').addEventListener('click',()=>{
   night=!night;

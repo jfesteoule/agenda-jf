@@ -2564,6 +2564,15 @@ let landscapeBgLoaded=false;
 LANDSCAPE_BG.onload=()=>{ landscapeBgLoaded=true; };
 LANDSCAPE_BG.src='landscape-bg.jpg';
 
+// Herbe au sol (de part et d'autre de la route/du chemin, accotement compris),
+// générée avec Canva : texture photo-réaliste plaquée en motif répété par-dessus
+// le dégradé existant (conservé en-dessous pour l'assombrissement avec la
+// distance), plutôt qu'une simple couleur plate.
+const GRASS_TEXTURE=new Image();
+let grassTextureLoaded=false;
+GRASS_TEXTURE.onload=()=>{ grassTextureLoaded=true; };
+GRASS_TEXTURE.src='grass-ground.jpg';
+
 function drawSkyAndLand(){
   const hzL=horizonScreenY();
   if(landscapeBgLoaded){
@@ -2596,6 +2605,12 @@ function drawSkyAndLand(){
   if(night){ gr.addColorStop(0,'#2a3125'); gr.addColorStop(1,'#161a12'); }
   else{ gr.addColorStop(0,'#9aa27c'); gr.addColorStop(0.5,'#7e885f'); gr.addColorStop(1,'#5f6a44'); }
   ctx.fillStyle=gr; ctx.fillRect(0,hzL,W,H-hzL);
+  if(grassTextureLoaded){
+    ctx.globalAlpha=night?0.35:0.75;
+    ctx.fillStyle=ctx.createPattern(GRASS_TEXTURE,'repeat');
+    ctx.fillRect(0,hzL,W,H-hzL);
+    ctx.globalAlpha=1;
+  }
 }
 
 // Texture de bruit réutilisée pour le grain de l'asphalte
@@ -2662,6 +2677,14 @@ function drawRoadSurface(){
   ctx.closePath();
   ctx.fillStyle=night?'#3a382e':'#a1957c';
   ctx.fill();
+  if(grassTextureLoaded){
+    ctx.save(); ctx.clip();
+    ctx.globalAlpha=night?0.3:0.7;
+    ctx.fillStyle=ctx.createPattern(GRASS_TEXTURE,'repeat');
+    ctx.fillRect(0,hzL-4,W,H-hzL+4);
+    ctx.globalAlpha=1;
+    ctx.restore();
+  }
 
   // chaussée (ou chemin de terre en mode marche à pied)
   ctx.beginPath();

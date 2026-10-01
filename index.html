@@ -2554,27 +2554,43 @@ function seasonSnowAt(day){
   return A.snowAmt+(B.snowAmt-A.snowAmt)*b.t;
 }
 // === Décor : ciel, reliefs lointains, sol — jour ou nuit ===
+// Décor lointain (ciel + collines), généré avec Canva : une vraie photo de
+// campagne vallonnée plutôt que des silhouettes vectorielles plates. Contrepartie
+// assumée : l'image ne défile plus très légèrement avec camDay comme avant (une
+// photo ne se répète pas sans couture visible), elle reste fixe en arrière-plan.
+// Tant qu'elle n'est pas chargée, on garde l'ancien rendu vectoriel en repli.
+const LANDSCAPE_BG=new Image();
+let landscapeBgLoaded=false;
+LANDSCAPE_BG.onload=()=>{ landscapeBgLoaded=true; };
+LANDSCAPE_BG.src='landscape-bg.jpg';
+
 function drawSkyAndLand(){
   const hzL=horizonScreenY();
-  const sky=ctx.createLinearGradient(0,0,0,hzL);
-  if(night){ sky.addColorStop(0,'#0d1524'); sky.addColorStop(1,'#2c3446'); }
-  else{ sky.addColorStop(0,'#8fb6d8'); sky.addColorStop(0.65,'#c9d9e3'); sky.addColorStop(1,'#e6e2d6'); }
-  ctx.fillStyle=sky; ctx.fillRect(0,0,W,hzL+2);
+  if(landscapeBgLoaded){
+    if(night) ctx.filter='brightness(0.3) saturate(0.7) hue-rotate(-8deg)';
+    ctx.drawImage(LANDSCAPE_BG,0,0,W,hzL+2);
+    if(night) ctx.filter='none';
+  } else {
+    const sky=ctx.createLinearGradient(0,0,0,hzL);
+    if(night){ sky.addColorStop(0,'#0d1524'); sky.addColorStop(1,'#2c3446'); }
+    else{ sky.addColorStop(0,'#8fb6d8'); sky.addColorStop(0.65,'#c9d9e3'); sky.addColorStop(1,'#e6e2d6'); }
+    ctx.fillStyle=sky; ctx.fillRect(0,0,W,hzL+2);
 
-  ctx.fillStyle=night?'#1a2130':'#a8aa9a';
-  ctx.beginPath(); ctx.moveTo(0,hzL);
-  for(let x=0;x<=W;x+=20){
-    const k=x/W*6+camDay*0.004;
-    ctx.lineTo(x,hzL-(18+26*Math.abs(Math.sin(k))+12*Math.abs(Math.sin(k*2.3))));
+    ctx.fillStyle=night?'#1a2130':'#a8aa9a';
+    ctx.beginPath(); ctx.moveTo(0,hzL);
+    for(let x=0;x<=W;x+=20){
+      const k=x/W*6+camDay*0.004;
+      ctx.lineTo(x,hzL-(18+26*Math.abs(Math.sin(k))+12*Math.abs(Math.sin(k*2.3))));
+    }
+    ctx.lineTo(W,hzL); ctx.closePath(); ctx.fill();
+    ctx.fillStyle=night?'#232b3a':'#8f9683';
+    ctx.beginPath(); ctx.moveTo(0,hzL);
+    for(let x=0;x<=W;x+=16){
+      const k=x/W*9+2+camDay*0.007;
+      ctx.lineTo(x,hzL-(6+16*Math.abs(Math.sin(k))));
+    }
+    ctx.lineTo(W,hzL); ctx.closePath(); ctx.fill();
   }
-  ctx.lineTo(W,hzL); ctx.closePath(); ctx.fill();
-  ctx.fillStyle=night?'#232b3a':'#8f9683';
-  ctx.beginPath(); ctx.moveTo(0,hzL);
-  for(let x=0;x<=W;x+=16){
-    const k=x/W*9+2+camDay*0.007;
-    ctx.lineTo(x,hzL-(6+16*Math.abs(Math.sin(k))));
-  }
-  ctx.lineTo(W,hzL); ctx.closePath(); ctx.fill();
 
   const gr=ctx.createLinearGradient(0,hzL,0,H);
   if(night){ gr.addColorStop(0,'#2a3125'); gr.addColorStop(1,'#161a12'); }

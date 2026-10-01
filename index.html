@@ -3476,8 +3476,10 @@ function drawMehari(){
   if(!mehariImgLoaded) return;
   const aspect=MEHARI_IMG.naturalHeight/MEHARI_IMG.naturalWidth;
   const drawW=w*1.55, drawH=drawW*aspect;
+  // 0.832 = ligne de contact pneu/sol mesurée dans le PNG (fond supprimé),
+  // pour que les roues touchent bien yGround au lieu de flotter au-dessus.
   if(night) ctx.filter='brightness(0.4) saturate(0.75)';
-  ctx.drawImage(MEHARI_IMG, cxc-drawW/2, yGround-drawH*0.97, drawW, drawH);
+  ctx.drawImage(MEHARI_IMG, cxc-drawW/2, yGround-drawH*0.832, drawW, drawH);
   if(night) ctx.filter='none';
 
   if(w>58){

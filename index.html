@@ -2646,6 +2646,17 @@ let walkerImgLoaded=false;
 WALKER_IMG.onload=()=>{ walkerImgLoaded=true; };
 WALKER_IMG.src='walker-realistic.png';
 
+// Touffes d'herbe (générées avec Canva, fond supprimé) semées de temps en
+// temps le long des deux bords du chemin de terre, voir drawRoadSurface().
+const GRASS_TUFT=new Image();
+let grassTuftLoaded=false;
+GRASS_TUFT.onload=()=>{ grassTuftLoaded=true; };
+GRASS_TUFT.src='grass-tuft.png';
+
+// Hash déterministe (0..1) pour semer les touffes de façon stable dans le
+// monde (pas de scintillement d'une frame à l'autre comme avec Math.random()).
+function hash01(n){ const x=Math.sin(n*12.9898)*43758.5453; return x-Math.floor(x); }
+
 function drawHaze(){
   const hzL=horizonScreenY();
   const haze=ctx.createLinearGradient(0,hzL-H*0.12,0,hzL+H*0.14);
@@ -2780,6 +2791,35 @@ function drawRoadSurface(){
     const dt=new Date(MONTH_ORIGIN_MS+k*86400000);
     if(dt.getUTCDate()===1){
       for(let s=-3;s<=3;s++) drawBand(d0,d0+SP*0.3, s*1.05-0.28, s*1.05+0.28, white, 0.85);
+    }
+  }
+
+  // Touffes d'herbe semées de temps en temps le long des deux bords du
+  // chemin (générées avec Canva), plantées pile sur le bord ondulé
+  // (pathEdgeWobble) pour accentuer la transition terre/herbe. Semis stable
+  // dans le monde via hash01(), pas de scintillement en avançant.
+  if(walkMode && grassTuftLoaded){
+    const step=2.4, tuftMaxD=Math.min(dF,70), tuftNearD=Math.max(dN,4);
+    for(let d=tuftNearD; d<tuftMaxD; d+=step){
+      [-1,1].forEach(side=>{
+        const cell=Math.round(d/step);
+        const seed=cell*1.618+side*91.7;
+        if(hash01(seed)>=0.3) return;
+        const jig=(hash01(seed+3.3)-0.5)*step*0.7;
+        const dd=d+jig;
+        const wob=pathEdgeWobble(camW_+dd, side<0?0:10);
+        const outward=0.1+hash01(seed+5.1)*0.22;
+        const lat=side*(RW+outward)+wob;
+        const scale=0.7+hash01(seed+7.2)*0.6;
+        const p=proj(dd,lat,0);
+        if(p.y<hzL||p.y>H+40) return;
+        const alpha=Math.min(1,(tuftMaxD-dd)/14);
+        const tuftW=Math.max(2,0.55*p.s*scale);
+        const tuftH=tuftW*(GRASS_TUFT.naturalHeight/GRASS_TUFT.naturalWidth);
+        ctx.globalAlpha=alpha;
+        ctx.drawImage(GRASS_TUFT, p.x-tuftW/2, p.y-tuftH*0.92, tuftW, tuftH);
+        ctx.globalAlpha=1;
+      });
     }
   }
 }

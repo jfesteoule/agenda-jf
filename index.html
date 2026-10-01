@@ -2646,6 +2646,15 @@ let walkerImgLoaded=false;
 WALKER_IMG.onload=()=>{ walkerImgLoaded=true; };
 WALKER_IMG.src='walker-realistic.png';
 
+// Photo de la Méhari décapotable avec son conducteur (mode conduite), générée
+// avec Canva (fond supprimé) : rendu photo-réaliste plutôt qu'un dessin
+// vectoriel. La plaque « JF 1968 » reste peinte par-dessus par le code
+// (texte fiable), le reste de la voiture vient de la photo.
+const MEHARI_IMG=new Image();
+let mehariImgLoaded=false;
+MEHARI_IMG.onload=()=>{ mehariImgLoaded=true; };
+MEHARI_IMG.src='mehari-realistic.png';
+
 // Petits cailloux blancs (générés avec Canva, fond supprimé) semés de façon
 // régulière le long des deux bords de la route/du chemin, voir drawRoadSurface().
 const WHITE_PEBBLES=new Image();
@@ -3441,6 +3450,8 @@ function drawRouteObjects(){
 }
 
 // === Méhari décapotable vue de l'arrière, conducteur au volant ===
+// Photo réaliste (Canva) à la place du dessin vectoriel ; seule la plaque
+// « JF 1968 » reste peinte par le code par-dessus (texte fiable).
 function drawMehari(){
   const bob=Math.sin(camDay*1.7)*0.03+Math.sin(camDay*0.9)*0.018;
   const sway=Math.sin(camDay*0.55)*0.1;
@@ -3454,138 +3465,31 @@ function drawMehari(){
   const [xR]=P(HW,0);
   const w=xR-xL;
   if(w<14) return;
-  const px=(m)=>w*(m/(HW*2));
-  const Y=(h)=>P(0,h)[1];
-  const yRoll=Y(1.52), yBody=Y(0.93), yWaist=Y(0.72), yAxle=Y(0.31), yBumper=Y(0.40);
   const cxc=(xL+xR)/2;
-  const light=!night;
 
   const shg=ctx.createRadialGradient(cxc,yGround,0,cxc,yGround,w*0.62);
   shg.addColorStop(0,'rgba(0,0,0,0.42)');
   shg.addColorStop(1,'rgba(0,0,0,0)');
   ctx.fillStyle=shg;
-  ctx.beginPath(); ctx.ellipse(cxc,yGround-px(0.02),w*0.62,px(0.2),0,0,Math.PI*2); ctx.fill();
+  ctx.beginPath(); ctx.ellipse(cxc,yGround-w*0.013,w*0.62,w*0.13,0,0,Math.PI*2); ctx.fill();
 
-  const rw=px(0.19), rh=yGround-yAxle;
-  for(const sx of [xL+px(0.02), xR-px(0.02)-rw]){
-    ctx.fillStyle=night?'#101114':'#1c1d21';
-    ctx.beginPath();
-    ctx.moveTo(sx,yAxle); ctx.lineTo(sx+rw,yAxle);
-    ctx.lineTo(sx+rw,yGround-px(0.03)); ctx.quadraticCurveTo(sx+rw/2,yGround+px(0.02),sx,yGround-px(0.03));
-    ctx.closePath(); ctx.fill();
-    if(w>55){
-      ctx.fillStyle=night?'#2b2c30':'#4a4b50';
-      ctx.fillRect(sx+rw*0.22,yAxle+rh*0.18,rw*0.56,rh*0.42);
-    }
-  }
+  if(!mehariImgLoaded) return;
+  const aspect=MEHARI_IMG.naturalHeight/MEHARI_IMG.naturalWidth;
+  const drawW=w*1.55, drawH=drawW*aspect;
+  if(night) ctx.filter='brightness(0.4) saturate(0.75)';
+  ctx.drawImage(MEHARI_IMG, cxc-drawW/2, yGround-drawH*0.97, drawW, drawH);
+  if(night) ctx.filter='none';
 
-  const bodyTopL=xL+px(0.05), bodyTopR=xR-px(0.05);
-  const grad=ctx.createLinearGradient(xL,0,xR,0);
-  if(light){
-    grad.addColorStop(0,'#b8541f'); grad.addColorStop(0.22,'#e08341');
-    grad.addColorStop(0.62,'#cf6c2c'); grad.addColorStop(1,'#9f4a1a');
-  }else{
-    grad.addColorStop(0,'#5a2c11'); grad.addColorStop(0.3,'#8a4a22'); grad.addColorStop(1,'#452007');
-  }
-  ctx.fillStyle=grad;
-  ctx.beginPath();
-  ctx.moveTo(bodyTopL,yBody); ctx.lineTo(bodyTopR,yBody);
-  ctx.lineTo(xR,yWaist); ctx.lineTo(xR,yBumper);
-  ctx.lineTo(xL,yBumper); ctx.lineTo(xL,yWaist);
-  ctx.closePath(); ctx.fill();
-
-  if(w>40){
-    ctx.strokeStyle=light?'rgba(0,0,0,0.16)':'rgba(0,0,0,0.3)';
-    ctx.lineWidth=Math.max(1,px(0.025));
-    for(let i=1;i<=5;i++){
-      const rx=xL+(w*i)/6;
-      ctx.beginPath(); ctx.moveTo(rx,yWaist+px(0.03)); ctx.lineTo(rx,yBumper-px(0.02)); ctx.stroke();
-    }
-  }
-  ctx.strokeStyle=light?'rgba(255,255,255,0.35)':'rgba(255,255,255,0.12)';
-  ctx.lineWidth=Math.max(1,px(0.03));
-  ctx.beginPath(); ctx.moveTo(xL+px(0.03),yWaist); ctx.lineTo(xR-px(0.03),yWaist); ctx.stroke();
-
-  ctx.fillStyle=night?'#141518':'#232019';
-  ctx.beginPath();
-  ctx.moveTo(bodyTopL+px(0.09),yBody);
-  ctx.lineTo(bodyTopR-px(0.09),yBody);
-  ctx.lineTo(bodyTopR-px(0.13),yBody+px(0.3));
-  ctx.lineTo(bodyTopL+px(0.13),yBody+px(0.3));
-  ctx.closePath(); ctx.fill();
-
-  ctx.strokeStyle=night?'#4a463d':'#6d6659';
-  ctx.lineWidth=Math.max(1.2,px(0.06));
-  ctx.beginPath();
-  ctx.moveTo(xL+px(0.14),yBody);
-  ctx.lineTo(xL+px(0.14),yRoll+px(0.08));
-  ctx.quadraticCurveTo(xL+px(0.14),yRoll,xL+px(0.26),yRoll);
-  ctx.lineTo(xR-px(0.26),yRoll);
-  ctx.quadraticCurveTo(xR-px(0.14),yRoll,xR-px(0.14),yRoll+px(0.08));
-  ctx.lineTo(xR-px(0.14),yBody);
-  ctx.stroke();
-  const capH=Math.max(1.5,px(0.13));
-  const cg=ctx.createLinearGradient(0,yRoll,0,yRoll+capH);
-  cg.addColorStop(0,night?'#3b382f':'#575043');
-  cg.addColorStop(1,night?'#22201b':'#332f27');
-  ctx.fillStyle=cg;
-  ctx.fillRect(xL+px(0.2),yRoll,w-px(0.4),capH);
-
-  const seatW=px(0.34), seatH=Math.max(2,px(0.26));
-  ctx.fillStyle=night?'#2a2721':'#403a31';
-  ctx.fillRect(cxc-px(0.42)-seatW/2,yBody-seatH,seatW,seatH);
-  ctx.fillRect(cxc+px(0.42)-seatW/2,yBody-seatH,seatW,seatH);
-
-  const [hx]=P(-0.36,0);
-  const yHead=Y(1.33);
-  const hr=Math.max(2,px(0.145));
-  ctx.fillStyle=night?'#3b3f4c':'#5d6b7d';
-  ctx.beginPath();
-  ctx.moveTo(hx-hr*1.85,yBody);
-  ctx.quadraticCurveTo(hx-hr*1.5,yHead+hr*0.6,hx-hr*0.75,yHead+hr*0.5);
-  ctx.lineTo(hx+hr*0.75,yHead+hr*0.5);
-  ctx.quadraticCurveTo(hx+hr*1.5,yHead+hr*0.6,hx+hr*1.85,yBody);
-  ctx.closePath(); ctx.fill();
-  if(w>45){
-    ctx.strokeStyle=night?'#3b3f4c':'#546171';
-    ctx.lineWidth=Math.max(1,hr*0.6);
-    ctx.beginPath();
-    ctx.moveTo(hx-hr*1.5,yHead+hr*1.1);
-    ctx.lineTo(hx-hr*2.4,yBody+px(0.06));
-    ctx.stroke();
-  }
-  ctx.fillStyle=night?'#c9a184':'#e2bb98';
-  ctx.beginPath(); ctx.arc(hx,yHead,hr,0,Math.PI*2); ctx.fill();
-  ctx.fillStyle=night?'#241b12':'#42301f';
-  ctx.beginPath();
-  ctx.arc(hx,yHead-hr*0.14,hr*1.04,Math.PI*0.96,Math.PI*2.04);
-  ctx.closePath(); ctx.fill();
-
-  const lw=px(0.22), lh2=Math.max(1.4,px(0.15));
-  for(const lx of [xL+px(0.1), xR-px(0.1)-lw]){
-    ctx.fillStyle=night?'#ff5a3c':'#c1361f';
-    ctx.fillRect(lx,yWaist+px(0.06),lw,lh2);
-    ctx.fillStyle='rgba(255,255,255,0.35)';
-    ctx.fillRect(lx,yWaist+px(0.06),lw,Math.max(1,lh2*0.28));
-    if(night){
-      ctx.save(); ctx.globalAlpha=0.5; ctx.fillStyle='#ff5a3c';
-      ctx.filter='blur('+Math.max(1,px(0.1)).toFixed(1)+'px)';
-      ctx.fillRect(lx-lw*0.2,yWaist+px(0.04),lw*1.4,lh2*1.5);
-      ctx.restore();
-    }
-  }
-
-  ctx.fillStyle=night?'#333438':'#6f7075';
-  ctx.fillRect(xL+px(0.02),yBumper-px(0.02),w-px(0.04),Math.max(1.5,px(0.09)));
   if(w>58){
-    const plw=px(0.52), plh=Math.max(2,px(0.16));
+    const plw=w*0.3, plh=Math.max(2,w*0.09);
+    const ply=yGround-drawH*0.34;
     ctx.fillStyle='#e9e5d7';
-    ctx.fillRect(cxc-plw/2,yWaist+px(0.28),plw,plh);
+    ctx.fillRect(cxc-plw/2,ply,plw,plh);
     if(w>90){
       ctx.fillStyle='#2b241c';
       ctx.font=`500 ${(plh*0.72).toFixed(1)}px Archivo, Arial, sans-serif`;
       ctx.textAlign='center'; ctx.textBaseline='middle';
-      ctx.fillText('JF 1968', cxc, yWaist+px(0.28)+plh*0.55);
+      ctx.fillText('JF 1968', cxc, ply+plh*0.55);
       ctx.textAlign='left'; ctx.textBaseline='top';
     }
   }

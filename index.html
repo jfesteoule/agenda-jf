@@ -2289,6 +2289,7 @@ function draw(ts){
   drawMultiDayEvents();
   drawVacancesBLine();
   drawRouteObjects();
+  if(walkMode) drawWalker(); else drawMehari();
   drawHaze();
   drawZoomedPhoto();
   requestAnimationFrame(draw);
@@ -3261,23 +3262,13 @@ function drawEventSign(it,alpha){
   const pGround=proj(it.dist,lat,0);
   const w=pBR.x-pTL.x, h=pBR.y-pTL.y;
   if(w<3||h<2) return;
-  if(pBR.y<H*0.14) return;
-
-  // Panneau très proche de la caméra (notamment celui du jour même) : la
-  // perspective le pousse fortement sur le côté, au point de le sortir du
-  // cadre sur un écran étroit (tablette, smartphone). On recale tout le
-  // groupe (bretelle + poteau + panneau) pour qu'il reste entièrement visible
-  // au lieu d'être tronqué, sans changer sa distance/date réelle. Un panneau
-  // trop large pour tenir même recalé (quasiment jamais le cas) reste masqué.
-  const margin=10;
-  let shiftX=0;
-  if(pTL.x<margin) shiftX=margin-pTL.x;
-  else if(pBR.x>W-margin) shiftX=(W-margin)-pBR.x;
-  if(pBR.x+shiftX<0||pTL.x+shiftX>W) return;
+  // Ne masquer que si le panneau est entièrement hors champ (le canvas
+  // découpe déjà le reste tout seul) : sinon il glisse sur le côté en
+  // approche au lieu de disparaître d'un coup pendant que la voiture avance.
+  if(pBR.x<0||pTL.x>W||pBR.y<H*0.14) return;
 
   ctx.save();
   ctx.beginPath(); ctx.rect(0,H*0.14,W,H*0.86-12); ctx.clip();
-  if(shiftX) ctx.translate(shiftX,0);
   ctx.globalAlpha=alpha;
 
   // bretelle d'accès jusqu'au panneau
@@ -3375,7 +3366,7 @@ function drawEventSign(it,alpha){
       ctx.fillText(`${photoUrlIdx+1}/${photoUrlList.length}`, imgX+imgSize-bs/2-1, imgY+2+bs*0.31);
       ctx.textAlign='left'; ctx.textBaseline='top';
     }
-    EVENT_PHOTO_HITS.push({x:imgX+shiftX,y:imgY,w:imgSize,h:imgSize,img:photoImg,legende:photoLegende,loaded:true,urls:photoUrlList,urlIdx:photoUrlIdx});
+    EVENT_PHOTO_HITS.push({x:imgX,y:imgY,w:imgSize,h:imgSize,img:photoImg,legende:photoLegende,loaded:true,urls:photoUrlList,urlIdx:photoUrlIdx});
     textW=w-w*0.18-imgSize-pad;
   }
 
@@ -3406,7 +3397,7 @@ function drawEventSign(it,alpha){
   }
   ctx.restore();
   ctx.globalAlpha=1;
-  EVENT_HITBOXES.push({ev:e,x0:pTL.x+shiftX,x1:pTL.x+shiftX+w,y0:pTL.y,y1:pTL.y+h});
+  EVENT_HITBOXES.push({ev:e,x0:pTL.x,x1:pTL.x+w,y0:pTL.y,y1:pTL.y+h});
 }
 
 function drawRouteObjects(){
@@ -3445,15 +3436,9 @@ function drawRouteObjects(){
     // l'ordre d'insertion).
     if(k%2===0) items.push({kind:'daypost',dist:dist+SP*0.5,day:k});
   }
-  // La voiture/le marcheur est inséré dans le même tri par profondeur que les
-  // panneaux : sans ça il était toujours peint par-dessus, y compris devant
-  // le panneau du jour même (plus proche que lui quand on est pile dessus),
-  // ce qui le masquait complètement.
-  items.push({kind:'vehicle',dist:9.2+tilt*4.5});
   items.sort((a,b)=>b.dist-a.dist);
 
   items.forEach(it=>{
-    if(it.kind==='vehicle'){ if(walkMode) drawWalker(); else drawMehari(); return; }
     const nearCut=it.kind==='sign'?5:12;
     if(it.dist<nearCut) return;
     const alpha=Math.min(1,Math.max(0,(260-it.dist)/110))*Math.min(1,Math.max(0,(it.dist-nearCut)/3));

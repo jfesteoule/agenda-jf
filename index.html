@@ -2696,6 +2696,36 @@ function pathEdgeWobble(worldPos,seed){
        + 0.07*Math.sin(worldPos*0.55+seed*3.7);
 }
 
+// Petit dos d'âne (une seule bosse, pas double) peint sur la chaussée pour
+// marquer un jour de week-end : une courte bosse ponctuelle plantée au
+// milieu du jour (comme les autres repères), pas une bande qui couvrirait
+// toute la longueur du jour.
+function drawSpeedBump(center,dN,dF){
+  const bumpLen=2.4, bumpH=0.3;
+  const d0=center-bumpLen/2, d1=center+bumpLen/2;
+  if(d1<=dN||d0>=dF) return;
+  const segs=8;
+  const latL=-RW+0.18, latR=RW-0.18;
+  const lit=night?'#6b2e28':'#e2645a', shade=night?'#431a16':'#8f362e';
+  for(let i=0;i<segs;i++){
+    const t0=i/segs, t1=(i+1)/segs;
+    const dd0=d0+t0*bumpLen, dd1=d0+t1*bumpLen;
+    if(dd1<=dN||dd0>=dF) continue;
+    const h0=bumpH*Math.sin(Math.PI*t0), h1=bumpH*Math.sin(Math.PI*t1);
+    const a=proj(dd0,latL,h0), b=proj(dd0,latR,h0), c=proj(dd1,latR,h1), e=proj(dd1,latL,h1);
+    ctx.fillStyle=t1<=0.5 ? lit : shade;
+    ctx.globalAlpha=0.9;
+    ctx.beginPath(); ctx.moveTo(a.x,a.y); ctx.lineTo(b.x,b.y); ctx.lineTo(c.x,c.y); ctx.lineTo(e.x,e.y); ctx.closePath(); ctx.fill();
+    ctx.globalAlpha=1;
+  }
+  // liseré clair sur la crête pour accentuer le relief de la bosse
+  const crestHalf=bumpLen*0.06;
+  const pc0=proj(center-crestHalf,latL,bumpH), pc1=proj(center-crestHalf,latR,bumpH);
+  const pc2=proj(center+crestHalf,latR,bumpH), pc3=proj(center+crestHalf,latL,bumpH);
+  ctx.fillStyle=night?'rgba(255,255,255,0.14)':'rgba(255,255,255,0.45)';
+  ctx.beginPath(); ctx.moveTo(pc0.x,pc0.y); ctx.lineTo(pc1.x,pc1.y); ctx.lineTo(pc2.x,pc2.y); ctx.lineTo(pc3.x,pc3.y); ctx.closePath(); ctx.fill();
+}
+
 // === CHAUSSÉE : accotement, asphalte, marquages, week-end, jours fériés, 1er du mois ===
 function drawRoadSurface(){
   const hzL=horizonScreenY();
@@ -2792,8 +2822,8 @@ function drawRoadSurface(){
       // axe discontinu
       drawBand(d0,d0+SP*0.62,-0.09,0.09,white,0.9);
     }
-    // week-end : bande rouge en travers
-    if(k>=0&&k<=TOTAL_DAYS&&(isSat(k)||isSun(k))) drawBand(d0,d0+SP,-RW+0.42,RW-0.42,'#cc3b30',0.5);
+    // week-end : petit dos d'âne (une seule bosse), au lieu d'une bande plate
+    if(k>=0&&k<=TOTAL_DAYS&&(isSat(k)||isSun(k))) drawSpeedBump(d0+SP*0.5,dN,dF);
     // jour férié : bande jaune
     else if(k>=0&&k<=TOTAL_DAYS&&isJourFerie(k)) drawBand(d0,d0+SP,-RW+0.42,RW-0.42,'#ffe000',0.5);
     // premier du mois : passage clouté

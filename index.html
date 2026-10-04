@@ -2568,6 +2568,19 @@ let landscapeBgLoaded=false;
 LANDSCAPE_BG.onload=()=>{ landscapeBgLoaded=true; };
 LANDSCAPE_BG.src='landscape-bg.jpg';
 
+// Variante du décor par saison (générées avec Canva) : moins de vert et plus
+// de brun à l'automne, de la neige sur les reliefs en hiver, du vert vif au
+// printemps, du soleil et du jaune doré en été. Repli sur LANDSCAPE_BG
+// ci-dessus tant qu'une variante donnée n'est pas (ou pas encore) chargée.
+const LANDSCAPE_SEASON_IMGS={}, LANDSCAPE_SEASON_LOADED={};
+['hiver','printemps','ete','automne'].forEach(saison=>{
+  const img=new Image();
+  LANDSCAPE_SEASON_LOADED[saison]=false;
+  img.onload=()=>{ LANDSCAPE_SEASON_LOADED[saison]=true; };
+  img.src=`landscape-bg-${saison}.jpg`;
+  LANDSCAPE_SEASON_IMGS[saison]=img;
+});
+
 // Herbe au sol (de part et d'autre de la route/du chemin, accotement compris),
 // générée avec Canva : texture photo-réaliste plaquée en motif répété par-dessus
 // le dégradé existant (conservé en-dessous pour l'assombrissement avec la
@@ -2579,7 +2592,22 @@ GRASS_TEXTURE.src='grass-ground.jpg';
 
 function drawSkyAndLand(){
   const hzL=horizonScreenY();
-  if(landscapeBgLoaded){
+  seasonBlend=computeSeasonBlend(camDay);
+  const imgA=LANDSCAPE_SEASON_IMGS[seasonBlend.a], imgB=LANDSCAPE_SEASON_IMGS[seasonBlend.b];
+  const loadedA=LANDSCAPE_SEASON_LOADED[seasonBlend.a], loadedB=LANDSCAPE_SEASON_LOADED[seasonBlend.b];
+  if(loadedA||loadedB){
+    if(night) ctx.filter='brightness(0.3) saturate(0.7) hue-rotate(-8deg)';
+    // Les 6 jours autour d'un changement de saison sont fondus entre les deux
+    // images plutôt que de basculer d'un coup.
+    if(loadedA) ctx.drawImage(LANDSCAPE_SEASON_IMGS[seasonBlend.a],0,0,W,hzL+2);
+    else ctx.drawImage(LANDSCAPE_BG,0,0,W,hzL+2);
+    if(loadedB && seasonBlend.t>0.004){
+      ctx.globalAlpha=seasonBlend.t;
+      ctx.drawImage(imgB,0,0,W,hzL+2);
+      ctx.globalAlpha=1;
+    }
+    if(night) ctx.filter='none';
+  } else if(landscapeBgLoaded){
     if(night) ctx.filter='brightness(0.3) saturate(0.7) hue-rotate(-8deg)';
     ctx.drawImage(LANDSCAPE_BG,0,0,W,hzL+2);
     if(night) ctx.filter='none';
@@ -2605,12 +2633,21 @@ function drawSkyAndLand(){
     ctx.lineTo(W,hzL); ctx.closePath(); ctx.fill();
   }
 
+  // Le sol est teinté selon la saison (vert au printemps, brun à l'automne,
+  // doré en été, pâle en hiver) à partir des couleurs déjà définies dans
+  // APP_SEASONS, et l'herbe se fait plus discrète sous la neige en hiver.
+  const groundTint=seasonColor('ground');
   const gr=ctx.createLinearGradient(0,hzL,0,H);
   if(night){ gr.addColorStop(0,'#2a3125'); gr.addColorStop(1,'#161a12'); }
-  else{ gr.addColorStop(0,'#9aa27c'); gr.addColorStop(0.5,'#7e885f'); gr.addColorStop(1,'#5f6a44'); }
+  else{
+    gr.addColorStop(0,lerpHex('#9aa27c',groundTint,0.55));
+    gr.addColorStop(0.5,lerpHex('#7e885f',groundTint,0.3));
+    gr.addColorStop(1,'#5f6a44');
+  }
   ctx.fillStyle=gr; ctx.fillRect(0,hzL,W,H-hzL);
   if(grassTextureLoaded){
-    ctx.globalAlpha=night?0.35:0.75;
+    const snowAmt=night?0:seasonNum('snowAmt');
+    ctx.globalAlpha=(night?0.35:0.75)*(1-snowAmt*0.6);
     ctx.fillStyle=ctx.createPattern(GRASS_TEXTURE,'repeat');
     ctx.fillRect(0,hzL,W,H-hzL);
     ctx.globalAlpha=1;
@@ -2714,11 +2751,12 @@ function drawRoadSurface(){
   for(let i=dists.length-1;i>=0;i--){ const p=proj(dists[i],-(RW+1.6),0); i===dists.length-1?ctx.moveTo(p.x,p.y):ctx.lineTo(p.x,p.y); }
   for(let i=0;i<dists.length;i++){ const p=proj(dists[i],RW+1.6,0); ctx.lineTo(p.x,p.y); }
   ctx.closePath();
-  ctx.fillStyle=night?'#3a382e':'#a1957c';
+  ctx.fillStyle=night?'#3a382e':lerpHex('#a1957c',seasonColor('ground'),0.4);
   ctx.fill();
   if(grassTextureLoaded){
+    const snowAmt=night?0:seasonNum('snowAmt');
     ctx.save(); ctx.clip();
-    ctx.globalAlpha=night?0.3:0.7;
+    ctx.globalAlpha=(night?0.3:0.7)*(1-snowAmt*0.6);
     ctx.fillStyle=ctx.createPattern(GRASS_TEXTURE,'repeat');
     ctx.fillRect(0,hzL-4,W,H-hzL+4);
     ctx.globalAlpha=1;

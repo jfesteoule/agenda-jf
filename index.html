@@ -3865,8 +3865,8 @@ canvas.style.cursor='ns-resize';
 wrap.addEventListener('wheel',e=>{
   if(monthViewActive) return;
   e.preventDefault();
-  // deltaY>0 (molette vers le bas) = avancer dans le temps
-  camDay=Math.max(0,Math.min(TOTAL_DAYS, camDay+e.deltaY*0.05));
+  // deltaY>0 (molette vers le bas) = reculer dans le temps (sens inversé)
+  camDay=Math.max(0,Math.min(TOTAL_DAYS, camDay-e.deltaY*0.05));
 },{passive:false});
 
 // === SCROLL TACTILE via Pointer Events (+ pincement à deux doigts = zoom) ===

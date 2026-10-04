@@ -101,6 +101,9 @@ canvas#c{position:absolute;inset:0;width:100%;height:100%;touch-action:none;poin
 .jchips{display:flex;gap:6px;flex-wrap:wrap;}
 .jchip{border:1px solid #e7e0d3;background:#fff;border-radius:16px;padding:6px 11px;font-family:'Archivo',Arial,sans-serif;font-size:12px;font-weight:500;color:#2b241c;cursor:pointer;}
 .jchip:hover{background:#f8f6f2;border-color:#c1502f;}
+.jchip.jchip-on{background:#c1502f;border-color:#c1502f;color:#fff;}
+#viewAnglePanel{display:none;position:absolute;top:56px;right:12px;z-index:1001;background:#fff;border-radius:12px;box-shadow:0 6px 18px rgba(0,0,0,0.22);padding:14px;width:200px;flex-direction:column;gap:10px;}
+#viewAnglePanel.open{display:flex;}
 #djdate{width:100%;height:36px;border:1px solid #e7e0d3;border-radius:8px;padding:0 10px;font-family:'Archivo',Arial,sans-serif;font-size:13px;color:#2b241c;}
 
 #eventDetailScrim,#dayPanelScrim{display:none;position:fixed;inset:0;background:rgba(43,36,28,0.28);}
@@ -184,7 +187,7 @@ canvas#c{position:absolute;inset:0;width:100%;height:100%;touch-action:none;poin
     <button id="monthbtn" class="hudbtn-top" style="position:relative;z-index:1000;pointer-events:auto;width:40px;height:40px;min-width:40px;background:#fff;border-radius:50%;border:none;cursor:pointer;display:flex;align-items:center;justify-content:center;box-shadow:0 2px 6px rgba(0,0,0,0.2);color:#c1502f;font-size:18px;margin-left:6px;" title="Vue mensuelle"><i class="ti ti-calendar-month"></i></button>
     <button id="photosbtn" class="hudbtn-top" style="position:relative;z-index:1000;pointer-events:auto;width:40px;height:40px;min-width:40px;background:#fff;border-radius:50%;border:none;cursor:pointer;display:flex;align-items:center;justify-content:center;box-shadow:0 2px 6px rgba(0,0,0,0.2);color:#c1502f;font-size:18px;margin-left:6px;" title="Photos"><i class="ti ti-photo"></i></button>
     <button id="photorevealbtn" style="position:relative;z-index:1000;pointer-events:auto;width:40px;height:40px;min-width:40px;background:#fff;border-radius:50%;border:none;cursor:pointer;display:flex;align-items:center;justify-content:center;box-shadow:0 2px 6px rgba(0,0,0,0.2);color:#c1502f;font-size:18px;margin-left:6px;flex:none;" title="N'afficher une photo que quand la Méhari passe sur sa date"><i class="ti ti-car"></i></button>
-    <button id="aerialbtn" class="hudbtn-top" style="position:relative;z-index:1000;pointer-events:auto;width:40px;height:40px;min-width:40px;background:#fff;border-radius:50%;border:none;cursor:pointer;display:flex;align-items:center;justify-content:center;box-shadow:0 2px 6px rgba(0,0,0,0.2);color:#c1502f;font-size:18px;margin-left:6px;" title="Vue à 45° au-dessus"><i class="ti ti-drone"></i></button>
+    <button id="aerialbtn" class="hudbtn-top" style="position:relative;z-index:1000;pointer-events:auto;width:40px;height:40px;min-width:40px;background:#fff;border-radius:50%;border:none;cursor:pointer;display:flex;align-items:center;justify-content:center;box-shadow:0 2px 6px rgba(0,0,0,0.2);color:#c1502f;font-size:18px;margin-left:6px;" title="Vue à 30°/45° au-dessus"><i class="ti ti-drone"></i></button>
     <button id="walkbtn" class="hudbtn-top" style="position:relative;z-index:1000;pointer-events:auto;width:40px;height:40px;min-width:40px;background:#fff;border-radius:50%;border:none;cursor:pointer;display:flex;align-items:center;justify-content:center;box-shadow:0 2px 6px rgba(0,0,0,0.2);color:#c1502f;font-size:18px;margin-left:6px;" title="Rouler en trottinette électrique au lieu de conduire"><i class="ti ti-scooter-electric"></i></button>
     <button id="weekbtn" class="hudbtn-top" style="position:relative;z-index:1000;pointer-events:auto;width:40px;height:40px;min-width:40px;background:#fff;border-radius:50%;border:none;cursor:pointer;display:flex;align-items:center;justify-content:center;box-shadow:0 2px 6px rgba(0,0,0,0.2);color:#c1502f;font-size:18px;margin-left:6px;" title="Volet hebdomadaire"><i class="ti ti-calendar-week"></i></button>
     <button id="nightbtn" class="hudbtn-top" style="position:relative;z-index:1000;pointer-events:auto;width:40px;height:40px;min-width:40px;background:#fff;border-radius:50%;border:none;cursor:pointer;display:flex;align-items:center;justify-content:center;box-shadow:0 2px 6px rgba(0,0,0,0.2);color:#c1502f;font-size:18px;margin-left:6px;" title="Nuit / jour"><i class="ti ti-sun" id="nightIcon"></i></button>
@@ -196,7 +199,7 @@ canvas#c{position:absolute;inset:0;width:100%;height:100%;touch-action:none;poin
     <button id="menu-datejump" class="menuitem"><i class="ti ti-calendar-event"></i>Aller à une date</button>
     <button id="menu-month" class="menuitem"><i class="ti ti-calendar-month"></i>Vue mensuelle</button>
     <button id="menu-photos" class="menuitem"><i class="ti ti-photo"></i>Photos</button>
-    <button id="menu-aerial" class="menuitem"><i class="ti ti-drone"></i>Vue à 45°</button>
+    <button id="menu-aerial" class="menuitem"><i class="ti ti-drone"></i>Vue à 30°/45°</button>
     <button id="menu-walk" class="menuitem"><i class="ti ti-scooter-electric"></i>Trottinette électrique</button>
     <button id="menu-week" class="menuitem"><i class="ti ti-calendar-week"></i>Volet hebdomadaire</button>
     <button id="menu-night" class="menuitem"><i class="ti ti-sun"></i>Nuit / jour</button>
@@ -260,6 +263,14 @@ canvas#c{position:absolute;inset:0;width:100%;height:100%;touch-action:none;poin
       <button class="jchip" id="dj-month" type="button">+ 1 mois</button>
     </div>
     <input type="date" id="djdate">
+  </div>
+  <div id="viewAnglePanel">
+    <div style="font-family:'Oswald',Arial,sans-serif;font-size:12px;font-weight:600;color:#2b241c;">Angle de vue</div>
+    <div class="jchips">
+      <button class="jchip jchip-on" data-angle="0" type="button">Conduite</button>
+      <button class="jchip" data-angle="30" type="button">30°</button>
+      <button class="jchip" data-angle="45" type="button">45°</button>
+    </div>
   </div>
   <button id="monthPrevBtn" class="monthnavbtn" title="Mois précédent"><i class="ti ti-chevron-left"></i></button>
   <button id="monthNextBtn" class="monthnavbtn" title="Mois suivant"><i class="ti ti-chevron-right"></i></button>
@@ -2191,7 +2202,7 @@ let W,H;
 let camDay=TODAY_DAY-1, playing=false, playingReverse=false, speed=3, lastTs=null;
 let SP=14;              // mètres de route par jour (remplace l'ancien zoom en pixels)
 let night=false;
-let aerial=false, tilt=0;   // tilt s'anime vers 1 (drone) ou 0 (conduite)
+let viewAngle=0, tilt=0;   // viewAngle cible en degrés (0, 30 ou 45) ; tilt s'anime vers viewAngle/45
 let walkMode=false;   // remplace la voiture par un marcheur et la route par un chemin
 let weekMode=false;
 let monthViewActive=false;
@@ -2264,8 +2275,8 @@ function draw(ts){
     return;
   }
 
-  // Tilt : s'anime en douceur vers 1 (vue drone) ou 0 (conduite)
-  const tiltGoal=aerial?1:0;
+  // Tilt : s'anime en douceur vers viewAngle/45 (vue drone à 30° ou 45°) ou 0 (conduite)
+  const tiltGoal=viewAngle/45;
   if(Math.abs(tilt-tiltGoal)>0.001){
     tilt+=(tiltGoal-tilt)*Math.min(1,dt*3.4);
     if(Math.abs(tilt-tiltGoal)<0.002) tilt=tiltGoal;
@@ -3722,12 +3733,25 @@ document.getElementById('weekPanelScrim').addEventListener('click',closeWeekPane
 document.getElementById('wp-prev').addEventListener('click',()=>{ camDay=Math.max(0,mondayOfDay(Math.round(camDay))-7); renderWeekPanel(); });
 document.getElementById('wp-next').addEventListener('click',()=>{ camDay=Math.min(TOTAL_DAYS,mondayOfDay(Math.round(camDay))+7); renderWeekPanel(); });
 
-// === Vue drone / nuit / volet hebdomadaire : boutons du HUD ===
-document.getElementById('aerialbtn').addEventListener('click',()=>{
-  aerial=!aerial;
-  const btn=document.getElementById('aerialbtn');
-  btn.style.background=aerial?'#c1502f':'#fff';
-  btn.style.color=aerial?'#fff':'#c1502f';
+// === Vue drone (30°/45°) / nuit / volet hebdomadaire : boutons du HUD ===
+const aerialbtn=document.getElementById('aerialbtn');
+const viewAnglePanel=document.getElementById('viewAnglePanel');
+function setViewAngle(deg){
+  viewAngle=deg;
+  aerialbtn.style.background=deg?'#c1502f':'#fff';
+  aerialbtn.style.color=deg?'#fff':'#c1502f';
+  aerialbtn.title=deg?`Vue à ${deg}° au-dessus`:'Vue à 30°/45° au-dessus';
+  document.querySelectorAll('#viewAnglePanel .jchip').forEach(c=>{
+    c.classList.toggle('jchip-on', +c.dataset.angle===deg);
+  });
+  viewAnglePanel.classList.remove('open');
+}
+aerialbtn.addEventListener('click',()=>{ viewAnglePanel.classList.toggle('open'); });
+viewAnglePanel.querySelectorAll('.jchip').forEach(c=>{
+  c.addEventListener('click',()=>setViewAngle(+c.dataset.angle));
+});
+document.addEventListener('click',e=>{
+  if(!viewAnglePanel.contains(e.target) && !aerialbtn.contains(e.target)) viewAnglePanel.classList.remove('open');
 });
 document.getElementById('walkbtn').addEventListener('click',()=>{
   walkMode=!walkMode;
@@ -3749,7 +3773,7 @@ document.getElementById('weekbtn').addEventListener('click',()=>{
   document.getElementById('weekPanelScrim').classList.toggle('open',weekMode);
   if(weekMode) renderWeekPanel();
 });
-document.getElementById('menu-aerial').addEventListener('click',()=>{ menuPanel.classList.remove('open'); document.getElementById('aerialbtn').click(); });
+document.getElementById('menu-aerial').addEventListener('click',()=>{ menuPanel.classList.remove('open'); aerialbtn.click(); });
 document.getElementById('menu-walk').addEventListener('click',()=>{ menuPanel.classList.remove('open'); document.getElementById('walkbtn').click(); });
 document.getElementById('menu-week').addEventListener('click',()=>{ menuPanel.classList.remove('open'); document.getElementById('weekbtn').click(); });
 document.getElementById('menu-night').addEventListener('click',()=>{ menuPanel.classList.remove('open'); document.getElementById('nightbtn').click(); });

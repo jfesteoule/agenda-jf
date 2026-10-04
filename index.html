@@ -244,6 +244,7 @@ canvas#c{position:absolute;inset:0;width:100%;height:100%;touch-action:none;poin
       <label>Date<input type="date" id="addEvDate"></label>
       <label>Heure (optionnel)<input type="time" id="addEvTime"></label>
       <label>Titre<input type="text" id="addEvTitle" maxlength="80" placeholder="Ex. Bridge D0301"></label>
+      <label>Pièce jointe Google Drive (lien, optionnel)<input type="url" id="addEvAttachment" placeholder="https://drive.google.com/file/d/…"></label>
       <div id="addEvStatus"></div>
       <div id="addEvActions">
         <button id="addEvCancel" class="menuitem" style="border:1px solid #ddd;border-radius:8px;">Annuler</button>
@@ -4758,9 +4759,12 @@ const videoCaption = document.getElementById('videoCaption');
 const videoCount = document.getElementById('videoCount');
 const videoPrev = document.getElementById('videoPrev');
 const videoNext = document.getElementById('videoNext');
-function driveEmbedUrl(url){
+function driveFileIdFromUrl(url){
   const m=(url||'').match(/drive\.google\.com\/(?:file\/d\/([\w-]+)|open\?id=([\w-]+)|uc\?(?:export=\w+&)?id=([\w-]+))/);
-  const id=m ? (m[1]||m[2]||m[3]) : null;
+  return m ? (m[1]||m[2]||m[3]) : null;
+}
+function driveEmbedUrl(url){
+  const id=driveFileIdFromUrl(url);
   return id ? `https://drive.google.com/file/d/${id}/preview` : url;
 }
 function hideVideoOverlay(){
@@ -4799,6 +4803,7 @@ document.getElementById('addEvSubmit').addEventListener('click', async () => {
   const dateStr = document.getElementById('addEvDate').value;
   const timeStr = document.getElementById('addEvTime').value;
   const title = document.getElementById('addEvTitle').value.trim();
+  const attachUrl = document.getElementById('addEvAttachment').value.trim();
   if(!dateStr || !title){
     addEvStatus.textContent = 'Date et titre requis.';
     addEvStatus.className = 'err';
@@ -4811,11 +4816,16 @@ document.getElementById('addEvSubmit').addEventListener('click', async () => {
   try{
     const token = await getGoogleAccessToken();
     addEvStatus.textContent = 'Création…';
-    const resp = await fetch('https://www.googleapis.com/calendar/v3/calendars/primary/events', {
+    // Pièce jointe Drive : un simple lien collé par l'utilisateur, comme pour les
+    // photos/vidéos ailleurs dans l'appli (pas de Picker Drive, pas de scope en plus).
+    const attachFileId = attachUrl ? driveFileIdFromUrl(attachUrl) : null;
+    const attachments = attachUrl ? [{ fileUrl: attachUrl, ...(attachFileId ? { fileId: attachFileId } : {}), title: 'Pièce jointe' }] : [];
+    const resp = await fetch('https://www.googleapis.com/calendar/v3/calendars/primary/events' + (attachments.length ? '?supportsAttachments=true' : ''), {
       method: 'POST',
       headers: { 'Authorization': 'Bearer ' + token, 'Content-Type': 'application/json' },
       body: JSON.stringify({
         summary: title,
+        ...(attachments.length ? { attachments } : {}),
         ...(timeStr ? {
           start: { dateTime: dateStr+'T'+timeStr+':00', timeZone: 'Europe/Paris' },
           end: { dateTime: dateStr+'T'+addOneHour(timeStr)+':00', timeZone: 'Europe/Paris' }
@@ -4842,6 +4852,7 @@ document.getElementById('addEvSubmit').addEventListener('click', async () => {
     addEvStatus.textContent = '✓ Événement créé dans Google Agenda.';
     addEvStatus.className = 'ok';
     document.getElementById('addEvTitle').value = '';
+    document.getElementById('addEvAttachment').value = '';
     setTimeout(closeAddEventModal, 900);
   }catch(err){
     addEvStatus.textContent = 'Erreur : ' + err.message;

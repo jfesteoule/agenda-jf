@@ -3263,9 +3263,8 @@ function drawEventSign(it,alpha){
   const e=it.ev;
   const lat=it.side*(RW+3.0+it.rank*4.9);
   const hTop=0.5+it.rank*1.7;
-  // Test : panneau vertical (portrait) au lieu d'horizontal, même surface
-  // totale qu'avant (dimensions transposées), pour comparer la visibilité.
-  const pTL=proj(it.dist,lat-0.75,hTop+4.3), pBR=proj(it.dist,lat+0.75,hTop);
+  // Test : 2x plus large et moins haut que le précédent essai vertical.
+  const pTL=proj(it.dist,lat-1.5,hTop+2.2), pBR=proj(it.dist,lat+1.5,hTop);
   const pGround=proj(it.dist,lat,0);
   const w=pBR.x-pTL.x, h=pBR.y-pTL.y;
   if(w<3||h<2) return;

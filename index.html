@@ -3315,18 +3315,12 @@ function drawEventSign(it,alpha){
   const lat=it.side*(RW+3.0+it.rank*3.3);
   const hTop=0.5+it.rank*0.35;
 
-  // Largeur normalement fixe (3 unités), mais plafonnée en pixels : très
-  // proche (le jour même notamment), la perspective l'agrandirait au point
-  // de le rendre illisible (trop gros, flou). On réduit alors sa taille
-  // "monde" pour garder une taille à l'écran raisonnable, panneau planté
-  // sur le bord de la route comme les autres. La hauteur est calculée plus
-  // bas selon le contenu réel (photo + nombre de lignes de titre) pour ne
-  // pas laisser de blanc inutile en bas du panneau.
-  const sRef=proj(it.dist,lat,hTop).s;
-  if(sRef<=0) return;
-  const MAXPX=150;
-  const latHalf=Math.min(1.5, MAXPX/(2*sRef));
-  const pL0=proj(it.dist,lat-latHalf,hTop), pR0=proj(it.dist,lat+latHalf,hTop);
+  // Largeur fixe ; la hauteur est calculée plus bas selon le contenu réel
+  // (photo + nombre de lignes de titre) pour ne pas laisser de blanc inutile
+  // en bas du panneau. `s` (échelle à cette distance) ne dépend pas de la
+  // hauteur choisie en vue conduite, donc on peut mesurer le contenu avant
+  // de fixer la géométrie finale.
+  const pL0=proj(it.dist,lat-1.5,hTop), pR0=proj(it.dist,lat+1.5,hTop);
   const w=pR0.x-pL0.x, s=pR0.s;
   if(w<3||s<=0) return;
 
@@ -3366,7 +3360,7 @@ function drawEventSign(it,alpha){
   const contentPx=pad*0.6+(photoImg?imgSize+pad*0.5:0)+lines.length*fs*1.2+pad*0.5;
   const worldH=Math.max(0.9,Math.min(2.6,contentPx/s));
 
-  const pTL=proj(it.dist,lat-latHalf,hTop+worldH), pBR=proj(it.dist,lat+latHalf,hTop);
+  const pTL=proj(it.dist,lat-1.5,hTop+worldH), pBR=proj(it.dist,lat+1.5,hTop);
   const pGround=proj(it.dist,lat,0);
   const h=pBR.y-pTL.y;
   if(h<2) return;

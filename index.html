@@ -3629,8 +3629,12 @@ function drawFirstPersonOverlay(){
   if(!loaded) return;
   const aspect=img.naturalHeight/img.naturalWidth;
   const drawW=W*1.05, drawH=drawW*aspect;
+  // Sur la trottinette, les mains sur le guidon montent plus haut dans la
+  // photo source que sur le volant : on pousse l'image vers le bas pour ne
+  // pas cacher les panneaux au-dessus.
+  const shiftDown=walkMode?drawH*0.24:0;
   if(night) ctx.filter='brightness(0.55)';
-  ctx.drawImage(img, (W-drawW)/2, H-drawH, drawW, drawH);
+  ctx.drawImage(img, (W-drawW)/2, H-drawH+shiftDown, drawW, drawH);
   if(night) ctx.filter='none';
 }
 

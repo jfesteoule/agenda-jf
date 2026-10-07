@@ -2217,7 +2217,7 @@ function resize(){ const r=wrap.getBoundingClientRect(); W=canvas.width=r.width;
 const RW=3.1;     // demi-largeur de chaussée (m)
 let CAMH=2.3;   // hauteur de l'œil (m) — ajustable via les boutons +/- (zoom = altitude)
 function curve(d){ const a=26; return a*Math.sin(d*0.0009)+a*0.35*Math.sin(d*0.0031+1.3); }
-function crest(d){ return 2.2*Math.sin(d*0.0017+0.6); }
+function crest(d){ return 4.5*Math.sin(d*0.0017+0.6); }
 
 // proj(dist,lat,hgt) : point à `dist` mètres devant la caméra, `lat` mètres à droite
 // de l'axe et `hgt` mètres de hauteur → coordonnées écran {x,y,s}. `s` est le facteur

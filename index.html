@@ -188,6 +188,7 @@ canvas#c{position:absolute;inset:0;width:100%;height:100%;touch-action:none;poin
     <button id="photosbtn" class="hudbtn-top" style="position:relative;z-index:1000;pointer-events:auto;width:40px;height:40px;min-width:40px;background:#fff;border-radius:50%;border:none;cursor:pointer;display:flex;align-items:center;justify-content:center;box-shadow:0 2px 6px rgba(0,0,0,0.2);color:#c1502f;font-size:18px;margin-left:6px;" title="Photos"><i class="ti ti-photo"></i></button>
     <button id="photorevealbtn" style="position:relative;z-index:1000;pointer-events:auto;width:40px;height:40px;min-width:40px;background:#fff;border-radius:50%;border:none;cursor:pointer;display:flex;align-items:center;justify-content:center;box-shadow:0 2px 6px rgba(0,0,0,0.2);color:#c1502f;font-size:18px;margin-left:6px;flex:none;" title="N'afficher une photo que quand la Méhari passe sur sa date"><i class="ti ti-car"></i></button>
     <button id="aerialbtn" class="hudbtn-top" style="position:relative;z-index:1000;pointer-events:auto;width:40px;height:40px;min-width:40px;background:#fff;border-radius:50%;border:none;cursor:pointer;display:flex;align-items:center;justify-content:center;box-shadow:0 2px 6px rgba(0,0,0,0.2);color:#c1502f;font-size:18px;margin-left:6px;" title="Vue à 30°/45° au-dessus"><i class="ti ti-drone"></i></button>
+    <button id="fpvbtn" class="hudbtn-top" style="position:relative;z-index:1000;pointer-events:auto;width:40px;height:40px;min-width:40px;background:#fff;border-radius:50%;border:none;cursor:pointer;display:flex;align-items:center;justify-content:center;box-shadow:0 2px 6px rgba(0,0,0,0.2);color:#c1502f;font-size:18px;margin-left:6px;" title="Vue conducteur (ce que voit JF ou le marcheur)"><i class="ti ti-eye"></i></button>
     <button id="walkbtn" class="hudbtn-top" style="position:relative;z-index:1000;pointer-events:auto;width:40px;height:40px;min-width:40px;background:#fff;border-radius:50%;border:none;cursor:pointer;display:flex;align-items:center;justify-content:center;box-shadow:0 2px 6px rgba(0,0,0,0.2);color:#c1502f;font-size:18px;margin-left:6px;" title="Rouler en trottinette électrique au lieu de conduire"><i class="ti ti-scooter-electric"></i></button>
     <button id="weekbtn" class="hudbtn-top" style="position:relative;z-index:1000;pointer-events:auto;width:40px;height:40px;min-width:40px;background:#fff;border-radius:50%;border:none;cursor:pointer;display:flex;align-items:center;justify-content:center;box-shadow:0 2px 6px rgba(0,0,0,0.2);color:#c1502f;font-size:18px;margin-left:6px;" title="Volet hebdomadaire"><i class="ti ti-calendar-week"></i></button>
     <button id="nightbtn" class="hudbtn-top" style="position:relative;z-index:1000;pointer-events:auto;width:40px;height:40px;min-width:40px;background:#fff;border-radius:50%;border:none;cursor:pointer;display:flex;align-items:center;justify-content:center;box-shadow:0 2px 6px rgba(0,0,0,0.2);color:#c1502f;font-size:18px;margin-left:6px;" title="Nuit / jour"><i class="ti ti-sun" id="nightIcon"></i></button>
@@ -200,6 +201,7 @@ canvas#c{position:absolute;inset:0;width:100%;height:100%;touch-action:none;poin
     <button id="menu-month" class="menuitem"><i class="ti ti-calendar-month"></i>Vue mensuelle</button>
     <button id="menu-photos" class="menuitem"><i class="ti ti-photo"></i>Photos</button>
     <button id="menu-aerial" class="menuitem"><i class="ti ti-drone"></i>Vue à 30°/45°</button>
+    <button id="menu-fpv" class="menuitem"><i class="ti ti-eye"></i>Vue conducteur</button>
     <button id="menu-walk" class="menuitem"><i class="ti ti-scooter-electric"></i>Trottinette électrique</button>
     <button id="menu-week" class="menuitem"><i class="ti ti-calendar-week"></i>Volet hebdomadaire</button>
     <button id="menu-night" class="menuitem"><i class="ti ti-sun"></i>Nuit / jour</button>
@@ -2204,6 +2206,11 @@ let SP=14;              // mètres de route par jour (remplace l'ancien zoom en 
 let night=false;
 let viewAngle=0, tilt=0;   // viewAngle cible en degrés (0, 30 ou 45) ; tilt s'anime vers viewAngle/45
 let walkMode=false;   // remplace la voiture par un marcheur et la route par un chemin
+// Vue conducteur : masque simplement la voiture/le marcheur dessiné devant
+// la caméra. La caméra elle-même est déjà à la position/hauteur du
+// conducteur (ou du marcheur) ; sans son propre sprite devant elle, on voit
+// donc exactement ce que JF (ou la personne à trottinette) voit.
+let firstPerson=false;
 let weekMode=false;
 let monthViewActive=false;
 let showJF=true, showAnne=true;
@@ -2303,7 +2310,7 @@ function draw(ts){
   drawMultiDayEvents();
   drawVacancesBLine();
   drawRouteObjects();
-  if(walkMode) drawWalker(); else drawMehari();
+  if(!firstPerson){ if(walkMode) drawWalker(); else drawMehari(); }
   drawHaze();
   drawZoomedPhoto();
   requestAnimationFrame(draw);
@@ -3760,6 +3767,13 @@ document.getElementById('walkbtn').addEventListener('click',()=>{
   btn.style.color=walkMode?'#fff':'#c1502f';
   btn.title=walkMode?'Reprendre la voiture':'Rouler en trottinette électrique au lieu de conduire';
 });
+document.getElementById('fpvbtn').addEventListener('click',()=>{
+  firstPerson=!firstPerson;
+  const btn=document.getElementById('fpvbtn');
+  btn.style.background=firstPerson?'#c1502f':'#fff';
+  btn.style.color=firstPerson?'#fff':'#c1502f';
+  btn.title=firstPerson?'Revenir à la vue normale':'Vue conducteur (ce que voit JF ou le marcheur)';
+});
 document.getElementById('nightbtn').addEventListener('click',()=>{
   night=!night;
   document.getElementById('nightIcon').className=night?'ti ti-moon':'ti ti-sun';
@@ -3774,6 +3788,7 @@ document.getElementById('weekbtn').addEventListener('click',()=>{
   if(weekMode) renderWeekPanel();
 });
 document.getElementById('menu-aerial').addEventListener('click',()=>{ menuPanel.classList.remove('open'); aerialbtn.click(); });
+document.getElementById('menu-fpv').addEventListener('click',()=>{ menuPanel.classList.remove('open'); document.getElementById('fpvbtn').click(); });
 document.getElementById('menu-walk').addEventListener('click',()=>{ menuPanel.classList.remove('open'); document.getElementById('walkbtn').click(); });
 document.getElementById('menu-week').addEventListener('click',()=>{ menuPanel.classList.remove('open'); document.getElementById('weekbtn').click(); });
 document.getElementById('menu-night').addEventListener('click',()=>{ menuPanel.classList.remove('open'); document.getElementById('nightbtn').click(); });

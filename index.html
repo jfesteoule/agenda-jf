@@ -2206,10 +2206,9 @@ let SP=14;              // mètres de route par jour (remplace l'ancien zoom en 
 let night=false;
 let viewAngle=0, tilt=0;   // viewAngle cible en degrés (0, 30 ou 45) ; tilt s'anime vers viewAngle/45
 let walkMode=false;   // remplace la voiture par un marcheur et la route par un chemin
-// Vue conducteur : masque simplement la voiture/le marcheur dessiné devant
-// la caméra. La caméra elle-même est déjà à la position/hauteur du
-// conducteur (ou du marcheur) ; sans son propre sprite devant elle, on voit
-// donc exactement ce que JF (ou la personne à trottinette) voit.
+// Vue conducteur : remplace la voiture/le marcheur vus de l'extérieur par un
+// bout de volant + capot (ou guidon + plateau) collé en bas de l'écran,
+// comme si on était assis dans la Méhari ou debout sur la trottinette.
 let firstPerson=false;
 let weekMode=false;
 let monthViewActive=false;
@@ -2310,7 +2309,7 @@ function draw(ts){
   drawMultiDayEvents();
   drawVacancesBLine();
   drawRouteObjects();
-  if(!firstPerson){ if(walkMode) drawWalker(); else drawMehari(); }
+  if(firstPerson) drawFirstPersonOverlay(); else { if(walkMode) drawWalker(); else drawMehari(); }
   drawHaze();
   drawZoomedPhoto();
   requestAnimationFrame(draw);
@@ -2714,6 +2713,19 @@ const MEHARI_IMG=new Image();
 let mehariImgLoaded=false;
 MEHARI_IMG.onload=()=>{ mehariImgLoaded=true; };
 MEHARI_IMG.src='mehari-realistic.png';
+
+// Vue conducteur (POV) : un bout du volant + du capot (voiture), ou du
+// guidon + du plateau (trottinette), collé en bas de l'écran par-dessus la
+// route, générés avec Canva (fond supprimé). Remplace la voiture/le
+// marcheur vus de l'extérieur quand la vue conducteur est activée.
+const DRIVER_POV_IMG=new Image();
+let driverPovLoaded=false;
+DRIVER_POV_IMG.onload=()=>{ driverPovLoaded=true; };
+DRIVER_POV_IMG.src='driver-pov.png';
+const SCOOTER_POV_IMG=new Image();
+let scooterPovLoaded=false;
+SCOOTER_POV_IMG.onload=()=>{ scooterPovLoaded=true; };
+SCOOTER_POV_IMG.src='scooter-pov.png';
 
 // Petits cailloux blancs (générés avec Canva, fond supprimé) semés de façon
 // régulière le long des deux bords de la route/du chemin, voir drawRoadSurface().
@@ -3605,6 +3617,20 @@ function drawWalker(){
   const drawW=Math.abs(w)*3.3, drawH=drawW*aspect;
   if(night) ctx.filter='brightness(0.55)';
   ctx.drawImage(WALKER_IMG, pGround.x-drawW/2, pGround.y-drawH, drawW, drawH);
+  if(night) ctx.filter='none';
+}
+
+// Vue conducteur (POV) : un bout du volant + du capot (ou du guidon + du
+// plateau en trottinette) collé en bas de l'écran, en overlay 2D fixe
+// (indépendant de proj()/de la caméra), par-dessus la route déjà dessinée.
+function drawFirstPersonOverlay(){
+  const img=walkMode?SCOOTER_POV_IMG:DRIVER_POV_IMG;
+  const loaded=walkMode?scooterPovLoaded:driverPovLoaded;
+  if(!loaded) return;
+  const aspect=img.naturalHeight/img.naturalWidth;
+  const drawW=W*1.05, drawH=drawW*aspect;
+  if(night) ctx.filter='brightness(0.55)';
+  ctx.drawImage(img, (W-drawW)/2, H-drawH, drawW, drawH);
   if(night) ctx.filter='none';
 }
 

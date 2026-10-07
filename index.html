@@ -3628,7 +3628,11 @@ function drawFirstPersonOverlay(){
   const loaded=walkMode?scooterPovLoaded:driverPovLoaded;
   if(!loaded) return;
   const aspect=img.naturalHeight/img.naturalWidth;
-  const drawW=W*1.05, drawH=drawW*aspect;
+  // Dimensionné sur la largeur du canvas d'habitude, mais sur un écran
+  // étroit (smartphone) ça rétrécit tellement que le volant/guidon finit
+  // entièrement caché sous la barre du bas (hauteur fixe, elle). On impose
+  // donc aussi un minimum basé sur la hauteur de l'écran.
+  const drawH=Math.max(W*1.05*aspect, H*0.58), drawW=drawH/aspect;
   // Sur la trottinette, les mains sur le guidon montent plus haut dans la
   // photo source que sur le volant : on pousse l'image vers le bas pour ne
   // pas cacher les panneaux au-dessus.

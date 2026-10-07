@@ -1641,35 +1641,53 @@ function drawBorne(it,alpha){
 // que le portique "OCTOBRE 2026" (fond vert, liseré blanc) mais en petit
 // panneau sur poteau simple. Jour de la semaine (3 lettres) + numéro du jour.
 function drawDayPost(it,alpha){
-  // Le lundi (début de semaine) a un panneau plus haut, liseré bleu, avec le
-  // numéro de semaine ISO en plus du jour : repère net pour voir où une
-  // semaine finit et où la suivante commence en roulant.
+  // Borne façon borne kilométrique : fût vert (jour de la semaine + date)
+  // surmonté d'un chapeau rouge arrondi portant le numéro de semaine ISO,
+  // séparés par un liseré blanc. Le lundi (début de semaine) garde un cadre
+  // bleu pour repérer où une nouvelle semaine commence.
   const isWeekStart=isMonday(it.day);
   const lat=-(RW+1.15);
-  const p0=proj(it.dist,lat-0.44,0), p1=proj(it.dist,lat+0.44,isWeekStart?1.85:1.35);
+  const BODY_H=1.35, CAP_H=0.62;
+  const p0=proj(it.dist,lat-0.44,0), p1=proj(it.dist,lat+0.44,BODY_H), pc=proj(it.dist,lat+0.44,BODY_H+CAP_H);
   ctx.globalAlpha=alpha;
   const w2=Math.abs(p1.x-p0.x), h2=p0.y-p1.y;
   if(w2<8){ ctx.globalAlpha=1; return; }
+  const x0=Math.min(p0.x,p1.x), cx=(p0.x+p1.x)/2;
+  // Fût vert
   ctx.fillStyle=night?'#0f3f2e':'#15613f';
-  ctx.fillRect(Math.min(p0.x,p1.x),p1.y,w2,h2);
+  ctx.fillRect(x0,p1.y,w2,h2);
   ctx.strokeStyle=isWeekStart?'#8ab4f8':'#eceadf';
   ctx.lineWidth=Math.max(1,h2*(isWeekStart?0.07:0.05));
-  ctx.strokeRect(Math.min(p0.x,p1.x)+w2*0.1,p1.y+h2*0.06,w2*0.8,h2*0.7);
+  ctx.strokeRect(x0+w2*0.1,p1.y+h2*0.08,w2*0.8,h2*0.78);
+  // Chapeau rouge arrondi (demi-cercle sur un court rectangle)
+  const capH=p1.y-pc.y, r=Math.min(w2/2,capH);
+  ctx.fillStyle=night?'#a32424':'#d32f2f';
+  ctx.beginPath();
+  ctx.moveTo(x0,p1.y);
+  ctx.lineTo(x0,pc.y+r);
+  ctx.ellipse(cx,pc.y+r,w2/2,r,0,Math.PI,0);
+  ctx.lineTo(x0+w2,p1.y);
+  ctx.closePath();
+  ctx.fill();
+  // Liseré blanc entre chapeau et fût
+  ctx.fillStyle='#f5f3ea';
+  ctx.fillRect(x0,p1.y-Math.max(1,h2*0.03),w2,Math.max(1.5,h2*0.06));
   const fs=w2*0.55;
   if(fs>7){
     const dow=['DIM','LUN','MAR','MER','JEU','VEN','SAM'][((it.day%7)+7)%7];
     const dayNum=new Date(MONTH_ORIGIN_MS+it.day*86400000).getUTCDate();
+    ctx.textAlign='center'; ctx.textBaseline='middle';
+    // Numéro de semaine dans le chapeau rouge
     ctx.fillStyle='#fff';
-    ctx.textAlign='center'; ctx.textBaseline='top';
+    ctx.font=`700 ${Math.min(fs*0.8,capH*0.62).toFixed(1)}px Oswald, Arial, sans-serif`;
+    ctx.fillText('S'+isoWeekNum(it.day), cx, pc.y+capH*0.56);
+    ctx.textBaseline='top';
     ctx.font=`600 ${fs.toFixed(1)}px Oswald, Arial, sans-serif`;
-    ctx.fillText(dow, (p0.x+p1.x)/2, p1.y+h2*(isWeekStart?0.08:0.11));
+    const dowW=ctx.measureText(dow).width, maxW=w2*0.74;
+    if(dowW>maxW) ctx.font=`600 ${(fs*maxW/dowW).toFixed(1)}px Oswald, Arial, sans-serif`;
+    ctx.fillText(dow, cx, p1.y+h2*0.13);
     ctx.font=`700 ${(fs*1.05).toFixed(1)}px Oswald, Arial, sans-serif`;
-    ctx.fillText(String(dayNum), (p0.x+p1.x)/2, p1.y+h2*(isWeekStart?0.3:0.4));
-    if(isWeekStart){
-      ctx.fillStyle='#8ab4f8';
-      ctx.font=`600 ${(fs*0.62).toFixed(1)}px Archivo, Arial, sans-serif`;
-      ctx.fillText('S'+isoWeekNum(it.day), (p0.x+p1.x)/2, p1.y+h2*0.68);
-    }
+    ctx.fillText(String(dayNum), cx, p1.y+h2*0.42);
   }
   ctx.globalAlpha=1;
 }

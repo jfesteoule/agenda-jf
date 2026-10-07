@@ -2308,6 +2308,7 @@ function draw(ts){
   drawSkyAndLand();
   drawSkyLife(ts);
   drawRoadSurface();
+  drawLandmarks();
   refreshAutoMultiDay();
   drawMultiDayEvents();
   drawVacancesBLine();
@@ -2793,6 +2794,19 @@ WHITE_PEBBLES.src='white-pebbles.png';
 // monde (pas de scintillement d'une frame à l'autre comme avec Math.random()).
 function hash01(n){ const x=Math.sin(n*12.9898)*43758.5453; return x-Math.floor(x); }
 
+// Repères de bord de route (lac, moulin, pont, troupeau), générés avec
+// Canva (fond supprimé), posés de temps en temps pour casser la monotonie
+// d'une route par ailleurs très répétitive. Voir drawLandmarks().
+function loadLandmark(src){
+  const img=new Image();
+  const state={loaded:false};
+  img.onload=()=>{ state.loaded=true; };
+  img.src=src;
+  return {img,state};
+}
+const LANDMARK_SRCS=['landscape-lake.png','landscape-windmill.png','landscape-bridge.png','landscape-sheep.png'];
+const LANDMARKS=LANDMARK_SRCS.map(loadLandmark);
+
 function drawHaze(){
   const hzL=horizonScreenY();
   const haze=ctx.createLinearGradient(0,hzL-H*0.12,0,hzL+H*0.14);
@@ -2985,6 +2999,52 @@ function drawRoadSurface(){
       ctx.fillStyle='rgba(180,200,210,0.75)';
       ctx.fillRect(x0+cw*0.15,pB.y+ch*0.12,cw*0.7,ch*0.38);
     }
+  }
+}
+
+// Repères de bord de route (lac, moulin, pont, troupeau) : un de temps en
+// temps, assez espacés pour rester une surprise plutôt qu'un décor répété.
+// Semés de façon stable dans le monde, même technique que les cailloux/les
+// voitures en sens inverse.
+function drawLandmarks(){
+  const hzL=horizonScreenY();
+  const T=tilt;
+  const dN=1.6+T*10, dF=420;
+  const camW_=camDay*SP;
+  const cell=340, maxD=Math.min(dF,320), nearD=Math.max(dN,30);
+  let lastIdx=null;
+  for(let d=nearD; d<maxD; d+=25){
+    const idx=Math.floor((camW_+d)/cell);
+    if(idx===lastIdx) continue;
+    lastIdx=idx;
+    const seed=idx*3.371;
+    if(hash01(seed)>=0.55) continue; // pas à chaque cellule : espacé
+    // Position fixe dans le monde (centre de la cellule + décalage aléatoire
+    // stable), pas liée au pas de balayage d, pour que le repère reste
+    // planté au même endroit de la route en avançant.
+    const dd=idx*cell+cell*0.5-camW_+(hash01(seed+1.1)-0.5)*cell*0.6;
+    if(dd<nearD||dd>maxD) continue;
+    const side=hash01(seed+2.2)<0.5?-1:1;
+    const li=Math.floor(hash01(seed+3.3)*LANDMARKS.length)%LANDMARKS.length;
+    const lm=LANDMARKS[li];
+    if(!lm.state.loaded) continue;
+    const img=lm.img;
+    const wWorld=7*(0.8+hash01(seed+4.4)*0.5);
+    const lat=side*(RW+9+hash01(seed+5.5)*7);
+    const pGround=proj(dd,lat,0);
+    if(pGround.y<hzL||pGround.y>H+60) continue;
+    const pEdge=proj(dd,lat+wWorld,0);
+    const drawW=Math.abs(pEdge.x-pGround.x)*2;
+    if(drawW<12) continue;
+    const aspect=img.naturalHeight/img.naturalWidth;
+    const drawH=drawW*aspect;
+    const alpha=Math.min(1,Math.max(0,(maxD-dd)/60))*Math.min(1,Math.max(0,(dd-nearD)/10));
+    if(alpha<=0) continue;
+    ctx.globalAlpha=alpha;
+    if(night) ctx.filter='brightness(0.45) saturate(0.8)';
+    ctx.drawImage(img, pGround.x-drawW/2, pGround.y-drawH, drawW, drawH);
+    if(night) ctx.filter='none';
+    ctx.globalAlpha=1;
   }
 }
 

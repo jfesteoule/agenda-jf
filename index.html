@@ -187,6 +187,7 @@ canvas#c{position:absolute;inset:0;width:100%;height:100%;touch-action:none;poin
     <button id="monthbtn" class="hudbtn-top" style="position:relative;z-index:1000;pointer-events:auto;width:40px;height:40px;min-width:40px;background:#fff;border-radius:50%;border:none;cursor:pointer;display:flex;align-items:center;justify-content:center;box-shadow:0 2px 6px rgba(0,0,0,0.2);color:#c1502f;font-size:18px;margin-left:6px;" title="Vue mensuelle"><i class="ti ti-calendar-month"></i></button>
     <button id="photosbtn" class="hudbtn-top" style="position:relative;z-index:1000;pointer-events:auto;width:40px;height:40px;min-width:40px;background:#fff;border-radius:50%;border:none;cursor:pointer;display:flex;align-items:center;justify-content:center;box-shadow:0 2px 6px rgba(0,0,0,0.2);color:#c1502f;font-size:18px;margin-left:6px;" title="Photos"><i class="ti ti-photo"></i></button>
     <button id="photorevealbtn" style="position:relative;z-index:1000;pointer-events:auto;width:40px;height:40px;min-width:40px;background:#fff;border-radius:50%;border:none;cursor:pointer;display:flex;align-items:center;justify-content:center;box-shadow:0 2px 6px rgba(0,0,0,0.2);color:#c1502f;font-size:18px;margin-left:6px;flex:none;" title="N'afficher une photo que quand la Méhari passe sur sa date"><i class="ti ti-car"></i></button>
+    <button id="nophotobtn" class="hudbtn-top" style="position:relative;z-index:1000;pointer-events:auto;width:40px;height:40px;min-width:40px;background:#fff;border-radius:50%;border:none;cursor:pointer;display:flex;align-items:center;justify-content:center;box-shadow:0 2px 6px rgba(0,0,0,0.2);color:#c1502f;font-size:18px;margin-left:6px;" title="Vue sans photo sur les panneaux"><i class="ti ti-photo-off"></i></button>
     <button id="aerialbtn" class="hudbtn-top" style="position:relative;z-index:1000;pointer-events:auto;width:40px;height:40px;min-width:40px;background:#fff;border-radius:50%;border:none;cursor:pointer;display:flex;align-items:center;justify-content:center;box-shadow:0 2px 6px rgba(0,0,0,0.2);color:#c1502f;font-size:18px;margin-left:6px;" title="Vue à 30°/45° au-dessus"><i class="ti ti-drone"></i></button>
     <button id="fpvbtn" class="hudbtn-top" style="position:relative;z-index:1000;pointer-events:auto;width:40px;height:40px;min-width:40px;background:#fff;border-radius:50%;border:none;cursor:pointer;display:flex;align-items:center;justify-content:center;box-shadow:0 2px 6px rgba(0,0,0,0.2);color:#c1502f;font-size:18px;margin-left:6px;" title="Vue conducteur (ce que voit JF ou le marcheur)"><i class="ti ti-eye"></i></button>
     <button id="walkbtn" class="hudbtn-top" style="position:relative;z-index:1000;pointer-events:auto;width:40px;height:40px;min-width:40px;background:#fff;border-radius:50%;border:none;cursor:pointer;display:flex;align-items:center;justify-content:center;box-shadow:0 2px 6px rgba(0,0,0,0.2);color:#c1502f;font-size:18px;margin-left:6px;" title="Rouler en trottinette électrique au lieu de conduire"><i class="ti ti-scooter-electric"></i></button>
@@ -200,6 +201,7 @@ canvas#c{position:absolute;inset:0;width:100%;height:100%;touch-action:none;poin
     <button id="menu-datejump" class="menuitem"><i class="ti ti-calendar-event"></i>Aller à une date</button>
     <button id="menu-month" class="menuitem"><i class="ti ti-calendar-month"></i>Vue mensuelle</button>
     <button id="menu-photos" class="menuitem"><i class="ti ti-photo"></i>Photos</button>
+    <button id="menu-nophoto" class="menuitem"><i class="ti ti-photo-off"></i>Vue sans photo</button>
     <button id="menu-aerial" class="menuitem"><i class="ti ti-drone"></i>Vue à 30°/45°</button>
     <button id="menu-fpv" class="menuitem"><i class="ti ti-eye"></i>Vue conducteur</button>
     <button id="menu-walk" class="menuitem"><i class="ti ti-scooter-electric"></i>Trottinette électrique</button>
@@ -3348,7 +3350,7 @@ function drawEventSign(it,alpha){
   // Drive ou liens Google Photos, via events.json) — s'il y en a plusieurs, la
   // vignette du panneau les fait défiler automatiquement et le zoom permet de
   // naviguer entre toutes ; sinon repli sur le catalogue PHOTOS codé en dur.
-  const revealOk=(!photoRevealOnly || Math.floor(camDay)===e.day);
+  const revealOk=!hidePhotos && (!photoRevealOnly || Math.floor(camDay)===e.day);
   const photoUrls=(e.photos && e.photos.length) ? e.photos : (e.photo ? [e.photo] : []);
   let photoImg=null, photoLegende=e.title, photoUrlList=null, photoUrlIdx=0, photoIsVideo=false;
   if(photoUrls.length && revealOk){
@@ -4871,6 +4873,18 @@ document.getElementById('photorevealbtn').addEventListener('click',()=>{
   btn.style.color=photoRevealOnly?'#fff':'#1a73e8';
   btn.title=photoRevealOnly?"Revenir à l'affichage permanent des photos":"N'afficher une photo que quand la Méhari passe sur sa date";
 });
+
+// Vue sans photo : panneaux texte seul (plus compacts, grâce au
+// dimensionnement déjà basé sur le contenu réel).
+let hidePhotos=false;
+document.getElementById('nophotobtn').addEventListener('click',()=>{
+  hidePhotos=!hidePhotos;
+  const btn=document.getElementById('nophotobtn');
+  btn.style.background=hidePhotos?'#c1502f':'#fff';
+  btn.style.color=hidePhotos?'#fff':'#c1502f';
+  btn.title=hidePhotos?'Réafficher les photos sur les panneaux':'Vue sans photo sur les panneaux';
+});
+document.getElementById('menu-nophoto').addEventListener('click',()=>{ menuPanel.classList.remove('open'); document.getElementById('nophotobtn').click(); });
 
 document.getElementById('addEvSubmit').addEventListener('click', async () => {
   const dateStr = document.getElementById('addEvDate').value;

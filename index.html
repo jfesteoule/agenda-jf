@@ -3406,15 +3406,19 @@ function drawBorne(it,alpha){
 // que le portique "OCTOBRE 2026" (fond vert, liseré blanc) mais en petit
 // panneau sur poteau simple. Jour de la semaine (3 lettres) + numéro du jour.
 function drawDayPost(it,alpha){
+  // Le lundi (début de semaine) a un panneau plus haut, liseré bleu, avec le
+  // numéro de semaine ISO en plus du jour : repère net pour voir où une
+  // semaine finit et où la suivante commence en roulant.
+  const isWeekStart=isMonday(it.day);
   const lat=-(RW+1.15);
-  const p0=proj(it.dist,lat-0.44,0), p1=proj(it.dist,lat+0.44,1.35);
+  const p0=proj(it.dist,lat-0.44,0), p1=proj(it.dist,lat+0.44,isWeekStart?1.85:1.35);
   ctx.globalAlpha=alpha;
   const w2=Math.abs(p1.x-p0.x), h2=p0.y-p1.y;
   if(w2<8){ ctx.globalAlpha=1; return; }
   ctx.fillStyle=night?'#0f3f2e':'#15613f';
   ctx.fillRect(Math.min(p0.x,p1.x),p1.y,w2,h2);
-  ctx.strokeStyle='#eceadf';
-  ctx.lineWidth=Math.max(1,h2*0.05);
+  ctx.strokeStyle=isWeekStart?'#8ab4f8':'#eceadf';
+  ctx.lineWidth=Math.max(1,h2*(isWeekStart?0.07:0.05));
   ctx.strokeRect(Math.min(p0.x,p1.x)+w2*0.1,p1.y+h2*0.06,w2*0.8,h2*0.7);
   const fs=w2*0.55;
   if(fs>7){
@@ -3423,9 +3427,14 @@ function drawDayPost(it,alpha){
     ctx.fillStyle='#fff';
     ctx.textAlign='center'; ctx.textBaseline='top';
     ctx.font=`600 ${fs.toFixed(1)}px Oswald, Arial, sans-serif`;
-    ctx.fillText(dow, (p0.x+p1.x)/2, p1.y+h2*0.11);
+    ctx.fillText(dow, (p0.x+p1.x)/2, p1.y+h2*(isWeekStart?0.08:0.11));
     ctx.font=`700 ${(fs*1.05).toFixed(1)}px Oswald, Arial, sans-serif`;
-    ctx.fillText(String(dayNum), (p0.x+p1.x)/2, p1.y+h2*0.4);
+    ctx.fillText(String(dayNum), (p0.x+p1.x)/2, p1.y+h2*(isWeekStart?0.3:0.4));
+    if(isWeekStart){
+      ctx.fillStyle='#8ab4f8';
+      ctx.font=`600 ${(fs*0.62).toFixed(1)}px Archivo, Arial, sans-serif`;
+      ctx.fillText('S'+isoWeekNum(it.day), (p0.x+p1.x)/2, p1.y+h2*0.68);
+    }
   }
   ctx.globalAlpha=1;
 }

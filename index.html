@@ -1281,35 +1281,11 @@ function drawRoadSurface(){
       });
     }
   }
-
-  // Voiture venant en sens inverse, de temps en temps (voie de gauche) :
-  // casse la monotonie d'une route sinon vide. Semée de façon stable dans
-  // le monde (même technique que les cailloux), pas en mode marche.
-  if(!walkMode){
-    const ccell=90, cMaxD=Math.min(dF,220), cNearD=Math.max(dN,14);
-    for(let d=cNearD; d<cMaxD; d+=ccell){
-      const idx=Math.round((camW_+d)/ccell);
-      const seed=idx*7.919;
-      if(hash01(seed)>=0.3) continue; // environ 3 cellules sur 10
-      const dd=d+(hash01(seed+1.7)-0.5)*ccell*0.5;
-      const lat=-1.05;
-      const pA=proj(dd,lat-0.62,0), pB=proj(dd,lat+0.62,1.25);
-      const cw=Math.abs(pB.x-pA.x), ch=pA.y-pB.y;
-      if(cw<5||ch<4||pB.y<hzL) continue;
-      const hue=hash01(seed+3.3);
-      ctx.fillStyle = hue<0.33?'#3a5a8c' : hue<0.66?'#8c3a3a' : '#e8e4d8';
-      const x0=Math.min(pA.x,pB.x);
-      ctx.fillRect(x0,pB.y,cw,ch);
-      ctx.fillStyle='rgba(180,200,210,0.75)';
-      ctx.fillRect(x0+cw*0.15,pB.y+ch*0.12,cw*0.7,ch*0.38);
-    }
-  }
 }
 
 // Repères de bord de route (lac, moulin, pont, troupeau) : un de temps en
 // temps, assez espacés pour rester une surprise plutôt qu'un décor répété.
-// Semés de façon stable dans le monde, même technique que les cailloux/les
-// voitures en sens inverse.
+// Semés de façon stable dans le monde, même technique que les cailloux.
 function drawLandmarks(){
   const hzL=horizonScreenY();
   const T=tilt;

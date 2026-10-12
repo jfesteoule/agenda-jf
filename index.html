@@ -471,7 +471,7 @@ function viewRange(){ return 260+Math.max(0,CAMH-8)*12; }
 // gauche, et ainsi de suite : on voit d'un coup d'œil les semaines d'un mois
 // alignées en marches d'escalier. Le mois d'une semaine est celui de son lundi.
 const ZIG_STEP=8;          // décalage latéral (m) à chaque changement de semaine
-const ZIG_HALF=0.88;       // demi-longueur (en jours) de la courbe entre deux semaines (virage très doux)
+const ZIG_HALF=1.76;       // demi-longueur (en jours) de la courbe entre deux semaines (virage très doux, du samedi au mardi)
 // Centre de la chicane, en jours après le début du dimanche : sur le joint
 // dimanche/lundi (1), entre les panneaux du dimanche (0,5) et du lundi (1,5).
 const ZIG_AT=1.0;
@@ -508,7 +508,7 @@ function withJogSamples(arr,a,b){
   for(let k=Math.ceil((camW+a-h-off)/wk);;k++){
     const c=off+k*wk-camW;
     if(c-h>b) break;
-    for(let j=0;j<=20;j++){ const d=c-h+2*h*j/20; if(d>a&&d<b) out.push(d); }
+    for(let j=0;j<=28;j++){ const d=c-h+2*h*j/28; if(d>a&&d<b) out.push(d); }
   }
   return out.length===arr.length ? out : out.sort((x,y)=>x-y);
 }

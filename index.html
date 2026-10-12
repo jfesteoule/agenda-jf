@@ -471,7 +471,7 @@ function viewRange(){ return 260+Math.max(0,CAMH-8)*12; }
 // gauche, et ainsi de suite : on voit d'un coup d'œil les semaines d'un mois
 // alignées en marches d'escalier. Le mois d'une semaine est celui de son lundi.
 const ZIG_STEP=8;          // décalage latéral (m) à chaque changement de semaine
-const ZIG_HALF=0.44;       // demi-longueur (en jours) de la chicane entre deux semaines (virage doux)
+const ZIG_HALF=0.88;       // demi-longueur (en jours) de la courbe entre deux semaines (virage très doux)
 // Centre de la chicane, en jours après le début du dimanche : sur le joint
 // dimanche/lundi (1), entre les panneaux du dimanche (0,5) et du lundi (1,5).
 const ZIG_AT=1.0;
@@ -495,7 +495,8 @@ function curve(d){
   if(t<ZIG_HALF){ prev=zigWeekOffset(k-1); next=zigWeekOffset(k); x=t; }
   else if(t>7-ZIG_HALF){ prev=zigWeekOffset(k); next=zigWeekOffset(k+1); x=t-7; }
   else return zigWeekOffset(k);
-  const q=(x+ZIG_HALF)/(2*ZIG_HALF), sm=q*q*(3-2*q);
+  // « smootherstep » : la courbure démarre et s'annule en douceur, sans à-coup.
+  const q=(x+ZIG_HALF)/(2*ZIG_HALF), sm=q*q*q*(q*(q*6-15)+10);
   return prev+(next-prev)*sm;
 }
 // Ajoute à une liste de distances (devant la caméra) des points serrés dans
@@ -507,7 +508,7 @@ function withJogSamples(arr,a,b){
   for(let k=Math.ceil((camW+a-h-off)/wk);;k++){
     const c=off+k*wk-camW;
     if(c-h>b) break;
-    for(let j=0;j<=12;j++){ const d=c-h+2*h*j/12; if(d>a&&d<b) out.push(d); }
+    for(let j=0;j<=20;j++){ const d=c-h+2*h*j/20; if(d>a&&d<b) out.push(d); }
   }
   return out.length===arr.length ? out : out.sort((x,y)=>x-y);
 }
@@ -525,17 +526,19 @@ function proj(dist,lat,hgt){
   // Axe latéral pris sous la voiture/le marcheur (dessinés 9,2 m devant la
   // caméra, un peu plus en vue plongeante) pour qu'ils restent toujours sur la
   // chaussée, même en passant une chicane de changement de semaine.
-  const c0=curve(camW+9.2+tilt*4.5), h0=crest(camW);
-  // Les semaines sont des lignes droites parallèles : la caméra garde toujours
-  // le même cap et glisse simplement de côté dans les chicanes.
-  const dc0=0;
+  const carW=camW+9.2+tilt*4.5;
+  const c0=curve(carW), h0=crest(camW);
+  // Cap de la route sous la voiture (lissé sur ±8 m) : dans les courbes entre
+  // deux semaines la vue tourne doucement avec la route, comme en conduisant ;
+  // en ligne droite il vaut 0.
+  const dc0=(curve(carW+8)-curve(carW-8))/16;
   const T=tilt;
   const camH=CAMH+T*6, pitch=T*0.7854, back=T*3;
   const cp=Math.cos(pitch), sp2=Math.sin(pitch);
   const cx=weekMode ? Math.max(W*0.28,(W-340)/2) : W/2;
   const hz=H*(0.44+0.52*T), f=H*0.95;
   const Z0=dist+back;
-  const X=lat+(curve(camW+dist)-c0)-dc0*dist;
+  const X=lat+(curve(camW+dist)-c0)-dc0*(dist-(carW-camW));
   const Y=hgt-camH+(crest(camW+dist)-h0);
   const Z=Z0*cp-Y*sp2;
   const Yv=Y*cp+Z0*sp2;

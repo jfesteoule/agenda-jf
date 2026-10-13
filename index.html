@@ -271,7 +271,11 @@ canvas#c{position:absolute;inset:0;width:100%;height:100%;touch-action:none;poin
     <div class="appBox">
       <h3>Agendas et vacances</h3>
       <p>À droite de la route : votre agenda Google principal. À gauche, vous pouvez ajouter un second agenda partagé avec vous (conjoint, famille, équipe…).</p>
-      <label>Adresse ou identifiant de l'agenda (optionnel)<input type="text" id="calSecondId" placeholder="prenom.nom@gmail.com"></label>
+      <label>Second agenda (à gauche de la route)<select id="calSecondSelect">
+        <option value="">Aucun</option>
+      </select></label>
+      <div id="calListStatus" style="font-size:12px;color:#8a7a5c;margin:-6px 0 10px;"></div>
+      <label id="calSecondIdWrap" style="display:none;">Adresse ou identifiant de l'agenda<input type="text" id="calSecondId" placeholder="prenom.nom@gmail.com"></label>
       <label>Nom affiché<input type="text" id="calSecondName" maxlength="20" placeholder="Ex. Camille"></label>
       <label>Vacances scolaires<select id="calZone">
         <option value="A">Zone A (Grenoble, Lyon, Bordeaux…)</option>
@@ -2770,7 +2774,9 @@ document.addEventListener('click',(e)=>{
 
 // ===== AJOUT D'ÉVÉNEMENT DANS GOOGLE AGENDA (agenda principal du compte connecté) =====
 const GOOGLE_CLIENT_ID = '553155346197-0mocoh81lknfp5hlva9c5s3vvatdaofk.apps.googleusercontent.com';
-const CALENDAR_SCOPE = 'https://www.googleapis.com/auth/calendar.events email profile';
+// calendar.calendarlist.readonly : lire la liste des agendas partagés avec le compte
+// (choix du second agenda dans « Agendas et vacances… »).
+const CALENDAR_SCOPE = 'https://www.googleapis.com/auth/calendar.events https://www.googleapis.com/auth/calendar.calendarlist.readonly email profile';
 let googleTokenClient = null;
 let googleAccessToken = null;
 let googleTokenExpiry = 0;
@@ -3204,19 +3210,79 @@ document.getElementById('menu-signout').addEventListener('click', () => { menuPa
 // « Agendas affichés… » : second agenda (partagé avec le compte connecté) affiché
 // à gauche de la route, avec le nom choisi pour la légende.
 const calOverlay = document.getElementById('calOverlay');
-function openCalendarSettings(){
+// Liste des agendas partagés avec le compte connecté (hors agenda principal),
+// pour choisir le second agenda sans avoir à taper son adresse.
+async function fetchCalendarList(){
+  const call = async (token) => fetch('https://www.googleapis.com/calendar/v3/users/me/calendarList?minAccessRole=reader&maxResults=250',
+    { headers: { 'Authorization': 'Bearer ' + token } });
+  let resp = await call(await getGoogleAccessToken());
+  if(resp.status === 401 || resp.status === 403){
+    // Jeton obtenu avant l'ajout de l'autorisation « liste des agendas » : on la redemande une fois.
+    resp = await call(await requestGoogleToken('consent'));
+  }
+  if(!resp.ok) throw new Error('HTTP ' + resp.status);
+  const data = await resp.json();
+  return (data.items || []).filter(c => !c.primary).map(c => ({ id: c.id, name: c.summaryOverride || c.summary || c.id }))
+    .sort((a,b) => a.name.localeCompare(b.name, 'fr'));
+}
+function shortCalendarName(name){
+  const base = (name || '').split('@')[0].trim();
+  const first = base.split(/[\s._-]+/)[0] || base;
+  return (first.charAt(0).toUpperCase() + first.slice(1)).slice(0, 20);
+}
+const calSecondSelect = document.getElementById('calSecondSelect');
+function setSecondSelectOptions(list, currentId){
+  calSecondSelect.innerHTML = '';
+  const add = (value, label) => { const o = document.createElement('option'); o.value = value; o.textContent = label; calSecondSelect.appendChild(o); return o; };
+  add('', 'Aucun');
+  list.forEach(c => { add(c.id, c.name).dataset.name = c.name; });
+  if(currentId && !list.some(c => c.id === currentId)) add(currentId, currentId);
+  add('__other__', 'Autre (saisir une adresse)…');
+  calSecondSelect.value = currentId || '';
+  document.getElementById('calSecondIdWrap').style.display = 'none';
+}
+calSecondSelect.addEventListener('change', () => {
+  const v = calSecondSelect.value;
+  const other = v === '__other__';
+  document.getElementById('calSecondIdWrap').style.display = other ? '' : 'none';
+  if(other){ document.getElementById('calSecondId').focus(); return; }
+  document.getElementById('calSecondId').value = v;
+  const nameInput = document.getElementById('calSecondName');
+  const opt = calSecondSelect.selectedOptions[0];
+  if(v && (!nameInput.value.trim() || nameInput.dataset.auto === '1')){
+    nameInput.value = shortCalendarName(opt.dataset.name || v);
+    nameInput.dataset.auto = '1';
+  }
+  if(!v){ nameInput.value = ''; nameInput.dataset.auto = '1'; }
+});
+document.getElementById('calSecondName').addEventListener('input', e => { e.target.dataset.auto = '0'; });
+async function openCalendarSettings(){
   const cfg = loadCalendarConfig();
   document.getElementById('calSecondId').value = cfg.secondId || '';
   document.getElementById('calSecondName').value = cfg.secondName || '';
+  document.getElementById('calSecondName').dataset.auto = cfg.secondName ? '0' : '1';
   document.getElementById('calZone').value = schoolZone();
+  setSecondSelectOptions([], cfg.secondId || '');
   calOverlay.classList.add('open');
+  const status = document.getElementById('calListStatus');
+  if(!readLiveSyncCache()){ status.textContent = 'Connectez-vous à Google pour choisir parmi vos agendas.'; return; }
+  status.textContent = 'Chargement de vos agendas…';
+  try{
+    const list = await fetchCalendarList();
+    setSecondSelectOptions(list, cfg.secondId || '');
+    status.textContent = list.length ? '' : "Aucun autre agenda n'est partagé avec votre compte.";
+  }catch(err){
+    console.warn(err);
+    status.textContent = 'Liste des agendas indisponible : choisissez « Autre » pour saisir une adresse.';
+  }
 }
 function closeCalendarSettings(){ calOverlay.classList.remove('open'); }
 document.getElementById('menu-calendars').addEventListener('click', () => { menuPanel.classList.remove('open'); openCalendarSettings(); });
 document.getElementById('calCancel').addEventListener('click', closeCalendarSettings);
 calOverlay.addEventListener('click', (e) => { if(e.target===calOverlay) closeCalendarSettings(); });
 document.getElementById('calSave').addEventListener('click', () => {
-  const secondId = document.getElementById('calSecondId').value.trim();
+  const sel = calSecondSelect.value;
+  const secondId = (sel === '__other__' ? document.getElementById('calSecondId').value : sel).trim();
   const secondName = document.getElementById('calSecondName').value.trim();
   const zone = document.getElementById('calZone').value;
   if(zone !== schoolZone()){

@@ -11,8 +11,8 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
-<title>Route du temps 2023-2027</title>
-<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@tabler/icons-webfont@latest/tabler-icons.min.css">
+<title>Route du temps</title>
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@tabler/icons-webfont@3.48.0/dist/tabler-icons.min.css">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Oswald:wght@500;600;700&family=Archivo:wght@400;500;600&display=swap">
 <style>
@@ -40,12 +40,17 @@ canvas#c{position:absolute;inset:0;width:100%;height:100%;touch-action:none;poin
 #addEvStatus.ok{color:#4c7a53;}
 #addEvActions{display:flex;gap:8px;justify-content:flex-end;}
 #addEvActions button{padding:9px 16px;font-size:13px;font-weight:500;cursor:pointer;}
+#toast{position:fixed;left:50%;bottom:96px;transform:translateX(-50%);z-index:3000;max-width:min(440px,calc(100vw - 32px));background:#2b241c;color:#fff;font-family:'Archivo',Arial,sans-serif;font-size:13px;line-height:1.4;padding:10px 16px;border-radius:12px;box-shadow:0 8px 24px rgba(0,0,0,0.3);opacity:0;pointer-events:none;transition:opacity .25s;}
+#toast.show{opacity:1;pointer-events:auto;}
+#toast.err{background:#a3341f;}
+.hudhide{display:none !important;}
 .appOverlay{display:none;position:fixed;inset:0;z-index:2000;background:rgba(20,15,10,0.45);align-items:center;justify-content:center;}
 .appOverlay.open{display:flex;}
 .appBox{background:#fff;border-radius:14px;padding:20px 22px;width:min(360px,92vw);box-shadow:0 12px 32px rgba(0,0,0,0.3);font-family:'Archivo',Arial,sans-serif;color:#2b241c;}
 .appBox h3{margin:0 0 12px;font-family:'Oswald',Arial,sans-serif;font-size:15px;font-weight:600;text-transform:uppercase;letter-spacing:0.02em;}
 .appBox p{margin:0 0 12px;font-size:13px;line-height:1.45;color:#5f6368;}
 .appBox label{display:flex;flex-direction:column;gap:4px;font-size:12px;color:#5f6368;margin-bottom:12px;}
+.appBox select{font-family:'Archivo',Arial,sans-serif;font-size:14px;padding:8px 10px;border:1px solid #ddd;border-radius:8px;color:#2b241c;background:#fff;}
 .appBox input{font-family:'Archivo',Arial,sans-serif;font-size:14px;padding:8px 10px;border:1px solid #ddd;border-radius:8px;color:#2b241c;}
 .appActions{display:flex;gap:8px;justify-content:flex-end;flex-wrap:wrap;}
 .appActions button{padding:9px 16px;font-size:13px;font-weight:500;cursor:pointer;border-radius:8px;}
@@ -56,17 +61,6 @@ canvas#c{position:absolute;inset:0;width:100%;height:100%;touch-action:none;poin
 #welcomeSignIn{display:inline-flex;align-items:center;gap:10px;padding:10px 18px;border-radius:24px;border:1px solid #dadce0;background:#fff;font-family:'Archivo',Arial,sans-serif;font-size:14px;font-weight:500;color:#3c4043;cursor:pointer;box-shadow:0 1px 3px rgba(0,0,0,0.12);}
 #welcomeSignIn:hover{background:#f8f9fa;}
 #welcomeSignIn svg{width:18px;height:18px;}
-#photosOverlay{display:none;position:fixed;inset:0;z-index:2000;background:rgba(20,15,10,0.45);align-items:center;justify-content:center;}
-#photosOverlay.open{display:flex;}
-#photosBox{background:#fff;border-radius:14px;padding:20px 22px;width:min(380px,92vw);max-height:80vh;display:flex;flex-direction:column;box-shadow:0 12px 32px rgba(0,0,0,0.3);font-family:'Archivo',Arial,sans-serif;}
-#photosBox h3{margin:0 0 14px;font-family:'Oswald',Arial,sans-serif;font-size:15px;font-weight:600;color:#2b241c;text-transform:uppercase;letter-spacing:0.02em;display:flex;align-items:center;justify-content:space-between;}
-#photosBox .close{width:28px;height:28px;border:none;background:#f4f1ea;border-radius:50%;cursor:pointer;color:#5f6368;display:flex;align-items:center;justify-content:center;font-size:14px;}
-#photosList{overflow-y:auto;flex:1;display:flex;flex-direction:column;margin:0 -8px;}
-#photosEmpty{display:none;padding:14px 8px;font-size:13px;color:#8a7a5c;}
-.photorow{display:flex;align-items:center;gap:12px;padding:8px;border-bottom:1px solid #eee;}
-.photorow:last-child{border-bottom:none;}
-.photorow img{width:48px;height:48px;border-radius:8px;object-fit:cover;flex:none;background:#f4f1ea;}
-.photorow .pr-title{font-size:13px;font-weight:500;color:#2b241c;overflow:hidden;text-overflow:ellipsis;}
 #videoOverlay{display:none;position:fixed;inset:0;z-index:2000;align-items:center;justify-content:center;flex-direction:column;background:transparent;}
 #videoOverlay.open{display:flex;}
 #videoOverlay iframe{width:min(86vw,900px);height:min(78vh,560px);border:0;border-radius:6px;box-shadow:0 10px 40px rgba(0,0,0,0.6);background:#000;}
@@ -181,6 +175,7 @@ canvas#c{position:absolute;inset:0;width:100%;height:100%;touch-action:none;poin
 <body>
 <div id="wrap">
   <canvas id="c"></canvas>
+  <div id="toast" role="status" aria-live="polite"></div>
   <div id="welcomeCard" hidden>
     <h2>Route du temps</h2>
     <p>Connectez votre compte Google pour voir défiler votre agenda le long de la route. Vos événements restent dans votre navigateur : rien n'est envoyé ailleurs que chez Google.</p>
@@ -190,14 +185,14 @@ canvas#c{position:absolute;inset:0;width:100%;height:100%;touch-action:none;poin
     <button id="mbtn"><i class="ti ti-menu-2" style="font-size:18px"></i></button>
     <div style="position:relative;flex:1;max-width:300px;">
       <i class="ti ti-search" id="sico"></i>
-      <input id="sbox" type="text" value="Route du temps · Jan 2023 › Déc 2027" placeholder="Rechercher un événement…" autocomplete="off">
+      <input id="sbox" type="text" value="Route du temps" placeholder="Rechercher un événement…" autocomplete="off">
       <div id="searchResults">
         <div id="searchList"></div>
         <div id="searchEmpty">Aucun événement trouvé.</div>
       </div>
     </div>
     <button id="addeventbtn" class="hudbtn-top" style="position:relative;z-index:1000;pointer-events:auto;width:40px;height:40px;min-width:40px;background:#fff;border-radius:50%;border:none;cursor:pointer;display:flex;align-items:center;justify-content:center;box-shadow:0 2px 6px rgba(0,0,0,0.2);color:#c1502f;font-size:18px;margin-left:auto;" title="Ajouter un événement"><i class="ti ti-plus"></i></button>
-    <button id="syncbtn" style="position:relative;z-index:1000;pointer-events:auto;width:40px;height:40px;min-width:40px;background:#fff;border-radius:50%;border:none;cursor:pointer;display:flex;align-items:center;justify-content:center;box-shadow:0 2px 6px rgba(0,0,0,0.2);color:#4c7a53;font-size:18px;margin-left:6px;flex:none;" title="Synchroniser Google Agenda"><i class="ti ti-refresh"></i></button>
+    <button id="syncbtn" class="hudhide" style="position:relative;z-index:1000;pointer-events:auto;width:40px;height:40px;min-width:40px;background:#fff;border-radius:50%;border:none;cursor:pointer;display:flex;align-items:center;justify-content:center;box-shadow:0 2px 6px rgba(0,0,0,0.2);color:#4c7a53;font-size:18px;margin-left:6px;flex:none;" title="Synchroniser Google Agenda"><i class="ti ti-refresh"></i></button>
     <button id="googleAuthBtn" class="hudbtn-top" style="position:relative;z-index:1000;pointer-events:auto;width:40px;height:40px;min-width:40px;background:#fff;border-radius:50%;border:none;cursor:pointer;display:flex;align-items:center;justify-content:center;box-shadow:0 2px 6px rgba(0,0,0,0.2);color:#9aa0a6;font-size:20px;margin-left:6px;overflow:hidden;padding:0;" title="Non connecté à Google — cliquer pour se connecter et synchroniser en direct">
       <i class="ti ti-user-circle" id="googleAuthIcon"></i>
       <img id="googleAuthAvatar" alt="" style="display:none;width:100%;height:100%;border-radius:50%;object-fit:cover;">
@@ -206,12 +201,10 @@ canvas#c{position:absolute;inset:0;width:100%;height:100%;touch-action:none;poin
     <button id="minicalbtn" class="hudbtn-top" style="position:relative;z-index:1000;pointer-events:auto;width:40px;height:40px;min-width:40px;background:#fff;border-radius:50%;border:none;cursor:pointer;display:flex;align-items:center;justify-content:center;box-shadow:0 2px 6px rgba(0,0,0,0.2);color:#c1502f;font-size:18px;margin-left:6px;" title="Masquer le mini calendrier"><i class="ti ti-calendar" id="minicalIcon"></i></button>
     <button id="datejumpbtn" class="hudbtn-top" style="position:relative;z-index:1000;pointer-events:auto;width:40px;height:40px;min-width:40px;background:#fff;border-radius:50%;border:none;cursor:pointer;display:flex;align-items:center;justify-content:center;box-shadow:0 2px 6px rgba(0,0,0,0.2);color:#c1502f;font-size:18px;margin-left:6px;" title="Aller à une date"><i class="ti ti-calendar-event"></i></button>
     <button id="monthbtn" class="hudbtn-top" style="position:relative;z-index:1000;pointer-events:auto;width:40px;height:40px;min-width:40px;background:#fff;border-radius:50%;border:none;cursor:pointer;display:flex;align-items:center;justify-content:center;box-shadow:0 2px 6px rgba(0,0,0,0.2);color:#c1502f;font-size:18px;margin-left:6px;" title="Vue mensuelle"><i class="ti ti-calendar-month"></i></button>
-    <button id="photosbtn" class="hudbtn-top" style="position:relative;z-index:1000;pointer-events:auto;width:40px;height:40px;min-width:40px;background:#fff;border-radius:50%;border:none;cursor:pointer;display:flex;align-items:center;justify-content:center;box-shadow:0 2px 6px rgba(0,0,0,0.2);color:#c1502f;font-size:18px;margin-left:6px;" title="Photos"><i class="ti ti-photo"></i></button>
-    <button id="photorevealbtn" style="position:relative;z-index:1000;pointer-events:auto;width:40px;height:40px;min-width:40px;background:#fff;border-radius:50%;border:none;cursor:pointer;display:flex;align-items:center;justify-content:center;box-shadow:0 2px 6px rgba(0,0,0,0.2);color:#c1502f;font-size:18px;margin-left:6px;flex:none;" title="N'afficher une photo que quand la Méhari passe sur sa date"><i class="ti ti-car"></i></button>
     <button id="nophotobtn" class="hudbtn-top" style="position:relative;z-index:1000;pointer-events:auto;width:40px;height:40px;min-width:40px;background:#fff;border-radius:50%;border:none;cursor:pointer;display:flex;align-items:center;justify-content:center;box-shadow:0 2px 6px rgba(0,0,0,0.2);color:#c1502f;font-size:18px;margin-left:6px;" title="Vue sans photo sur les panneaux"><i class="ti ti-photo-off"></i></button>
-    <button id="aerialbtn" class="hudbtn-top" style="position:relative;z-index:1000;pointer-events:auto;width:40px;height:40px;min-width:40px;background:#fff;border-radius:50%;border:none;cursor:pointer;display:flex;align-items:center;justify-content:center;box-shadow:0 2px 6px rgba(0,0,0,0.2);color:#c1502f;font-size:18px;margin-left:6px;" title="Vue à 30°/45° au-dessus"><i class="ti ti-drone"></i></button>
-    <button id="fpvbtn" class="hudbtn-top" style="position:relative;z-index:1000;pointer-events:auto;width:40px;height:40px;min-width:40px;background:#fff;border-radius:50%;border:none;cursor:pointer;display:flex;align-items:center;justify-content:center;box-shadow:0 2px 6px rgba(0,0,0,0.2);color:#c1502f;font-size:18px;margin-left:6px;" title="Vue conducteur (ce que voit le conducteur ou le marcheur)"><i class="ti ti-eye"></i></button>
-    <button id="walkbtn" class="hudbtn-top" style="position:relative;z-index:1000;pointer-events:auto;width:40px;height:40px;min-width:40px;background:#fff;border-radius:50%;border:none;cursor:pointer;display:flex;align-items:center;justify-content:center;box-shadow:0 2px 6px rgba(0,0,0,0.2);color:#c1502f;font-size:18px;margin-left:6px;" title="Rouler en trottinette électrique au lieu de conduire"><i class="ti ti-scooter-electric"></i></button>
+    <button id="aerialbtn" class="hudbtn-top" style="position:relative;z-index:1000;pointer-events:auto;width:40px;height:40px;min-width:40px;background:#fff;border-radius:50%;border:none;cursor:pointer;display:flex;align-items:center;justify-content:center;box-shadow:0 2px 6px rgba(0,0,0,0.2);color:#c1502f;font-size:18px;margin-left:6px;" title="Vue : angle, vue conducteur, trottinette"><i class="ti ti-drone"></i></button>
+    <button id="fpvbtn" class="hudbtn-top hudhide" style="position:relative;z-index:1000;pointer-events:auto;width:40px;height:40px;min-width:40px;background:#fff;border-radius:50%;border:none;cursor:pointer;display:flex;align-items:center;justify-content:center;box-shadow:0 2px 6px rgba(0,0,0,0.2);color:#c1502f;font-size:18px;margin-left:6px;" title="Vue conducteur (ce que voit le conducteur ou le marcheur)"><i class="ti ti-eye"></i></button>
+    <button id="walkbtn" class="hudbtn-top hudhide" style="position:relative;z-index:1000;pointer-events:auto;width:40px;height:40px;min-width:40px;background:#fff;border-radius:50%;border:none;cursor:pointer;display:flex;align-items:center;justify-content:center;box-shadow:0 2px 6px rgba(0,0,0,0.2);color:#c1502f;font-size:18px;margin-left:6px;" title="Rouler en trottinette électrique au lieu de conduire"><i class="ti ti-scooter-electric"></i></button>
     <button id="weekbtn" class="hudbtn-top" style="position:relative;z-index:1000;pointer-events:auto;width:40px;height:40px;min-width:40px;background:#fff;border-radius:50%;border:none;cursor:pointer;display:flex;align-items:center;justify-content:center;box-shadow:0 2px 6px rgba(0,0,0,0.2);color:#c1502f;font-size:18px;margin-left:6px;" title="Volet hebdomadaire"><i class="ti ti-calendar-week"></i></button>
     <button id="nightbtn" class="hudbtn-top" style="position:relative;z-index:1000;pointer-events:auto;width:40px;height:40px;min-width:40px;background:#fff;border-radius:50%;border:none;cursor:pointer;display:flex;align-items:center;justify-content:center;box-shadow:0 2px 6px rgba(0,0,0,0.2);color:#c1502f;font-size:18px;margin-left:6px;" title="Nuit / jour"><i class="ti ti-sun" id="nightIcon"></i></button>
     <button id="rightonlybtn" class="hudbtn-top" style="position:relative;z-index:1000;pointer-events:auto;width:40px;height:40px;min-width:40px;background:#fff;border-radius:50%;border:none;cursor:pointer;display:flex;align-items:center;justify-content:center;box-shadow:0 2px 6px rgba(0,0,0,0.2);color:#c1502f;font-size:16px;font-weight:bold;margin-left:6px;" title="Masquer mon agenda">Moi</button>
@@ -221,15 +214,14 @@ canvas#c{position:absolute;inset:0;width:100%;height:100%;touch-action:none;poin
     <button id="menu-minical" class="menuitem"><i class="ti ti-calendar"></i>Masquer le mini calendrier</button>
     <button id="menu-datejump" class="menuitem"><i class="ti ti-calendar-event"></i>Aller à une date</button>
     <button id="menu-month" class="menuitem"><i class="ti ti-calendar-month"></i>Vue mensuelle</button>
-    <button id="menu-photos" class="menuitem"><i class="ti ti-photo"></i>Photos</button>
     <button id="menu-nophoto" class="menuitem"><i class="ti ti-photo-off"></i>Vue sans photo</button>
-    <button id="menu-aerial" class="menuitem"><i class="ti ti-drone"></i>Vue à 30°/45°</button>
+    <button id="menu-aerial" class="menuitem"><i class="ti ti-drone"></i>Vue (angle, conducteur, trottinette)</button>
     <button id="menu-fpv" class="menuitem"><i class="ti ti-eye"></i>Vue conducteur</button>
     <button id="menu-walk" class="menuitem"><i class="ti ti-scooter-electric"></i>Trottinette électrique</button>
     <button id="menu-week" class="menuitem"><i class="ti ti-calendar-week"></i>Volet hebdomadaire</button>
     <button id="menu-night" class="menuitem"><i class="ti ti-sun"></i>Nuit / jour</button>
     <button id="menu-right" class="menuitem"><i class="ti ti-user"></i>Masquer mon agenda</button>
-    <button id="menu-calendars" class="menuitem"><i class="ti ti-users"></i>Agendas affichés…</button>
+    <button id="menu-calendars" class="menuitem"><i class="ti ti-users"></i>Agendas et vacances…</button>
     <button id="menu-signout" class="menuitem" style="display:none;"><i class="ti ti-logout"></i>Se déconnecter de Google</button>
   </div>
   <div id="miniCal">
@@ -254,13 +246,6 @@ canvas#c{position:absolute;inset:0;width:100%;height:100%;touch-action:none;poin
     </div>
     <div class="list" id="wp-list"></div>
   </div>
-  <div id="photosOverlay">
-    <div id="photosBox">
-      <h3>Photos<button class="close" id="photos-close" type="button"><i class="ti ti-x"></i></button></h3>
-      <div id="photosList"></div>
-      <div id="photosEmpty">Aucune photo pour le moment.</div>
-    </div>
-  </div>
   <div id="videoOverlay">
     <span class="vidNav left" id="videoPrev">‹</span>
     <span class="vidNav right" id="videoNext">›</span>
@@ -284,10 +269,16 @@ canvas#c{position:absolute;inset:0;width:100%;height:100%;touch-action:none;poin
   </div>
   <div id="calOverlay" class="appOverlay">
     <div class="appBox">
-      <h3>Agendas affichés</h3>
+      <h3>Agendas et vacances</h3>
       <p>À droite de la route : votre agenda Google principal. À gauche, vous pouvez ajouter un second agenda partagé avec vous (conjoint, famille, équipe…).</p>
       <label>Adresse ou identifiant de l'agenda (optionnel)<input type="text" id="calSecondId" placeholder="prenom.nom@gmail.com"></label>
       <label>Nom affiché<input type="text" id="calSecondName" maxlength="20" placeholder="Ex. Camille"></label>
+      <label>Vacances scolaires<select id="calZone">
+        <option value="A">Zone A (Grenoble, Lyon, Bordeaux…)</option>
+        <option value="B">Zone B (Marseille, Nice, Lille, Rennes…)</option>
+        <option value="C">Zone C (Paris, Montpellier, Toulouse)</option>
+        <option value="none">Ne pas afficher</option>
+      </select></label>
       <div class="appActions">
         <button id="calCancel" class="menuitem" style="border:1px solid #ddd;">Annuler</button>
         <button id="calSave" class="menuitem" style="background:#c1502f;color:#fff;">Enregistrer</button>
@@ -310,6 +301,11 @@ canvas#c{position:absolute;inset:0;width:100%;height:100%;touch-action:none;poin
       <button class="jchip" data-angle="30" type="button">30°</button>
       <button class="jchip" data-angle="45" type="button">45°</button>
     </div>
+    <div style="font-family:'Oswald',Arial,sans-serif;font-size:12px;font-weight:600;color:#2b241c;margin-top:4px;">Options</div>
+    <div class="jchips">
+      <button class="jchip" id="vp-fpv" type="button">Vue conducteur</button>
+      <button class="jchip" id="vp-walk" type="button">Trottinette</button>
+    </div>
   </div>
   <button id="monthPrevBtn" class="monthnavbtn" title="Mois précédent"><i class="ti ti-chevron-left"></i></button>
   <button id="monthNextBtn" class="monthnavbtn" title="Mois suivant"><i class="ti ti-chevron-right"></i></button>
@@ -320,17 +316,18 @@ canvas#c{position:absolute;inset:0;width:100%;height:100%;touch-action:none;poin
     <button class="sp on" data-s="3">×3</button>
   </div>
   <div id="legend">
-    <button id="legright" class="leg" style="cursor:pointer;user-select:none;border:none;font:inherit;color:inherit;text-align:left;" title="Masquer mon agenda"><div class="legdot" style="background:#1a73e8"></div><span id="legrightName">Moi</span></button>
-    <button id="legleft" class="leg" style="display:none;cursor:pointer;user-select:none;border:none;font:inherit;color:inherit;text-align:left;" title="Masquer l'agenda partagé"><div class="legdot" style="background:#e67c73"></div><span id="legleftName"></span></button>
+    <button id="legright" class="leg" style="cursor:pointer;user-select:none;border:none;font-family:inherit;color:inherit;text-align:left;" title="Masquer mon agenda"><div class="legdot" style="background:#1a73e8"></div><span id="legrightName">Moi</span></button>
+    <button id="legleft" class="leg" style="display:none;cursor:pointer;user-select:none;border:none;font-family:inherit;color:inherit;text-align:left;" title="Masquer l'agenda partagé"><div class="legdot" style="background:#e67c73"></div><span id="legleftName"></span></button>
     <div class="leg"><div class="legline"></div>Week-end</div>
-    <div class="leg"><div class="legline" style="background:#ffd600;"></div>Vacances scolaires</div>
+    <div class="leg" id="legVac"><div class="legline" style="background:#ffd600;"></div><span id="legVacTxt">Vacances scolaires</span></div>
+    <button id="legSync" class="leg" type="button" style="display:none;cursor:pointer;border:none;font-family:inherit;color:inherit;text-align:left;" title="Relancer la synchro Google Agenda"><i class="ti ti-refresh" style="font-size:12px;"></i><span id="legSyncTxt"></span></button>
   </div>
   <div id="zbx">
     <button class="zb" id="zi">+</button>
     <button class="zb" id="zo">−</button>
   </div>
   <button id="todaybtn" title="Aujourd'hui">Auj</button>  <button id="resetbtn" title="Retour au début"><i class="ti ti-arrow-back-up"></i></button>
-  <button id="revbtn" title="Reculer"><i class="ti ti-player-play" style="transform:scaleX(-1);display:inline-block"></i></button><button id="playbtn"><i class="ti ti-player-play" id="pico"></i></button>
+  <button id="revbtn" title="Reculer"><i class="ti ti-player-play" style="transform:scaleX(-1);display:inline-block"></i></button><button id="playbtn" aria-label="Lecture / pause"><i class="ti ti-player-play" id="pico"></i></button>
   <div id="eta">
     <div>
       <div id="eta-who" style="font-size:12px;font-weight:600;color:#5f6368;">—</div>
@@ -371,57 +368,20 @@ const TODAY_DOW=0;
 // Événements chargés depuis Google Agenda à la connexion (voir applyEventsData) :
 // côté droit = agenda principal du compte connecté, côté gauche = agenda partagé optionnel.
 const EVT_RIGHT=[];
+let EVENTS_VERSION=0;   // incrémenté à chaque rechargement des événements (cache par jour)
 const EVT_LEFT=[];
 
-const VACANCES_B=[
-  {label:'Noël',start:0,end:2},
-  {label:'Hiver',start:41,end:57},
-  {label:'Printemps',start:104,end:121},
-  {label:'Été',start:188,end:246},
-  {label:'Toussaint',start:293,end:309},
-  {label:'Noël',start:356,end:372},
-  {label:'Hiver',start:405,end:421},
-  {label:'Printemps',start:475,end:491},
-  {label:'Été',start:552,end:610},
-  {label:'Toussaint',start:657,end:673},
-  {label:'Noël',start:720,end:736},
-  {label:'Hiver',start:769,end:785},
-  {label:'Printemps',start:825,end:842},
-  {label:'Été',start:916,end:974},
-  {label:'Toussaint',start:1021,end:1037},
-  {label:'Noël',start:1084,end:1100},
-  {label:'Hiver',start:1140,end:1156},
-  {label:'Printemps',start:1196,end:1212},
-  {label:'Été',start:1280,end:1339},
-  {label:'Toussaint',start:1385,end:1401},
-  {label:'Noël',start:1448,end:1464},
-  {label:'Hiver',start:1511,end:1527},
-  {label:'Printemps',start:1567,end:1583},
-  {label:'Été',start:1644,end:1825}
-];
+// Vacances scolaires officielles (data.education.gouv.fr), par zone : [nom, 1er jour,
+// jour de la reprise], en index de jour depuis le 1er janvier 2023. Table embarquée
+// (2022-2028) complétée/actualisée au chargement par l'API officielle (voir
+// refreshSchoolCalendar) ; la zone se choisit dans « Agendas et vacances… ».
+const VACANCES_ZONES={
+  A:[['Noël',-15,2],['Hiver',34,50],['Printemps',97,113],['Été',188,246],['Toussaint',293,309],['Noël',356,372],['Hiver',412,428],['Printemps',468,484],['Été',552,610],['Toussaint',657,673],['Noël',720,736],['Hiver',783,799],['Printemps',839,855],['Été',916,974],['Toussaint',1021,1037],['Noël',1084,1100],['Hiver',1133,1149],['Printemps',1189,1205],['Été',1280,1339],['Toussaint',1385,1401],['Noël',1448,1464],['Hiver',1504,1520],['Printemps',1560,1576],['Été',1644,1705],['Toussaint',1756,1772],['Noël',1812,1828],['Hiver',1875,1891],['Printemps',1938,1955],['Été',2011,2070]],
+  B:[['Noël',-15,2],['Hiver',41,57],['Printemps',104,121],['Été',188,246],['Toussaint',293,309],['Noël',356,372],['Hiver',419,435],['Printemps',475,491],['Été',552,610],['Toussaint',657,673],['Noël',720,736],['Hiver',769,785],['Printemps',825,842],['Été',916,974],['Toussaint',1021,1037],['Noël',1084,1100],['Hiver',1140,1156],['Printemps',1196,1212],['Été',1280,1339],['Toussaint',1385,1401],['Noël',1448,1464],['Hiver',1511,1527],['Printemps',1567,1583],['Été',1644,1705],['Toussaint',1756,1772],['Noël',1812,1828],['Hiver',1861,1877],['Printemps',1924,1940],['Été',2011,2070]],
+  C:[['Noël',-15,2],['Hiver',48,64],['Printemps',111,128],['Été',188,246],['Toussaint',293,309],['Noël',356,372],['Hiver',405,421],['Printemps',461,477],['Été',552,610],['Toussaint',657,673],['Noël',720,736],['Hiver',776,792],['Printemps',832,848],['Été',916,974],['Toussaint',1021,1037],['Noël',1084,1100],['Hiver',1147,1163],['Printemps',1203,1219],['Été',1280,1339],['Toussaint',1385,1401],['Noël',1448,1464],['Hiver',1497,1513],['Printemps',1553,1569],['Été',1644,1705],['Toussaint',1756,1772],['Noël',1812,1828],['Hiver',1868,1884],['Printemps',1931,1948],['Été',2011,2070]]
+};
+const VACANCES=[];   // vacances de la zone choisie, {label,start,end}, voir rebuildVacances()
 const MULTI_EVENTS=[];
-const JOURS_FERIES=[
-  {day:0,label:'1 Jan'},{day:99,label:'10 Avr'},{day:120,label:'1 Mai'},
-  {day:127,label:'8 Mai'},{day:137,label:'18 Mai'},{day:148,label:'29 Mai'},
-  {day:194,label:'14 Jul'},{day:226,label:'15 Aoû'},{day:304,label:'1 Nov'},
-  {day:314,label:'11 Nov'},{day:358,label:'25 Déc'},
-  {day:365,label:'1 Jan'},{day:456,label:'1 Avr'},{day:486,label:'1 Mai'},
-  {day:493,label:'8 Mai'},{day:494,label:'9 Mai'},{day:505,label:'20 Mai'},
-  {day:560,label:'14 Jul'},{day:592,label:'15 Aoû'},{day:670,label:'1 Nov'},
-  {day:680,label:'11 Nov'},{day:724,label:'25 Déc'},
-  {day:731,label:'1 Jan'},{day:841,label:'21 Avr'},{day:851,label:'1 Mai'},
-  {day:858,label:'8 Mai'},{day:879,label:'29 Mai'},{day:890,label:'9 Jun'},
-  {day:925,label:'14 Jul'},{day:957,label:'15 Aoû'},{day:1035,label:'1 Nov'},
-  {day:1045,label:'11 Nov'},{day:1089,label:'25 Déc'},
-  {day:1096,label:'1 Jan'},{day:1191,label:'6 Avr'},{day:1216,label:'1 Mai'},
-  {day:1223,label:'8 Mai'},{day:1229,label:'14 Mai'},{day:1240,label:'25 Mai'},
-  {day:1290,label:'14 Jul'},{day:1322,label:'15 Aoû'},{day:1400,label:'1 Nov'},
-  {day:1410,label:'11 Nov'},{day:1454,label:'25 Déc'},
-  {day:1461,label:'1 Jan'},{day:1548,label:'29 Mar'},{day:1581,label:'1 Mai'},
-  {day:1586,label:'6 Mai'},{day:1588,label:'8 Mai'},{day:1597,label:'17 Mai'},
-  {day:1655,label:'14 Jul'},{day:1687,label:'15 Aoû'},{day:1765,label:'1 Nov'},
-  {day:1775,label:'11 Nov'},{day:1819,label:'25 Déc'}
-];
 
 const ALL_EVENTS=[...EVT_RIGHT,...EVT_LEFT].sort((a,b)=>a.day-b.day);
 
@@ -454,7 +414,17 @@ let monthViewActive=false;
 let showRight=true, showLeft=true;
 let fling=0;            // vitesse résiduelle (jours/s) après un glissé tactile
 function isVisibleSide(side){ return side==='right' ? showRight : showLeft; }
-function visibleEvents(){ return ALL_EVENTS.filter(e=>isVisibleSide(e.side)); }
+let VIS_CACHE={sig:null,list:[],byDay:new Map()};
+function refreshVisibleCache(){
+  const sig=showRight+'|'+showLeft+'|'+ALL_EVENTS.length+'|'+EVENTS_VERSION;
+  if(VIS_CACHE.sig===sig) return VIS_CACHE;
+  const list=ALL_EVENTS.filter(e=>isVisibleSide(e.side)), byDay=new Map();
+  list.forEach(e=>{ let a=byDay.get(e.day); if(!a) byDay.set(e.day,a=[]); a.push(e); });
+  VIS_CACHE={sig,list,byDay};
+  return VIS_CACHE;
+}
+function visibleEvents(){ return refreshVisibleCache().list; }
+function visibleEventsOn(day){ return refreshVisibleCache().byDay.get(day) || []; }
 
 function resize(){ const r=wrap.getBoundingClientRect(); W=canvas.width=r.width; H=canvas.height=r.height; }
 
@@ -465,6 +435,9 @@ let CAMH=2.3;   // hauteur de l'œil (m) — ajustable via les boutons +/- (zoom
 // d'escalier de semaines ; la portée d'affichage s'allonge avec l'altitude.
 function camHMax(){ return viewAngle ? 26 : 8; }
 function viewRange(){ return 260+Math.max(0,CAMH-8)*12; }
+// Recul de la caméra derrière la voiture : plus on monte (dézoom en vue 30°/45°),
+// plus on recule, pour que la voiture reste dans le bas de l'écran.
+function camBack(){ return tilt*(3+Math.max(0,CAMH-8)*1.1); }
 // Tracé « en escalier » : chaque semaine (du lundi au dimanche) est une ligne
 // droite, puis la route fait un saut de côté entre le dimanche et le lundi.
 // Pendant un mois les sauts vont tous vers la droite, le mois suivant vers la
@@ -533,7 +506,7 @@ function proj(dist,lat,hgt){
   // en ligne droite il vaut 0.
   const dc0=(curve(carW+8)-curve(carW-8))/16;
   const T=tilt;
-  const camH=CAMH+T*6, pitch=T*0.7854, back=T*3;
+  const camH=CAMH+T*6, pitch=T*0.7854, back=camBack();
   const cp=Math.cos(pitch), sp2=Math.sin(pitch);
   const cx=weekMode ? Math.max(W*0.28,(W-340)/2) : W/2;
   const hz=H*(0.44+0.52*T), f=H*0.95;
@@ -561,7 +534,7 @@ function isMonday(d){ return((TODAY_DOW+d)%7)===1; }
 function shortDate(d){
   const ms=new Date('2023-01-01T00:00:00Z').getTime()+d*86400000;
   const dt=new Date(ms);
-  return dt.getDate()+' '+dt.toLocaleString('fr-FR',{month:'short'})+' '+dt.getUTCFullYear();
+  return dt.getUTCDate()+' '+dt.toLocaleString('fr-FR',{month:'short',timeZone:'UTC'})+' '+dt.getUTCFullYear();
 }
 
 // ===== DRAW FUNCTIONS =====
@@ -653,7 +626,7 @@ function easterDateUTC(year){
   return new Date(Date.UTC(year,month-1,day));
 }
 const HOLIDAY_DAYS=new Set();
-for(let y=2022;y<=2028;y++){
+for(let y=2022;y<=2060;y++){
   const easter=easterDateUTC(y);
   const plus=(n)=>{const dt=new Date(easter.getTime()); dt.setUTCDate(dt.getUTCDate()+n); return dt;};
   [
@@ -1139,7 +1112,7 @@ function pathEdgeWobble(worldPos,seed){
 function drawRoadSurface(){
   const hzL=horizonScreenY();
   const T=tilt;
-  const dN=1.6+T*10, dF=Math.max(420,viewRange()+40);
+  const dN=1.6+T*10-camBack()+T*3, dF=Math.max(420,viewRange()+40);
   const steps=90;
   const dists=[];
   for(let i=0;i<=steps;i++) dists.push(dN*Math.pow(dF/dN,i/steps));
@@ -1289,7 +1262,7 @@ function drawRoadSurface(){
 function drawLandmarks(){
   const hzL=horizonScreenY();
   const T=tilt;
-  const dN=1.6+T*10, dF=Math.max(420,viewRange()+40);
+  const dN=1.6+T*10-camBack()+T*3, dF=Math.max(420,viewRange()+40);
   const camW_=camDay*SP;
   const cell=340, maxD=Math.min(dF,320), nearD=Math.max(dN,30);
   let lastIdx=null;
@@ -1333,7 +1306,7 @@ function drawLandmarks(){
 function drawVacancesBLine(){
   ctx.strokeStyle='#ffd600';
   ctx.lineWidth=2.5;
-  VACANCES_B.forEach(v=>{
+  VACANCES.forEach(v=>{
     const d1=Math.max(0,v.start), d2=Math.min(TOTAL_DAYS,v.end);
     if(d2<d1) return;
     const dist1=dayToDist(d1), dist2=dayToDist(d2);
@@ -1792,7 +1765,7 @@ function drawEventSign(it,alpha){
   // Drive ou liens Google Photos, via Google Agenda) — s'il y en a plusieurs, la
   // vignette du panneau les fait défiler automatiquement et le zoom permet de
   // naviguer entre toutes ; sinon repli sur le catalogue PHOTOS codé en dur.
-  const revealOk=!hidePhotos && (!photoRevealOnly || Math.floor(camDay)===e.day);
+  const revealOk=!hidePhotos;
   const photoUrls=(e.photos && e.photos.length) ? e.photos : (e.photo ? [e.photo] : []);
   let photoImg=null, photoLegende=e.title, photoUrlList=null, photoUrlIdx=0, photoIsVideo=false;
   if(photoUrls.length && revealOk){
@@ -1930,6 +1903,19 @@ function drawEventSign(it,alpha){
     });
   }
   ctx.restore();
+  // Plus de 3 événements ce jour-là : pastille « +N » sur le dernier panneau
+  // (clic = liste complète du jour), pour ne pas les masquer en silence.
+  if(it.more){
+    const r=Math.max(7,Math.min(16,w*0.13));
+    const bx=pTL.x+w, by=pTL.y;
+    ctx.fillStyle='#d32f2f';
+    ctx.beginPath(); ctx.arc(bx,by,r,0,Math.PI*2); ctx.fill();
+    ctx.strokeStyle='#fff'; ctx.lineWidth=Math.max(1,r*0.15); ctx.stroke();
+    ctx.fillStyle='#fff'; ctx.textAlign='center'; ctx.textBaseline='middle';
+    ctx.font=`700 ${(r*0.95).toFixed(1)}px Archivo, Arial, sans-serif`;
+    ctx.fillText('+'+it.more, bx, by+r*0.05);
+    EVENT_HITBOXES.push({day:e.day,x0:bx-r,x1:bx+r,y0:by-r,y1:by+r});
+  }
   ctx.globalAlpha=1;
   EVENT_HITBOXES.push({ev:e,x0:pTL.x,x1:pTL.x+w,y0:pTL.y,y1:pTL.y+h});
 }
@@ -1949,20 +1935,22 @@ function drawRouteObjects(){
     const isFirst=dt.getUTCDate()===1;
     if(isFirst) items.push({kind:'borne',dist,day:k});
     if(isFirst && dist>24) items.push({kind:'gantry',dist,day:k});
-    const dayEvents=visibleEvents().filter(e=>e.day===k);
+    const dayEvents=visibleEventsOn(k);
     const evs=[];
     dayEvents.forEach(e=>{
       const key=e.side+String.fromCharCode(1)+e.day+String.fromCharCode(1)+e.title;
       if(!AUTO_EXCLUDE.has(key)) evs.push(e);
     });
     let nL=0,nR=0;
-    evs.slice(0,3).forEach(e=>{
+    const shown=evs.slice(0,3);
+    shown.forEach((e,iShown)=>{
+      const more=(iShown===shown.length-1 && evs.length>3) ? evs.length-3 : 0;
       const side=e.side==='right' ? 1 : -1; // agenda principal à droite, agenda partagé à gauche
       // Position fixe au milieu du jour, à égale distance entre le joint noir
       // du jour précédent et celui du jour suivant : le panneau (et sa
       // bretelle d'accès) ne suit jamais la voiture, il reste planté à cet
       // endroit de la route comme les autres repères.
-      items.push({kind:'sign',dist:dist+SP*0.5,ev:e,side,rank:side>0?nR++:nL++});
+      items.push({kind:'sign',dist:dist+SP*0.5,ev:e,side,rank:side>0?nR++:nL++,more});
     });
     // Repère jour/date à gauche, pour chaque jour, planté au milieu du jour
     // (comme les panneaux d'événement) et non sur le joint entre deux jours.
@@ -2170,7 +2158,7 @@ function renderWeekPanel(){
     const k=m+i;
     const dt=new Date(MONTH_ORIGIN_MS+k*86400000);
     const dow=['Dim','Lun','Mar','Mer','Jeu','Ven','Sam'][dt.getUTCDay()];
-    const evs=visibleEvents().filter(e=>e.day===k);
+    const evs=visibleEventsOn(k);
     const dayDiv=document.createElement('div');
     dayDiv.className='wp-day';
     dayDiv.style.background=k===cur?'#f8f6f2':'transparent';
@@ -2222,16 +2210,18 @@ function setViewAngle(deg){
   CAMH=Math.min(CAMH,camHMax());
   aerialbtn.style.background=deg?'#c1502f':'#fff';
   aerialbtn.style.color=deg?'#fff':'#c1502f';
-  aerialbtn.title=deg?`Vue à ${deg}° au-dessus`:'Vue à 30°/45° au-dessus';
-  document.querySelectorAll('#viewAnglePanel .jchip').forEach(c=>{
+  aerialbtn.title='Vue : angle, vue conducteur, trottinette';
+  document.querySelectorAll('#viewAnglePanel .jchip[data-angle]').forEach(c=>{
     c.classList.toggle('jchip-on', +c.dataset.angle===deg);
   });
   viewAnglePanel.classList.remove('open');
 }
 aerialbtn.addEventListener('click',()=>{ viewAnglePanel.classList.toggle('open'); });
-viewAnglePanel.querySelectorAll('.jchip').forEach(c=>{
+viewAnglePanel.querySelectorAll('.jchip[data-angle]').forEach(c=>{
   c.addEventListener('click',()=>setViewAngle(+c.dataset.angle));
 });
+document.getElementById('vp-fpv').addEventListener('click',()=>document.getElementById('fpvbtn').click());
+document.getElementById('vp-walk').addEventListener('click',()=>document.getElementById('walkbtn').click());
 document.addEventListener('click',e=>{
   if(!viewAnglePanel.contains(e.target) && !aerialbtn.contains(e.target)) viewAnglePanel.classList.remove('open');
 });
@@ -2241,6 +2231,7 @@ document.getElementById('walkbtn').addEventListener('click',()=>{
   btn.style.background=walkMode?'#c1502f':'#fff';
   btn.style.color=walkMode?'#fff':'#c1502f';
   btn.title=walkMode?'Reprendre la voiture':'Rouler en trottinette électrique au lieu de conduire';
+  document.getElementById('vp-walk').classList.toggle('jchip-on',walkMode);
 });
 document.getElementById('fpvbtn').addEventListener('click',()=>{
   firstPerson=!firstPerson;
@@ -2248,6 +2239,7 @@ document.getElementById('fpvbtn').addEventListener('click',()=>{
   btn.style.background=firstPerson?'#c1502f':'#fff';
   btn.style.color=firstPerson?'#fff':'#c1502f';
   btn.title=firstPerson?'Revenir à la vue normale':'Vue conducteur (ce que voit le conducteur ou le marcheur)';
+  document.getElementById('vp-fpv').classList.toggle('jchip-on',firstPerson);
 });
 document.getElementById('nightbtn').addEventListener('click',()=>{
   night=!night;
@@ -2418,7 +2410,7 @@ wrap.addEventListener('pointerdown',e=>{
   // Les calques (fiche détail, panneau du jour, recherche, date, ajout d'événement...) ne doivent pas
   // capturer le pointeur : sinon leur propre clic est redirigé vers wrap (voir plus bas)
   // et ne peut plus se fermer au clic sur leur fond.
-  if(e.target.closest('#eventDetail')||e.target.closest('#eventDetailScrim')||e.target.closest('#dayPanel')||e.target.closest('#dayPanelScrim')||e.target.closest('#searchResults')||e.target.closest('#datejumpPanel')||e.target.closest('#addEventOverlay')||e.target.closest('#photosOverlay')||e.target.closest('#videoOverlay')||e.target.closest('.appOverlay')||e.target.closest('#welcomeCard')) return;
+  if(e.target.closest('#eventDetail')||e.target.closest('#eventDetailScrim')||e.target.closest('#dayPanel')||e.target.closest('#dayPanelScrim')||e.target.closest('#searchResults')||e.target.closest('#datejumpPanel')||e.target.closest('#addEventOverlay')||e.target.closest('#videoOverlay')||e.target.closest('.appOverlay')||e.target.closest('#welcomeCard')) return;
   activePointers.set(e.pointerId,{x:e.clientX,y:e.clientY});
   if(activePointers.size===2){
     const pts=[...activePointers.values()];
@@ -2494,7 +2486,7 @@ wrap.addEventListener('pointercancel',e=>{activePointers.delete(e.pointerId);pin
 
 wrap.addEventListener('click',e=>{
   if(e.target.closest('button')||e.target.closest('input')) return;
-  if(e.target.closest('#eventDetail')||e.target.closest('#eventDetailScrim')||e.target.closest('#dayPanel')||e.target.closest('#dayPanelScrim')||e.target.closest('#searchResults')||e.target.closest('#datejumpPanel')||e.target.closest('#addEventOverlay')||e.target.closest('#photosOverlay')||e.target.closest('#videoOverlay')||e.target.closest('.appOverlay')||e.target.closest('#welcomeCard')) return;
+  if(e.target.closest('#eventDetail')||e.target.closest('#eventDetailScrim')||e.target.closest('#dayPanel')||e.target.closest('#dayPanelScrim')||e.target.closest('#searchResults')||e.target.closest('#datejumpPanel')||e.target.closest('#addEventOverlay')||e.target.closest('#videoOverlay')||e.target.closest('.appOverlay')||e.target.closest('#welcomeCard')) return;
   const rect=canvas.getBoundingClientRect();
   const scaleX=canvas.width/rect.width, scaleY=canvas.height/rect.height;
   const cx=(e.clientX-rect.left)*scaleX, cy=(e.clientY-rect.top)*scaleY;
@@ -2524,7 +2516,7 @@ wrap.addEventListener('click',e=>{
     return;
   }
   const evHit=EVENT_HITBOXES.find(h=>cx>=h.x0 && cx<=h.x1 && cy>=h.y0 && cy<=h.y1);
-  if(evHit){ openEventDetail(evHit.ev); return; }
+  if(evHit){ if(evHit.ev) openEventDetail(evHit.ev); else openDayPanel(evHit.day); return; }
 });
 
 // Curseur "cliquable" au survol d'un événement, d'une case du mois ou d'une photo
@@ -2597,7 +2589,7 @@ function closeDayPanel(){
 document.getElementById('dp-close').addEventListener('click',closeDayPanel);
 document.getElementById('dayPanelScrim').addEventListener('click',closeDayPanel);
 
-let SBOX_TITLE="Route du temps · Jan 2023 › Déc 2027";
+let SBOX_TITLE="Route du temps";
 const SBOX_MAX_RESULTS=6;
 const sbox=document.getElementById('sbox');
 const searchResults=document.getElementById('searchResults');
@@ -2685,7 +2677,7 @@ function applyEventsData(events){
 
   events.forEach(ev=>{
     const d = new Date(ORIGIN.getTime() + ev.day*86400000);
-    const label = d.getDate() + ' ' + d.toLocaleString('fr-FR',{month:'short'});
+    const label = d.getUTCDate() + ' ' + d.toLocaleString('fr-FR',{month:'short',timeZone:'UTC'});
     const title = ev.title || '';
     const side = ev.side==='left' ? 'left' : 'right';
     const item = {
@@ -2724,6 +2716,7 @@ function applyEventsData(events){
 
   ALL_EVENTS.length=0;
   [...EVT_RIGHT,...EVT_LEFT].sort((a,b)=>a.day-b.day).forEach(e=>ALL_EVENTS.push(e));
+  EVENTS_VERSION++;
 
   // La route ne doit jamais s'arrêter : on la prolonge pour garder au moins
   // 2 ans d'avance sur aujourd'hui, et pour couvrir tout événement connu
@@ -2740,9 +2733,12 @@ function applyEventsData(events){
 function updateRouteRangeLabels(){
   const endDate=new Date(MONTH_ORIGIN_MS+TOTAL_DAYS*86400000);
   const endYear=endDate.getUTCFullYear();
-  document.title=`Route du temps 2023-${endYear}`;
+  const firstDay=ALL_EVENTS.length ? Math.max(0,ALL_EVENTS[0].day) : TODAY_DAY;
+  const startDate=new Date(MONTH_ORIGIN_MS+firstDay*86400000);
+  const fmt=dt=>dt.toLocaleDateString('fr-FR',{month:'short',year:'numeric',timeZone:'UTC'});
+  document.title=`Route du temps ${startDate.getUTCFullYear()}-${endYear}`;
   const wasDefault=(typeof sbox!=='undefined' && sbox.value===SBOX_TITLE);
-  SBOX_TITLE=`Route du temps · Jan 2023 › ${endDate.toLocaleDateString('fr-FR',{month:'short',year:'numeric'})}`;
+  SBOX_TITLE=`Route du temps · ${fmt(startDate)} › ${fmt(endDate)}`;
   if(typeof sbox!=='undefined' && (wasDefault || !sbox.value.trim())) sbox.value=SBOX_TITLE;
 }
 
@@ -2760,10 +2756,6 @@ document.getElementById('mbtn').addEventListener('click',(e)=>{
 document.getElementById('menu-month').addEventListener('click',()=>{
   menuPanel.classList.remove('open');
   document.getElementById('monthbtn').click();
-});
-document.getElementById('menu-photos').addEventListener('click',()=>{
-  menuPanel.classList.remove('open');
-  document.getElementById('photosbtn').click();
 });
 document.getElementById('menu-right').addEventListener('click',()=>{
   menuPanel.classList.remove('open');
@@ -2866,39 +2858,6 @@ document.getElementById('addeventbtn').addEventListener('click', openAddEventMod
 document.getElementById('addEvCancel').addEventListener('click', closeAddEventModal);
 addEventOverlay.addEventListener('click', (e) => { if(e.target===addEventOverlay) closeAddEventModal(); });
 
-// ===== PHOTOS SOUVENIRS : popup récapitulatif =====
-const photosOverlay = document.getElementById('photosOverlay');
-function openPhotosPanel(){
-  const list = document.getElementById('photosList');
-  const empty = document.getElementById('photosEmpty');
-  list.innerHTML='';
-  // Un seul rappel par libellé : la correspondance libellé ↔ photo, pas une ligne par date.
-  const uniqueByLegende = new Map();
-  PHOTOS.forEach(p=>{ if(!uniqueByLegende.has(p.legende)) uniqueByLegende.set(p.legende, p); });
-  const unique=[...uniqueByLegende.values()].sort((a,b)=>a.legende.localeCompare(b.legende,'fr'));
-  empty.style.display = unique.length ? 'none' : 'block';
-  unique.forEach(p=>{
-    const row = document.createElement('div');
-    row.className = 'photorow';
-
-    const img = document.createElement('img');
-    img.src = p.src;
-    img.alt = p.legende;
-
-    const title = document.createElement('div');
-    title.className = 'pr-title';
-    title.textContent = p.legende;
-
-    row.append(img, title);
-    list.appendChild(row);
-  });
-  photosOverlay.classList.add('open');
-}
-function closePhotosPanel(){ photosOverlay.classList.remove('open'); }
-document.getElementById('photosbtn').addEventListener('click', openPhotosPanel);
-document.getElementById('photos-close').addEventListener('click', closePhotosPanel);
-photosOverlay.addEventListener('click', (e) => { if(e.target===photosOverlay) closePhotosPanel(); });
-
 // ===== Lecture vidéo (pièce jointe Drive) : lecteur intégré par-dessus le canvas =====
 // Le zoom photo normal dessine l'image sur le <canvas> (ctx.drawImage), ce qui ne
 // marche pas pour une vraie lecture vidéo. Quand l'item zoomé est une vidéo, on
@@ -2937,18 +2896,6 @@ function renderVideoOverlay(item,legende){
 videoOverlay.addEventListener('click', (e)=>{ if(e.target===videoOverlay){ zoomedPhoto=null; hideVideoOverlay(); } });
 videoPrev.addEventListener('click', (e)=>{ e.stopPropagation(); if(zoomedPhoto&&zoomedPhoto.urls){ const n=zoomedPhoto.urls.length; zoomedPhoto.index=(zoomedPhoto.index-1+n)%n; } });
 videoNext.addEventListener('click', (e)=>{ e.stopPropagation(); if(zoomedPhoto&&zoomedPhoto.urls){ const n=zoomedPhoto.urls.length; zoomedPhoto.index=(zoomedPhoto.index+1)%n; } });
-
-// Par défaut une photo reste visible tant qu'on est dans son mois. Activé, elle
-// n'apparaît qu'au moment précis où le marcheur passe sur sa date, et disparaît
-// dès qu'il l'a dépassée — un effet de décor qui se révèle au fil de la route.
-let photoRevealOnly=false;
-document.getElementById('photorevealbtn').addEventListener('click',()=>{
-  photoRevealOnly=!photoRevealOnly;
-  const btn=document.getElementById('photorevealbtn');
-  btn.style.background=photoRevealOnly?'#1a73e8':'#fff';
-  btn.style.color=photoRevealOnly?'#fff':'#1a73e8';
-  btn.title=photoRevealOnly?"Revenir à l'affichage permanent des photos":"N'afficher une photo que quand la Méhari passe sur sa date";
-});
 
 // Vue sans photo : panneaux texte seul (plus compacts, grâce au
 // dimensionnement déjà basé sur le contenu réel).
@@ -3011,6 +2958,7 @@ document.getElementById('addEvSubmit').addEventListener('click', async () => {
     EVT_RIGHT.push(item);
     ALL_EVENTS.push(item);
     ALL_EVENTS.sort((a,b)=>a.day-b.day);
+    EVENTS_VERSION++;
 
     addEvStatus.textContent = '✓ Événement créé dans Google Agenda.';
     addEvStatus.className = 'ok';
@@ -3204,11 +3152,13 @@ async function liveSyncFromGoogleCalendar(force){
       localStorage.setItem(LIVE_SYNC_CACHE_KEY, JSON.stringify({ts: Date.now(), cfg: cfgSig, events: allEntries, profile}));
     }catch(e){ console.warn('Cache local indisponible', e); }
     sbtn.style.color = '#34a853';
-    if(failures.length) alert("Impossible de lire l'agenda « " + failures.join(', ') + " ». Vérifiez qu'il est bien partagé avec votre compte Google.");
+    LAST_SYNC_TS = Date.now(); updateSyncAge();
+    if(failures.length) showToast("Impossible de lire l'agenda « " + failures.join(', ') + " ». Vérifiez qu'il est bien partagé avec votre compte Google.", true);
+    else showToast('✓ Agenda synchronisé ('+allEntries.length+' événements)');
   }catch(err){
     console.error(err);
     sbtn.style.color = '#ea4335';
-    alert('Erreur synchro Google : ' + err.message);
+    showToast('Erreur synchro Google : ' + err.message, true);
   }finally{
     btn.style.animation = sbtn.style.animation = '';
   }
@@ -3219,6 +3169,7 @@ function readLiveSyncCache(){
 }
 function applyCachedSync(cached){
   applyEventsData(cached.events || []);
+  LAST_SYNC_TS = cached.ts || null; updateSyncAge();
   if(cached.profile){ updateGoogleAuthUI(cached.profile); applySideNamesFromProfile(cached.profile); }
   showWelcome(false);
 }
@@ -3239,6 +3190,7 @@ function signOutGoogle(){
   applyEventsData([]);
   updateGoogleAuthUI(null);
   setSideNames('Moi','');
+  LAST_SYNC_TS = null; updateSyncAge();
   showWelcome(true);
 }
 
@@ -3253,6 +3205,7 @@ function openCalendarSettings(){
   const cfg = loadCalendarConfig();
   document.getElementById('calSecondId').value = cfg.secondId || '';
   document.getElementById('calSecondName').value = cfg.secondName || '';
+  document.getElementById('calZone').value = schoolZone();
   calOverlay.classList.add('open');
 }
 function closeCalendarSettings(){ calOverlay.classList.remove('open'); }
@@ -3262,7 +3215,14 @@ calOverlay.addEventListener('click', (e) => { if(e.target===calOverlay) closeCal
 document.getElementById('calSave').addEventListener('click', () => {
   const secondId = document.getElementById('calSecondId').value.trim();
   const secondName = document.getElementById('calSecondName').value.trim();
+  const zone = document.getElementById('calZone').value;
+  if(zone !== schoolZone()){
+    try{ localStorage.setItem(SCHOOL_ZONE_KEY, zone); }catch(e){}
+    rebuildVacances();
+  }
+  const prevCfg = JSON.stringify(loadCalendarConfig());
   saveCalendarConfig(secondId ? {secondId, secondName} : {});
+  if(prevCfg === JSON.stringify(loadCalendarConfig())){ closeCalendarSettings(); return; }
   closeCalendarSettings();
   const cached = readLiveSyncCache();
   if(cached && cached.profile){
@@ -3272,6 +3232,113 @@ document.getElementById('calSave').addEventListener('click', () => {
     setSideNames(RIGHT_NAME, secondId ? (secondName || secondId.split('@')[0]) : '');
   }
 });
+
+// Petit message temporaire en bas de l'écran (remplace les alert() bloquantes).
+let toastTimer=null;
+function showToast(msg, isErr){
+  const t=document.getElementById('toast');
+  t.textContent=msg;
+  t.classList.toggle('err', !!isErr);
+  t.classList.add('show');
+  clearTimeout(toastTimer);
+  toastTimer=setTimeout(()=>t.classList.remove('show'), isErr ? 7000 : 3500);
+}
+
+// Âge de la dernière synchro Google, affiché dans la légende : la route peut être
+// réaffichée depuis le cache local au démarrage, il faut donc voir de quand elle
+// date. Au-delà d'une heure, la pastille passe en orange et invite à actualiser.
+let LAST_SYNC_TS=null;
+function formatAge(ms){
+  const m=Math.round(ms/60000);
+  if(m<1) return "à l'instant";
+  if(m<60) return 'il y a '+m+' min';
+  const h=Math.round(m/60);
+  if(h<24) return 'il y a '+h+' h';
+  const d=Math.round(h/24);
+  return 'il y a '+d+' j';
+}
+function updateSyncAge(){
+  const chip=document.getElementById('legSync');
+  if(!LAST_SYNC_TS){ chip.style.display='none'; return; }
+  const age=Date.now()-LAST_SYNC_TS, stale=age>60*60*1000;
+  chip.style.display='';
+  document.getElementById('legSyncTxt').textContent=(stale?'Actualiser · ':'Synchro ')+formatAge(age);
+  chip.style.background=stale?'#fbbc04':'#fff';
+}
+setInterval(updateSyncAge, 30000);
+document.getElementById('legSync').addEventListener('click', ()=>liveSyncFromGoogleCalendar(true));
+
+// ===== Vacances scolaires par zone =====
+const SCHOOL_ZONE_KEY='schoolZone_v1', SCHOOL_CAL_CACHE_KEY='schoolCalendar_v1';
+function schoolZone(){
+  try{ return localStorage.getItem(SCHOOL_ZONE_KEY) || 'A'; }catch(e){ return 'A'; }
+}
+let VAC_FETCHED=null;   // vacances lues sur l'API officielle, {A:[...],B:[...],C:[...]}
+function rebuildVacances(){
+  const z=schoolZone();
+  VACANCES.length=0;
+  const leg=document.getElementById('legVac');
+  leg.style.display = z==='none' ? 'none' : '';
+  document.getElementById('legVacTxt').textContent='Vacances scolaires · zone '+z;
+  if(z==='none') return;
+  // Une période par (nom, année de début) : l'API officielle remplace la table embarquée.
+  const byKey=new Map();
+  const keyOf=v=>v.label+'|'+new Date(MONTH_ORIGIN_MS+v.start*86400000).getUTCFullYear();
+  (VACANCES_ZONES[z]||[]).forEach(([label,start,end])=>byKey.set(keyOf({label,start}),{label,start,end}));
+  ((VAC_FETCHED && VAC_FETCHED[z]) || []).forEach(v=>byKey.set(keyOf(v),v));
+  [...byKey.values()].sort((a,b)=>a.start-b.start).forEach(v=>VACANCES.push(v));
+}
+function parisDateStr(iso){ return new Date(iso).toLocaleDateString('en-CA',{timeZone:'Europe/Paris'}); }
+async function refreshSchoolCalendar(){
+  try{
+    const c=JSON.parse(localStorage.getItem(SCHOOL_CAL_CACHE_KEY)||'null');
+    if(c && Date.now()-c.ts < 7*86400000){ VAC_FETCHED=c.data; rebuildVacances(); return; }
+  }catch(e){}
+  try{
+    const since=new Date(Date.now()-365*86400000).toISOString().slice(0,10);
+    const where=`(zones="Zone A" or zones="Zone B" or zones="Zone C") and start_date>=date'${since}'`;
+    const url='https://data.education.gouv.fr/api/explore/v2.1/catalog/datasets/fr-en-calendrier-scolaire/records'
+      +'?select=description,start_date,end_date,zones&where='+encodeURIComponent(where)
+      +'&group_by=description,start_date,end_date,zones&order_by=start_date&limit=100';
+    const resp=await fetch(url);
+    if(!resp.ok) return;
+    const js=await resp.json();
+    const best=new Map();
+    (js.results||[]).forEach(x=>{
+      const z=(x.zones||'').slice(-1), desc=x.description||'';
+      if(!'ABC'.includes(z) || !z) return;
+      const label=/toussaint/i.test(desc)?'Toussaint':/no[eë]l/i.test(desc)?'Noël':/hiver/i.test(desc)?'Hiver':
+        /printemps/i.test(desc)?'Printemps':/[ée]t[ée]/i.test(desc)?'Été':null;
+      if(!label) return;   // ponts, etc.
+      const start=dayIndexFromDateStr(parisDateStr(x.start_date));
+      let end=dayIndexFromDateStr(parisDateStr(x.end_date));
+      if(end<=start){
+        // « Début des vacances d'été » seul (fin pas encore publiée) : reprise estimée au 1er septembre.
+        if(label!=='Été') return;
+        end=dayIndexFromDateStr(new Date(x.start_date).getUTCFullYear()+'-09-01');
+      }
+      const k=z+'|'+label+'|'+start, prev=best.get(k);
+      if(!prev || end>prev.end) best.set(k,{z,label,start,end});   // élèves : la reprise la plus tardive
+    });
+    const data={A:[],B:[],C:[]};
+    best.forEach(v=>data[v.z].push({label:v.label,start:v.start,end:v.end}));
+    VAC_FETCHED=data;
+    try{ localStorage.setItem(SCHOOL_CAL_CACHE_KEY, JSON.stringify({ts:Date.now(), data})); }catch(e){}
+    rebuildVacances();
+  }catch(err){
+    console.warn('Calendrier scolaire officiel indisponible, table embarquée utilisée', err);
+  }
+}
+rebuildVacances();
+refreshSchoolCalendar();
+
+// Accessibilité : les boutons à icône seule reprennent leur infobulle comme
+// libellé pour les lecteurs d'écran, y compris quand l'infobulle change.
+function syncAriaLabel(b){ if(b.title) b.setAttribute('aria-label', b.title); }
+document.querySelectorAll('button[title]').forEach(syncAriaLabel);
+new MutationObserver(muts=>muts.forEach(m=>{ if(m.target.tagName==='BUTTON') syncAriaLabel(m.target); }))
+  .observe(document.body,{subtree:true,attributes:true,attributeFilter:['title']});
+const mbtnEl=document.getElementById('mbtn'); if(mbtnEl && !mbtnEl.title) mbtnEl.setAttribute('aria-label','Menu');
 
 // Démarrage : si ce navigateur a déjà été connecté, on réaffiche aussitôt la
 // route depuis le cache local (sans popup Google) ; un clic sur le bouton de

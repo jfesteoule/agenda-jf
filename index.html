@@ -1683,7 +1683,7 @@ function drawBorne(it,alpha){
 // panneau sur poteau simple. Jour de la semaine (3 lettres) + numéro du jour.
 function drawDayPost(it,alpha){
   // Borne façon borne kilométrique : fût vert (jour de la semaine + date)
-  // surmonté d'un chapeau rouge arrondi portant le numéro de semaine ISO,
+  // surmonté d'un chapeau rouge arrondi portant le mois en 3 lettres,
   // séparés par un liseré blanc. Le lundi (début de semaine) garde un cadre
   // bleu pour repérer où une nouvelle semaine commence.
   const isWeekStart=isMonday(it.day);
@@ -1718,10 +1718,13 @@ function drawDayPost(it,alpha){
     const dow=['DIM','LUN','MAR','MER','JEU','VEN','SAM'][((it.day%7)+7)%7];
     const dayNum=new Date(MONTH_ORIGIN_MS+it.day*86400000).getUTCDate();
     ctx.textAlign='center'; ctx.textBaseline='middle';
-    // Numéro de semaine dans le chapeau rouge
+    // Mois (3 lettres, JUN/JUL pour juin/juillet) dans le chapeau rouge
+    const mois=['JAN','FÉV','MAR','AVR','MAI','JUN','JUL','AOÛ','SEP','OCT','NOV','DÉC'][new Date(MONTH_ORIGIN_MS+it.day*86400000).getUTCMonth()];
     ctx.fillStyle='#fff';
     ctx.font=`700 ${Math.min(fs*0.8,capH*0.62).toFixed(1)}px Oswald, Arial, sans-serif`;
-    ctx.fillText('S'+isoWeekNum(it.day), cx, pc.y+capH*0.56);
+    const moisW=ctx.measureText(mois).width, capMaxW=w2*0.86;
+    if(moisW>capMaxW) ctx.font=`700 ${(Math.min(fs*0.8,capH*0.62)*capMaxW/moisW).toFixed(1)}px Oswald, Arial, sans-serif`;
+    ctx.fillText(mois, cx, pc.y+capH*0.56);
     ctx.textBaseline='top';
     ctx.font=`600 ${fs.toFixed(1)}px Oswald, Arial, sans-serif`;
     const dowW=ctx.measureText(dow).width, maxW=w2*0.74;

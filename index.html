@@ -504,7 +504,10 @@ function proj(dist,lat,hgt){
   // Cap de la route sous la voiture (lissé sur ±8 m) : dans les courbes entre
   // deux semaines la vue tourne doucement avec la route, comme en conduisant ;
   // en ligne droite il vaut 0.
-  const dc0=(curve(carW+8)-curve(carW-8))/16;
+  // Sur écran étroit (smartphone), la rotation est fortement réduite : sinon les
+  // panneaux du jour sortent de l'écran pendant les virages entre deux semaines.
+  const turnK=Math.max(0,Math.min(1,(W-420)/600));
+  const dc0=turnK*(curve(carW+8)-curve(carW-8))/16;
   const T=tilt;
   const camH=CAMH+T*6, pitch=T*0.7854, back=camBack();
   const cp=Math.cos(pitch), sp2=Math.sin(pitch);

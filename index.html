@@ -348,7 +348,7 @@ canvas#c{position:absolute;inset:0;width:100%;height:100%;touch-action:none;poin
     <div class="leg" id="legWeekend"><div class="legline"></div>Week-end</div>
     <div class="leg" id="legVac"><div class="legline" style="background:#ffd600;"></div><span id="legVacTxt">Vacances scolaires</span></div>
     <button id="legSync" class="leg" type="button" style="display:none;cursor:pointer;border:none;font-family:inherit;color:inherit;text-align:left;" title="Relancer la synchro Google Agenda"><i class="ti ti-refresh" style="font-size:12px;"></i><span id="legSyncTxt"></span></button>
-    <div id="appVersion" style="font-size:10px;color:#fff;text-shadow:0 1px 2px rgba(0,0,0,0.6);text-align:right;padding-right:4px;">Version 2026-10-14 20:48 · <a href="confidentialite.html" style="color:#fff">Confidentialité</a> · <a href="conditions.html" style="color:#fff">Conditions</a></div>
+    <div id="appVersion" style="font-size:10px;color:#fff;text-shadow:0 1px 2px rgba(0,0,0,0.6);text-align:right;padding-right:4px;">Version 2026-10-14 20:51 · <a href="confidentialite.html" style="color:#fff">Confidentialité</a> · <a href="conditions.html" style="color:#fff">Conditions</a></div>
   </div>
   <div id="zbx">
     <button class="zb" id="zi">+</button>
@@ -1157,8 +1157,8 @@ WALKER_IMG.src='walker-realistic.png';
 const MEHARI_IMG=new Image();
 let mehariImgLoaded=false;
 MEHARI_IMG.onload=()=>{ mehariImgLoaded=true; };
-MEHARI_IMG.src='mehari-realistic.png';
-// Vues de trois quarts arrière (même cadrage que mehari-realistic.png : roues
+MEHARI_IMG.src='mehari-arriere-hd.png';
+// Vues de trois quarts arrière (même cadrage que mehari-arriere-hd.png : roues
 // sur la même ligne, arrière centré) affichées dans les virages : la voiture
 // pivote en montrant un peu son flanc.
 const MEHARI_TURN_IMGS={left:new Image(), right:new Image()};
@@ -2230,18 +2230,17 @@ function drawMehari(){
   // Positions arrondies au pixel : avec le petit rebond, des coordonnées
   // fractionnaires rééchantillonnent l'image à chaque frame (flou qui tremble).
   ctx.imageSmoothingQuality='high';
-  ctx.drawImage(carImg, Math.round(cxc-drawW/2), Math.round(yGround-drawH*(carImg===MEHARI_IMG?0.82:0.832)), Math.round(drawW), Math.round(drawH));
+  ctx.drawImage(carImg, Math.round(cxc-drawW/2), Math.round(yGround-drawH*0.832), Math.round(drawW), Math.round(drawH));
   if(night) ctx.filter='none';
 
   // Plaque toujours dessinée (y compris voiture vue de plus loin en 30°/45°),
   // le texte dès qu'il reste lisible.
   {
-    // Plaque plus petite et un peu plus basse sur les vues de trois quarts.
-    const turned=carImg!==MEHARI_IMG;
-    // Plaque et texte calés au pixel (et taille de police par demi-pixel) pour
-    // que le texte ne tremble pas avec le rebond de la voiture.
-    const plw=Math.round(w*(turned?0.163:0.3)), plh=Math.max(2,Math.round(w*(turned?0.101:0.09)));
-    const ply=Math.round(yGround-drawH*(turned?0.288:0.34)), plx=Math.round(cxc-plw/2);
+    // Plaque blanche de l'image (même position sur les trois vues HD),
+    // calée au pixel (et police par demi-pixel) pour ne pas trembler avec le
+    // rebond de la voiture.
+    const plw=Math.round(w*0.162), plh=Math.max(2,Math.round(w*0.101));
+    const ply=Math.round(yGround-drawH*0.286), plx=Math.round(cxc-plw/2);
     ctx.fillStyle='#e9e5d7';
     ctx.fillRect(plx,ply,plw,plh);
     if(plh*0.72>=3){

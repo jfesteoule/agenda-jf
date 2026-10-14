@@ -311,10 +311,14 @@ canvas#c{position:absolute;inset:0;width:100%;height:100%;touch-action:none;poin
       <button class="jchip" data-angle="30" type="button">30°</button>
       <button class="jchip" data-angle="45" type="button">45°</button>
     </div>
+    <div style="font-family:'Oswald',Arial,sans-serif;font-size:12px;font-weight:600;color:#2b241c;margin-top:4px;">Véhicule</div>
+    <div class="jchips">
+      <button class="jchip jchip-on" id="vp-car" type="button">Voiture</button>
+      <button class="jchip" id="vp-walk" type="button">Trottinette</button>
+    </div>
     <div style="font-family:'Oswald',Arial,sans-serif;font-size:12px;font-weight:600;color:#2b241c;margin-top:4px;">Options</div>
     <div class="jchips">
       <button class="jchip" id="vp-fpv" type="button">Vue conducteur</button>
-      <button class="jchip" id="vp-walk" type="button">Trottinette</button>
     </div>
   </div>
   <button id="monthPrevBtn" class="monthnavbtn" title="Mois précédent"><i class="ti ti-chevron-left"></i></button>
@@ -331,7 +335,7 @@ canvas#c{position:absolute;inset:0;width:100%;height:100%;touch-action:none;poin
     <div class="leg"><div class="legline"></div>Week-end</div>
     <div class="leg" id="legVac"><div class="legline" style="background:#ffd600;"></div><span id="legVacTxt">Vacances scolaires</span></div>
     <button id="legSync" class="leg" type="button" style="display:none;cursor:pointer;border:none;font-family:inherit;color:inherit;text-align:left;" title="Relancer la synchro Google Agenda"><i class="ti ti-refresh" style="font-size:12px;"></i><span id="legSyncTxt"></span></button>
-    <div id="appVersion" style="font-size:10px;color:#fff;text-shadow:0 1px 2px rgba(0,0,0,0.6);text-align:right;padding-right:4px;">Version 2026-10-14 18:56</div>
+    <div id="appVersion" style="font-size:10px;color:#fff;text-shadow:0 1px 2px rgba(0,0,0,0.6);text-align:right;padding-right:4px;">Version 2026-10-14 19:08</div>
   </div>
   <div id="zbx">
     <button class="zb" id="zi">+</button>
@@ -520,7 +524,10 @@ function proj(dist,lat,hgt){
   const turnK=Math.max(0,Math.min(1,(W-420)/600));
   const dc0=turnK*(curve(carW+8)-curve(carW-8))/16;
   const T=tilt;
-  const camH=CAMH+T*6, pitch=T*0.7854, back=camBack();
+  // Vue conducteur au ras de la route : yeux du conducteur à ~1,3 m (au lieu
+  // de la caméra placée plus haut pour voir la voiture de l'extérieur).
+  const eyeH=(firstPerson && !walkMode) ? Math.min(CAMH,1.3) : (firstPerson ? Math.min(CAMH,1.7) : CAMH);
+  const camH=eyeH+T*6, pitch=T*0.7854, back=camBack();
   const cp=Math.cos(pitch), sp2=Math.sin(pitch);
   const cx=weekMode ? Math.max(W*0.28,(W-340)/2) : W/2;
   const hz=H*(0.44+0.52*T), f=H*0.95;
@@ -1091,6 +1098,9 @@ function loadLandmark(src){
 }
 const LANDMARK_SRCS=['landscape-lake.png','landscape-windmill.png','landscape-bridge.png','landscape-sheep.png'];
 const LANDMARKS=LANDMARK_SRCS.map(loadLandmark);
+// Échelle propre à chaque repère (même ordre que LANDMARK_SRCS) : le troupeau
+// (4 moutons) mesure ~5 m de large, pas la taille d'un lac ou d'un moulin.
+const LANDMARK_SCALE=[1,1,1,0.35];
 
 function drawHaze(){
   const hzL=horizonScreenY();
@@ -1126,10 +1136,28 @@ function pathEdgeWobble(worldPos,seed){
 function drawRoadSurface(){
   const hzL=horizonScreenY();
   const T=tilt;
-  const dN=1.6+T*10-camBack()+T*3, dF=Math.max(420,viewRange()+40);
+  let dN=1.6+T*10-camBack()+T*3;
+  const dF=Math.max(420,viewRange()+40);
+  // Vue plongeante (trottinette, vue aérienne) : le bord proche de la route
+  // peut tomber au-dessus du bas de l'écran, laissant une bande d'herbe sous
+  // la route. On rapproche ce bord jusqu'à ce qu'il passe sous l'écran.
+  // L'échantillonnage se fait en distance à la caméra (z = d + recul), qui
+  // reste positive même quand d devient négatif.
+  // En vue de dessus (30°/45°), le bas de l'écran montre même des points
+  // situés derrière la caméra : on continue tant que la projection reste
+  // valide (profondeur caméra suffisante, cf. s dans proj()).
+  const back=camBack(), sMax=H*0.95/0.6;
+  const nearOk=d=>{ const a=proj(d,-(RW+1.6),0), b=proj(d,RW+1.6,0); return a.s<sMax && Math.min(a.y,b.y)<H+4; };
+  for(let k=0;k<200 && nearOk(dN);k++){
+    dN-=Math.max(0.3,Math.abs(dN+back)*0.12);
+  }
+  // Échantillonnage : linéaire sur la partie la plus proche (z = d + recul
+  // pouvant être ≤ 0), puis géométrique jusqu'à l'horizon.
+  const zN=dN+back, zF=dF+back, zG=Math.max(1,zN);
   const steps=90;
   const dists=[];
-  for(let i=0;i<=steps;i++) dists.push(dN*Math.pow(dF/dN,i/steps));
+  if(zN<zG){ for(let i=0;i<24;i++) dists.push(zN+(zG-zN)*i/24-back); }
+  for(let i=0;i<=steps;i++) dists.push(zG*Math.pow(zF/zG,i/steps)-back);
   const jogDists=withJogSamples(dists,dN,dF);
   dists.length=0; dists.push(...jogDists);
 
@@ -1296,13 +1324,13 @@ function drawLandmarks(){
     const lm=LANDMARKS[li];
     if(!lm.state.loaded) continue;
     const img=lm.img;
-    const wWorld=7*(0.8+hash01(seed+4.4)*0.5);
+    const wWorld=7*(0.8+hash01(seed+4.4)*0.5)*LANDMARK_SCALE[li];
     const lat=side*(RW+9+hash01(seed+5.5)*7);
     const pGround=proj(dd,lat,0);
     if(pGround.y<hzL||pGround.y>H+60) continue;
     const pEdge=proj(dd,lat+wWorld,0);
     const drawW=Math.abs(pEdge.x-pGround.x)*2;
-    if(drawW<12) continue;
+    if(drawW<12*LANDMARK_SCALE[li]) continue;
     const aspect=img.naturalHeight/img.naturalWidth;
     const drawH=drawW*aspect;
     const alpha=Math.min(1,Math.max(0,(maxD-dd)/60))*Math.min(1,Math.max(0,(dd-nearD)/10));
@@ -2111,13 +2139,25 @@ function drawFirstPersonOverlay(){
   // étroit (smartphone) ça rétrécit tellement que le volant/guidon finit
   // entièrement caché sous la barre du bas (hauteur fixe, elle). On impose
   // donc aussi un minimum basé sur la hauteur de l'écran.
-  const drawH=Math.max(W*1.05*aspect, H*0.58), drawW=drawH/aspect;
+  // Taille fixée sur la hauteur de l'écran (le volant occupe ~1/5 de la
+  // hauteur) pour ne pas écraser la route sur un écran large ; si l'image est
+  // alors moins large que l'écran, on prolonge le tableau de bord sur les
+  // côtés en étirant une fine bande prise sur chaque bord de l'image.
+  const drawH=H*0.65, drawW=drawH/aspect;
   // Sur la trottinette, les mains sur le guidon montent plus haut dans la
   // photo source que sur le volant : on pousse l'image vers le bas pour ne
   // pas cacher les panneaux au-dessus.
-  const shiftDown=walkMode?drawH*0.24:0;
+  const shiftDown=walkMode?drawH*0.08:0;
+  const x0=(W-drawW)/2, y0=H-drawH+shiftDown;
   if(night) ctx.filter='brightness(0.55)';
-  ctx.drawImage(img, (W-drawW)/2, H-drawH+shiftDown, drawW, drawH);
+  if(x0>0){
+    // Bandes prises un peu à l'intérieur : les coins de l'image sont arrondis
+    // (transparents), il faut une colonne où le tableau de bord est plein.
+    const iw=img.naturalWidth, ih=img.naturalHeight, strip=3, inset=Math.round(iw*0.08);
+    ctx.drawImage(img, inset, 0, strip, ih, 0, y0, x0+drawW*0.08+1, drawH);
+    ctx.drawImage(img, iw-inset-strip, 0, strip, ih, x0+drawW*0.92-1, y0, W-(x0+drawW*0.92)+1, drawH);
+  }
+  ctx.drawImage(img, x0, y0, drawW, drawH);
   if(night) ctx.filter='none';
 }
 
@@ -2272,7 +2312,9 @@ viewAnglePanel.querySelectorAll('.jchip[data-angle]').forEach(c=>{
   c.addEventListener('click',()=>setViewAngle(+c.dataset.angle));
 });
 document.getElementById('vp-fpv').addEventListener('click',()=>document.getElementById('fpvbtn').click());
-document.getElementById('vp-walk').addEventListener('click',()=>document.getElementById('walkbtn').click());
+// Choix exclusif voiture / trottinette.
+document.getElementById('vp-car').addEventListener('click',()=>{ if(walkMode) document.getElementById('walkbtn').click(); });
+document.getElementById('vp-walk').addEventListener('click',()=>{ if(!walkMode) document.getElementById('walkbtn').click(); });
 document.addEventListener('click',e=>{
   if(!viewAnglePanel.contains(e.target) && !aerialbtn.contains(e.target)) viewAnglePanel.classList.remove('open');
 });
@@ -2283,6 +2325,7 @@ document.getElementById('walkbtn').addEventListener('click',()=>{
   btn.style.color=walkMode?'#fff':'#c1502f';
   btn.title=walkMode?'Reprendre la voiture':'Rouler en trottinette électrique au lieu de conduire';
   document.getElementById('vp-walk').classList.toggle('jchip-on',walkMode);
+  document.getElementById('vp-car').classList.toggle('jchip-on',!walkMode);
 });
 document.getElementById('fpvbtn').addEventListener('click',()=>{
   firstPerson=!firstPerson;

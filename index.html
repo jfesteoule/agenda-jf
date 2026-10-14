@@ -259,7 +259,8 @@ canvas#c{position:absolute;inset:0;width:100%;height:100%;touch-action:none;poin
       <label>Date<input type="date" id="addEvDate"></label>
       <label>Heure (optionnel)<input type="time" id="addEvTime"></label>
       <label>Titre<input type="text" id="addEvTitle" maxlength="80" placeholder="Ex. Dîner chez des amis"></label>
-      <label>Pièce jointe Google Drive (lien, optionnel)<input type="url" id="addEvAttachment" placeholder="https://drive.google.com/file/d/…"></label>
+      <label>Photo ou vidéo (optionnel, envoyée dans Google Drive)<input type="file" id="addEvPhoto" accept="image/*,video/*"></label>
+      <label>Ou lien Google Drive existant (optionnel)<input type="url" id="addEvAttachment" placeholder="https://drive.google.com/file/d/…"></label>
       <div id="addEvStatus"></div>
       <div id="addEvActions">
         <button id="addEvCancel" class="menuitem" style="border:1px solid #ddd;border-radius:8px;">Annuler</button>
@@ -325,7 +326,7 @@ canvas#c{position:absolute;inset:0;width:100%;height:100%;touch-action:none;poin
     <div class="leg"><div class="legline"></div>Week-end</div>
     <div class="leg" id="legVac"><div class="legline" style="background:#ffd600;"></div><span id="legVacTxt">Vacances scolaires</span></div>
     <button id="legSync" class="leg" type="button" style="display:none;cursor:pointer;border:none;font-family:inherit;color:inherit;text-align:left;" title="Relancer la synchro Google Agenda"><i class="ti ti-refresh" style="font-size:12px;"></i><span id="legSyncTxt"></span></button>
-    <div id="appVersion" style="font-size:10px;color:#fff;text-shadow:0 1px 2px rgba(0,0,0,0.6);text-align:right;padding-right:4px;">Version 2026-10-14 18:44</div>
+    <div id="appVersion" style="font-size:10px;color:#fff;text-shadow:0 1px 2px rgba(0,0,0,0.6);text-align:right;padding-right:4px;">Version 2026-10-14 18:46</div>
   </div>
   <div id="zbx">
     <button class="zb" id="zi">+</button>
@@ -2814,7 +2815,9 @@ document.addEventListener('click',(e)=>{
 const GOOGLE_CLIENT_ID = '553155346197-0mocoh81lknfp5hlva9c5s3vvatdaofk.apps.googleusercontent.com';
 // calendar.calendarlist.readonly : lire la liste des agendas partagés avec le compte
 // (choix du second agenda dans « Agendas et vacances… »).
-const CALENDAR_SCOPE = 'https://www.googleapis.com/auth/calendar.events https://www.googleapis.com/auth/calendar.calendarlist.readonly email profile';
+// drive.file : envoyer dans Drive les photos ajoutées à un nouvel événement
+// (l'appli ne voit que les fichiers qu'elle a elle-même créés).
+const CALENDAR_SCOPE = 'https://www.googleapis.com/auth/calendar.events https://www.googleapis.com/auth/calendar.calendarlist.readonly https://www.googleapis.com/auth/drive.file email profile';
 let googleTokenClient = null;
 let googleAccessToken = null;
 let googleTokenExpiry = 0;
@@ -2956,6 +2959,44 @@ document.getElementById('nophotobtn').addEventListener('click',()=>{
 });
 document.getElementById('menu-nophoto').addEventListener('click',()=>{ menuPanel.classList.remove('open'); document.getElementById('nophotobtn').click(); });
 
+// ===== Envoi d'une photo dans Google Drive (dossier « Route du temps ») =====
+const DRIVE_FOLDER_NAME = 'Route du temps';
+async function driveFetch(url, opts){
+  let token = await getGoogleAccessToken();
+  const call = t => fetch(url, { ...opts, headers: { ...(opts && opts.headers), 'Authorization': 'Bearer ' + t } });
+  let resp = await call(token);
+  if(resp.status === 401 || resp.status === 403){
+    // Jeton obtenu avant l'ajout de l'autorisation Drive : on la demande une fois.
+    token = await requestGoogleToken('consent');
+    resp = await call(token);
+  }
+  if(!resp.ok){
+    const errBody = await resp.json().catch(()=>({}));
+    throw new Error('Google Drive : ' + ((errBody.error && errBody.error.message) || ('HTTP ' + resp.status)));
+  }
+  return resp.json();
+}
+async function ensureDriveFolder(){
+  const q = "name='" + DRIVE_FOLDER_NAME + "' and mimeType='application/vnd.google-apps.folder' and trashed=false";
+  const found = await driveFetch('https://www.googleapis.com/drive/v3/files?fields=files(id)&q=' + encodeURIComponent(q));
+  if(found.files && found.files.length) return found.files[0].id;
+  const created = await driveFetch('https://www.googleapis.com/drive/v3/files?fields=id', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ name: DRIVE_FOLDER_NAME, mimeType: 'application/vnd.google-apps.folder' })
+  });
+  return created.id;
+}
+async function uploadToDrive(file){
+  const folderId = await ensureDriveFolder();
+  const form = new FormData();
+  form.append('metadata', new Blob([JSON.stringify({ name: file.name, parents: [folderId] })], { type: 'application/json' }));
+  form.append('file', file);
+  return driveFetch('https://www.googleapis.com/upload/drive/v3/files?uploadType=multipart&fields=id,name,mimeType,webViewLink', {
+    method: 'POST', body: form
+  });
+}
+
 document.getElementById('addEvSubmit').addEventListener('click', async () => {
   const dateStr = document.getElementById('addEvDate').value;
   const timeStr = document.getElementById('addEvTime').value;
@@ -2972,11 +3013,20 @@ document.getElementById('addEvSubmit').addEventListener('click', async () => {
   addEvStatus.className = '';
   try{
     const token = await getGoogleAccessToken();
+    // Pièces jointes : la photo choisie (envoyée d'abord dans Drive) et/ou un
+    // lien Drive collé par l'utilisateur.
+    const attachments = [];
+    const photoFile = document.getElementById('addEvPhoto').files[0];
+    if(photoFile){
+      addEvStatus.textContent = 'Envoi de la photo dans Google Drive…';
+      const f = await uploadToDrive(photoFile);
+      attachments.push({ fileUrl: f.webViewLink, fileId: f.id, mimeType: f.mimeType, title: f.name });
+    }
+    if(attachUrl){
+      const attachFileId = driveFileIdFromUrl(attachUrl);
+      attachments.push({ fileUrl: attachUrl, ...(attachFileId ? { fileId: attachFileId } : {}), title: 'Pièce jointe' });
+    }
     addEvStatus.textContent = 'Création…';
-    // Pièce jointe Drive : un simple lien collé par l'utilisateur, comme pour les
-    // photos/vidéos ailleurs dans l'appli (pas de Picker Drive, pas de scope en plus).
-    const attachFileId = attachUrl ? driveFileIdFromUrl(attachUrl) : null;
-    const attachments = attachUrl ? [{ fileUrl: attachUrl, ...(attachFileId ? { fileId: attachFileId } : {}), title: 'Pièce jointe' }] : [];
     const resp = await fetch('https://www.googleapis.com/calendar/v3/calendars/primary/events' + (attachments.length ? '?supportsAttachments=true' : ''), {
       method: 'POST',
       headers: { 'Authorization': 'Bearer ' + token, 'Content-Type': 'application/json' },
@@ -3001,7 +3051,8 @@ document.getElementById('addEvSubmit').addEventListener('click', async () => {
     const day = Math.round((new Date(dateStr+'T00:00:00Z').getTime() - MONTH_ORIGIN_MS)/86400000);
     const d = new Date(MONTH_ORIGIN_MS + day*86400000);
     const label = d.getUTCDate() + ' ' + d.toLocaleString('fr-FR',{month:'short',timeZone:'UTC'});
-    const item = { day, label, title: title.slice(0,40), color:'#1a73e8', side:'right', who:RIGHT_NAME };
+    const photos = attachments.map(a => ({ url: a.fileUrl, isVideo: !!(a.mimeType && a.mimeType.indexOf('video/')===0) }));
+    const item = { day, label, title: title.slice(0,40), color:'#1a73e8', side:'right', who:RIGHT_NAME, photo: photos[0] || null, photos };
     EVT_RIGHT.push(item);
     ALL_EVENTS.push(item);
     ALL_EVENTS.sort((a,b)=>a.day-b.day);
@@ -3011,6 +3062,7 @@ document.getElementById('addEvSubmit').addEventListener('click', async () => {
     addEvStatus.className = 'ok';
     document.getElementById('addEvTitle').value = '';
     document.getElementById('addEvAttachment').value = '';
+    document.getElementById('addEvPhoto').value = '';
     setTimeout(closeAddEventModal, 900);
   }catch(err){
     addEvStatus.textContent = 'Erreur : ' + err.message;

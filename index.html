@@ -207,7 +207,7 @@ canvas#c{position:absolute;inset:0;width:100%;height:100%;touch-action:none;poin
     <button id="walkbtn" class="hudbtn-top hudhide" style="position:relative;z-index:1000;pointer-events:auto;width:40px;height:40px;min-width:40px;background:#fff;border-radius:50%;border:none;cursor:pointer;display:flex;align-items:center;justify-content:center;box-shadow:0 2px 6px rgba(0,0,0,0.2);color:#c1502f;font-size:18px;margin-left:6px;" title="Rouler en trottinette électrique au lieu de conduire"><i class="ti ti-scooter-electric"></i></button>
     <button id="weekbtn" class="hudbtn-top" style="position:relative;z-index:1000;pointer-events:auto;width:40px;height:40px;min-width:40px;background:#fff;border-radius:50%;border:none;cursor:pointer;display:flex;align-items:center;justify-content:center;box-shadow:0 2px 6px rgba(0,0,0,0.2);color:#c1502f;font-size:18px;margin-left:6px;" title="Volet hebdomadaire"><i class="ti ti-calendar-week"></i></button>
     <button id="nightbtn" class="hudbtn-top" style="position:relative;z-index:1000;pointer-events:auto;width:40px;height:40px;min-width:40px;background:#fff;border-radius:50%;border:none;cursor:pointer;display:flex;align-items:center;justify-content:center;box-shadow:0 2px 6px rgba(0,0,0,0.2);color:#c1502f;font-size:18px;margin-left:6px;" title="Nuit / jour"><i class="ti ti-sun" id="nightIcon"></i></button>
-    <button id="rightonlybtn" class="hudbtn-top" style="position:relative;z-index:1000;pointer-events:auto;width:40px;height:40px;min-width:40px;background:#fff;border-radius:50%;border:none;cursor:pointer;display:flex;align-items:center;justify-content:center;box-shadow:0 2px 6px rgba(0,0,0,0.2);color:#c1502f;font-size:16px;font-weight:bold;margin-left:6px;" title="Masquer mon agenda">Moi</button>
+    <button id="rightonlybtn" class="hudbtn-top" style="position:relative;z-index:1000;pointer-events:auto;width:40px;height:40px;min-width:40px;background:#fff;border-radius:50%;border:none;cursor:pointer;display:none;align-items:center;justify-content:center;box-shadow:0 2px 6px rgba(0,0,0,0.2);color:#c1502f;font-size:16px;font-weight:bold;margin-left:6px;" title="Masquer mon agenda">Moi</button>
   </div>
   <div id="menuPanel">
     <button id="menu-add" class="menuitem"><i class="ti ti-plus"></i>Ajouter un événement</button>
@@ -3158,8 +3158,9 @@ async function liveSyncFromGoogleCalendar(force){
     const allEntries = [];
     const failures = [];
     let calendarList = [];
+    let listError = '';
     try{ calendarList = await fetchCalendarListRaw(); }
-    catch(err){ console.warn('Liste des agendas indisponible', err); }
+    catch(err){ console.warn('Liste des agendas indisponible', err); listError = err.message || String(err); }
     const cals = liveSyncCalendars(profile, calendarList);
     const leftName = cals.filter(c=>c.side==='left').map(c=>c.who).join(' · ');
     applySideNamesFromProfile(profile, leftName);
@@ -3184,8 +3185,9 @@ async function liveSyncFromGoogleCalendar(force){
     }catch(e){ console.warn('Cache local indisponible', e); }
     sbtn.style.color = '#34a853';
     LAST_SYNC_TS = Date.now(); updateSyncAge();
-    if(failures.length) showToast("Impossible de lire l'agenda « " + failures.join(', ') + " ». Vérifiez qu'il est bien partagé avec votre compte Google.", true);
-    else showToast('✓ Agenda synchronisé ('+allEntries.length+' événements)');
+    if(listError) showToast("Liste des agendas Google inaccessible (" + listError + ") : seul l'agenda principal est affiché.", true);
+    else if(failures.length) showToast("Impossible de lire l'agenda « " + failures.join(', ') + " ». Vérifiez qu'il est bien partagé avec votre compte Google.", true);
+    else showToast('✓ '+cals.length+' agenda'+(cals.length>1?'s':'')+' synchronisé'+(cals.length>1?'s':'')+' ('+allEntries.length+' événements)');
   }catch(err){
     console.error(err);
     sbtn.style.color = '#ea4335';

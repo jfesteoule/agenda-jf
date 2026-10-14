@@ -288,13 +288,9 @@ canvas#c{position:absolute;inset:0;width:100%;height:100%;touch-action:none;poin
   <div id="calOverlay" class="appOverlay">
     <div class="appBox">
       <h3>Agendas et vacances</h3>
-      <p>À droite de la route : votre agenda Google principal. À gauche, vous pouvez ajouter un second agenda partagé avec vous (conjoint, famille, équipe…).</p>
-      <label>Second agenda (à gauche de la route)<select id="calSecondSelect">
-        <option value="">Aucun</option>
-      </select></label>
-      <div id="calListStatus" style="font-size:12px;color:#8a7a5c;margin:-6px 0 10px;"></div>
-      <label id="calSecondIdWrap" style="display:none;">Adresse ou identifiant de l'agenda<input type="text" id="calSecondId" placeholder="prenom.nom@gmail.com"></label>
-      <label>Nom affiché<input type="text" id="calSecondName" maxlength="20" placeholder="Ex. Camille"></label>
+      <p>Cochez les agendas à afficher (par défaut, ceux cochés dans Google Agenda). Vos agendas sont à droite de la route, ceux partagés avec vous à gauche. Le nom peut être modifié pour la légende.</p>
+      <div id="calList" style="display:flex;flex-direction:column;gap:6px;margin-bottom:10px;max-height:40vh;overflow:auto;"></div>
+      <div id="calListStatus" style="font-size:12px;color:#8a7a5c;margin:-4px 0 10px;"></div>
       <label>Vacances scolaires<select id="calZone">
         <option value="A">Zone A (Grenoble, Lyon, Bordeaux…)</option>
         <option value="B">Zone B (Marseille, Nice, Lille, Rennes…)</option>
@@ -347,7 +343,7 @@ canvas#c{position:absolute;inset:0;width:100%;height:100%;touch-action:none;poin
     <div class="leg" id="legWeekend"><div class="legline"></div>Week-end</div>
     <div class="leg" id="legVac"><div class="legline" style="background:#ffd600;"></div><span id="legVacTxt">Vacances scolaires</span></div>
     <button id="legSync" class="leg" type="button" style="display:none;cursor:pointer;border:none;font-family:inherit;color:inherit;text-align:left;" title="Relancer la synchro Google Agenda"><i class="ti ti-refresh" style="font-size:12px;"></i><span id="legSyncTxt"></span></button>
-    <div id="appVersion" style="font-size:10px;color:#fff;text-shadow:0 1px 2px rgba(0,0,0,0.6);text-align:right;padding-right:4px;">Version 2026-10-14 20:23 · <a href="confidentialite.html" style="color:#fff">Confidentialité</a> · <a href="conditions.html" style="color:#fff">Conditions</a></div>
+    <div id="appVersion" style="font-size:10px;color:#fff;text-shadow:0 1px 2px rgba(0,0,0,0.6);text-align:right;padding-right:4px;">Version 2026-10-14 20:27 · <a href="confidentialite.html" style="color:#fff">Confidentialité</a> · <a href="conditions.html" style="color:#fff">Conditions</a></div>
   </div>
   <div id="zbx">
     <button class="zb" id="zi">+</button>
@@ -2138,14 +2134,7 @@ function drawMehari(){
   const drawW=w*1.55, drawH=drawW*aspect;
   // 0.832 = ligne de contact pneu/sol mesurée dans le PNG (fond supprimé),
   // pour que les roues touchent bien yGround au lieu de flotter au-dessus.
-  // La voiture pivote avec la route : angle de la chaussée à l'écran sous
-  // ses roues (surtout utile sur téléphone, où la vue ne tourne presque pas
-  // dans les virages).
-  const pA=proj(CD-2.5,CL,0), pB=proj(CD+2.5,CL,0);
-  const roadAng=Math.atan2(pB.x-pA.x, pA.y-pB.y);
-  const carAng=Math.max(-0.17,Math.min(0.17,roadAng*0.3));
   ctx.save();
-  ctx.translate(cxc,yGround); ctx.rotate(carAng); ctx.translate(-cxc,-yGround);
   if(night) ctx.filter='brightness(0.4) saturate(0.75)';
   ctx.drawImage(MEHARI_IMG, cxc-drawW/2, yGround-drawH*0.832, drawW, drawH);
   if(night) ctx.filter='none';
@@ -3338,31 +3327,56 @@ function profileDisplayName(profile){
 // (à gauche), plus tous les autres agendas cochés dans Google Agenda : ceux dont
 // le compte est propriétaire à droite, les agendas partagés à gauche. Chaque
 // agenda supplémentaire garde sa couleur Google et son nom dans la légende.
-function liveSyncCalendars(profile, calendarList){
+// Jours fériés : affichés avec mon agenda, sans apparaître dans la légende
+// (agendas fournis par Google : identifiant en « …@group.v.calendar.google.com »).
+function isHolidayCalendar(c){
+  return /#holiday@|@group\.v\.calendar\.google\.com$/.test(c.id) || /f[ée]ri[ée]s|holiday/i.test(c.summary||'');
+}
+function calendarSide(c){ return (isHolidayCalendar(c) || c.accessRole==='owner') ? 'right' : 'left'; }
+// L'agenda principal d'une autre personne porte son adresse e-mail comme nom.
+function calendarDefaultName(c){
+  const name = c.summaryOverride || c.summary || c.id;
+  return name.indexOf('@')>=0 ? shortCalendarName(name) : name;
+}
+// Réglages : { show: {id: true/false}, names: {id: nom} }. Sans choix explicite,
+// un agenda est affiché s'il est coché dans Google Agenda. Les anciens réglages
+// (un seul « second agenda ») sont convertis.
+function calendarPrefs(){
   const cfg=loadCalendarConfig();
+  const show=Object.assign({}, cfg.show||{}), names=Object.assign({}, cfg.names||{});
+  if(cfg.secondId){
+    if(!(cfg.secondId in show)) show[cfg.secondId]=true;
+    if(cfg.secondName && !names[cfg.secondId]) names[cfg.secondId]=cfg.secondName;
+  }
+  return {show, names};
+}
+function liveSyncCalendars(profile, calendarList){
+  const {show, names}=calendarPrefs();
   const cals=[{id:'primary', side:'right', who:profileDisplayName(profile), primary:true}];
-  if(cfg.secondId) cals.push({id:cfg.secondId, side:'left', who:cfg.secondName || cfg.secondId.split('@')[0]});
+  const seen=new Set();
   (calendarList||[]).forEach(c=>{
-    if(c.primary || !c.selected || c.id===cfg.secondId) return;
-    // Jours fériés : affichés avec mon agenda, sans apparaître dans la légende.
-    // (agendas fournis par Google : identifiant en « …@group.v.calendar.google.com »).
-    const holiday = /#holiday@|@group\.v\.calendar\.google\.com$/.test(c.id) || /f[ée]ri[ée]s|holiday/i.test(c.summary||'');
-    const name = c.summaryOverride || c.summary || c.id;
+    if(c.primary) return;
+    seen.add(c.id);
+    const visible = (c.id in show) ? show[c.id] : !!c.selected;
+    if(!visible) return;
     cals.push({
       id:c.id,
-      side:(holiday || c.accessRole==='owner') ? 'right' : 'left',
-      // L'agenda principal d'une autre personne porte son adresse e-mail comme nom.
-      who:name.indexOf('@')>=0 ? shortCalendarName(name) : name,
+      side:calendarSide(c),
+      who:names[c.id] || calendarDefaultName(c),
       color:c.backgroundColor || null,
-      holiday
+      holiday:isHolidayCalendar(c)
     });
+  });
+  // Liste Google indisponible : on garde au moins les agendas choisis explicitement.
+  Object.keys(show).forEach(id=>{
+    if(show[id] && !seen.has(id)) cals.push({id, side:'left', who:names[id] || shortCalendarName(id)});
   });
   return cals;
 }
 // leftName : noms des agendas affichés à gauche (sinon, nom du second agenda choisi).
 function applySideNamesFromProfile(profile, leftName){
   const cfg=loadCalendarConfig();
-  if(leftName===undefined) leftName = cfg.secondId ? (cfg.secondName || cfg.secondId.split('@')[0]) : '';
+  if(leftName===undefined) leftName = '';
   setSideNames(profileDisplayName(profile), leftName, profile && profile.name);
 }
 
@@ -3617,50 +3631,42 @@ function shortCalendarName(name){
   const first = base.split(/[\s._-]+/)[0] || base;
   return (first.charAt(0).toUpperCase() + first.slice(1)).slice(0, 20);
 }
-const calSecondSelect = document.getElementById('calSecondSelect');
-function setSecondSelectOptions(list, currentId){
-  calSecondSelect.innerHTML = '';
-  const add = (value, label) => { const o = document.createElement('option'); o.value = value; o.textContent = label; calSecondSelect.appendChild(o); return o; };
-  add('', 'Aucun');
-  list.forEach(c => { add(c.id, c.name).dataset.name = c.name; });
-  if(currentId && !list.some(c => c.id === currentId)) add(currentId, currentId);
-  add('__other__', 'Autre (saisir une adresse)…');
-  calSecondSelect.value = currentId || '';
-  document.getElementById('calSecondIdWrap').style.display = 'none';
+const calListEl = document.getElementById('calList');
+function renderCalendarChoices(list){
+  const {show, names}=calendarPrefs();
+  calListEl.innerHTML='';
+  list.filter(c=>!c.primary).sort((a,b)=>calendarDefaultName(a).localeCompare(calendarDefaultName(b),'fr')).forEach(c=>{
+    const row=document.createElement('div');
+    row.style.cssText='display:flex;align-items:center;gap:8px;';
+    const cb=document.createElement('input'); cb.type='checkbox'; cb.dataset.id=c.id;
+    cb.checked=(c.id in show) ? show[c.id] : !!c.selected;
+    cb.style.cssText='width:18px;height:18px;flex:none;margin:0;';
+    const dot=document.createElement('span');
+    dot.style.cssText='width:10px;height:10px;border-radius:50%;flex:none;background:'+(c.backgroundColor||'#9aa0a6');
+    const name=document.createElement('input'); name.type='text'; name.maxLength=30; name.dataset.id=c.id;
+    name.placeholder=calendarDefaultName(c); name.value=names[c.id]||'';
+    name.style.cssText='flex:1;min-width:0;padding:6px 8px;border:1px solid #ddd;border-radius:6px;font-size:13px;';
+    const side=document.createElement('span');
+    side.textContent=calendarSide(c)==='right' ? 'droite' : 'gauche';
+    side.style.cssText='font-size:11px;color:#8a7a5c;flex:none;';
+    row.append(cb,dot,name,side);
+    calListEl.appendChild(row);
+  });
 }
-calSecondSelect.addEventListener('change', () => {
-  const v = calSecondSelect.value;
-  const other = v === '__other__';
-  document.getElementById('calSecondIdWrap').style.display = other ? '' : 'none';
-  if(other){ document.getElementById('calSecondId').focus(); return; }
-  document.getElementById('calSecondId').value = v;
-  const nameInput = document.getElementById('calSecondName');
-  const opt = calSecondSelect.selectedOptions[0];
-  if(v && (!nameInput.value.trim() || nameInput.dataset.auto === '1')){
-    nameInput.value = shortCalendarName(opt.dataset.name || v);
-    nameInput.dataset.auto = '1';
-  }
-  if(!v){ nameInput.value = ''; nameInput.dataset.auto = '1'; }
-});
-document.getElementById('calSecondName').addEventListener('input', e => { e.target.dataset.auto = '0'; });
 async function openCalendarSettings(){
-  const cfg = loadCalendarConfig();
-  document.getElementById('calSecondId').value = cfg.secondId || '';
-  document.getElementById('calSecondName').value = cfg.secondName || '';
-  document.getElementById('calSecondName').dataset.auto = cfg.secondName ? '0' : '1';
   document.getElementById('calZone').value = schoolZone();
-  setSecondSelectOptions([], cfg.secondId || '');
+  calListEl.innerHTML='';
   calOverlay.classList.add('open');
   const status = document.getElementById('calListStatus');
-  if(!readLiveSyncCache()){ status.textContent = 'Connectez-vous à Google pour choisir parmi vos agendas.'; return; }
+  if(!readLiveSyncCache()){ status.textContent = 'Connectez-vous à Google pour choisir vos agendas.'; return; }
   status.textContent = 'Chargement de vos agendas…';
   try{
-    const list = await fetchCalendarList();
-    setSecondSelectOptions(list, cfg.secondId || '');
-    status.textContent = list.length ? '' : "Aucun autre agenda n'est partagé avec votre compte.";
+    const list = await fetchCalendarListRaw();
+    renderCalendarChoices(list);
+    status.textContent = list.some(c=>!c.primary) ? '' : "Aucun autre agenda n'est associé à votre compte.";
   }catch(err){
     console.warn(err);
-    status.textContent = 'Liste des agendas indisponible : choisissez « Autre » pour saisir une adresse.';
+    status.textContent = 'Liste des agendas indisponible pour le moment.';
   }
 }
 function closeCalendarSettings(){ calOverlay.classList.remove('open'); }
@@ -3668,25 +3674,23 @@ document.getElementById('menu-calendars').addEventListener('click', () => { menu
 document.getElementById('calCancel').addEventListener('click', closeCalendarSettings);
 calOverlay.addEventListener('click', (e) => { if(e.target===calOverlay) closeCalendarSettings(); });
 document.getElementById('calSave').addEventListener('click', () => {
-  const sel = calSecondSelect.value;
-  const secondId = (sel === '__other__' ? document.getElementById('calSecondId').value : sel).trim();
-  const secondName = document.getElementById('calSecondName').value.trim();
   const zone = document.getElementById('calZone').value;
   if(zone !== schoolZone()){
     try{ localStorage.setItem(SCHOOL_ZONE_KEY, zone); }catch(e){}
     rebuildVacances();
   }
   const prevCfg = JSON.stringify(loadCalendarConfig());
-  saveCalendarConfig(secondId ? {secondId, secondName} : {});
-  if(prevCfg === JSON.stringify(loadCalendarConfig())){ closeCalendarSettings(); return; }
-  closeCalendarSettings();
-  const cached = readLiveSyncCache();
-  if(cached && cached.profile){
-    applySideNamesFromProfile(cached.profile);
-    liveSyncFromGoogleCalendar(true);
-  }else{
-    setSideNames(RIGHT_NAME, secondId ? (secondName || secondId.split('@')[0]) : '');
+  // Liste non chargée (hors connexion…) : on ne touche pas aux choix existants.
+  if(calListEl.children.length){
+    const show={}, names={};
+    calListEl.querySelectorAll('input[type=checkbox]').forEach(cb=>{ show[cb.dataset.id]=cb.checked; });
+    calListEl.querySelectorAll('input[type=text]').forEach(t=>{ if(t.value.trim()) names[t.dataset.id]=t.value.trim(); });
+    saveCalendarConfig({show, names});
   }
+  closeCalendarSettings();
+  if(prevCfg === JSON.stringify(loadCalendarConfig())) return;
+  const cached = readLiveSyncCache();
+  if(cached && cached.profile) liveSyncFromGoogleCalendar(true);
 });
 
 // Petit message temporaire en bas de l'écran (remplace les alert() bloquantes).

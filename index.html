@@ -335,7 +335,7 @@ canvas#c{position:absolute;inset:0;width:100%;height:100%;touch-action:none;poin
     <div class="leg"><div class="legline"></div>Week-end</div>
     <div class="leg" id="legVac"><div class="legline" style="background:#ffd600;"></div><span id="legVacTxt">Vacances scolaires</span></div>
     <button id="legSync" class="leg" type="button" style="display:none;cursor:pointer;border:none;font-family:inherit;color:inherit;text-align:left;" title="Relancer la synchro Google Agenda"><i class="ti ti-refresh" style="font-size:12px;"></i><span id="legSyncTxt"></span></button>
-    <div id="appVersion" style="font-size:10px;color:#fff;text-shadow:0 1px 2px rgba(0,0,0,0.6);text-align:right;padding-right:4px;">Version 2026-10-14 19:13</div>
+    <div id="appVersion" style="font-size:10px;color:#fff;text-shadow:0 1px 2px rgba(0,0,0,0.6);text-align:right;padding-right:4px;">Version 2026-10-14 19:18</div>
   </div>
   <div id="zbx">
     <button class="zb" id="zi">+</button>
@@ -1099,8 +1099,8 @@ function loadLandmark(src){
 const LANDMARK_SRCS=['landscape-lake.png','landscape-windmill.png','landscape-bridge.png','landscape-sheep.png'];
 const LANDMARKS=LANDMARK_SRCS.map(loadLandmark);
 // Échelle propre à chaque repère (même ordre que LANDMARK_SRCS) : le troupeau
-// (4 moutons) mesure ~5 m de large, pas la taille d'un lac ou d'un moulin.
-const LANDMARK_SCALE=[1,1,1,0.35];
+// (4 moutons, ~1 m chacun) mesure ~3,5 m de large, pas la taille d'un lac ou d'un moulin.
+const LANDMARK_SCALE=[1,1,1,0.22];
 
 function drawHaze(){
   const hzL=horizonScreenY();

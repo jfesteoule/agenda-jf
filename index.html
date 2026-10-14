@@ -326,8 +326,8 @@ canvas#c{position:absolute;inset:0;width:100%;height:100%;touch-action:none;poin
   <div id="speeds">
     <button class="sp" data-s="0.2">×⅕</button>
     <button class="sp" data-s="0.5">×½</button>
-    <button class="sp" data-s="1">×1</button>
-    <button class="sp on" data-s="3">×3</button>
+    <button class="sp on" data-s="1">×1</button>
+    <button class="sp" data-s="3">×3</button>
   </div>
   <div id="legend">
     <button id="legright" class="leg" style="cursor:pointer;user-select:none;border:none;font-family:inherit;color:inherit;text-align:left;" title="Masquer mon agenda"><div class="legdot" style="background:#1a73e8"></div><span id="legrightName">Moi</span></button>
@@ -417,7 +417,7 @@ let W,H;
 // === État de la caméra (route de conduite, façon Méhari) ===
 // La voiture/le marcheur est positionné un jour avant la date du jour : plus
 // lisible (le panneau du jour même reste bien visible devant, pas juste sous le nez).
-let camDay=TODAY_DAY-1, playing=false, playingReverse=false, speed=3, lastTs=null;
+let camDay=TODAY_DAY-1, playing=false, playingReverse=false, speed=1, lastTs=null;
 let SP=14;              // mètres de route par jour (remplace l'ancien zoom en pixels)
 let night=false;
 let viewAngle=0, tilt=0;   // viewAngle cible en degrés (0, 30 ou 45) ; tilt s'anime vers viewAngle/45

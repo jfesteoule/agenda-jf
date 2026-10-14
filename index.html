@@ -348,7 +348,7 @@ canvas#c{position:absolute;inset:0;width:100%;height:100%;touch-action:none;poin
     <div class="leg" id="legWeekend"><div class="legline"></div>Week-end</div>
     <div class="leg" id="legVac"><div class="legline" style="background:#ffd600;"></div><span id="legVacTxt">Vacances scolaires</span></div>
     <button id="legSync" class="leg" type="button" style="display:none;cursor:pointer;border:none;font-family:inherit;color:inherit;text-align:left;" title="Relancer la synchro Google Agenda"><i class="ti ti-refresh" style="font-size:12px;"></i><span id="legSyncTxt"></span></button>
-    <div id="appVersion" style="font-size:10px;color:#fff;text-shadow:0 1px 2px rgba(0,0,0,0.6);text-align:right;padding-right:4px;">Version 2026-10-14 20:44 · <a href="confidentialite.html" style="color:#fff">Confidentialité</a> · <a href="conditions.html" style="color:#fff">Conditions</a></div>
+    <div id="appVersion" style="font-size:10px;color:#fff;text-shadow:0 1px 2px rgba(0,0,0,0.6);text-align:right;padding-right:4px;">Version 2026-10-14 20:46 · <a href="confidentialite.html" style="color:#fff">Confidentialité</a> · <a href="conditions.html" style="color:#fff">Conditions</a></div>
   </div>
   <div id="zbx">
     <button class="zb" id="zi">+</button>
@@ -2178,7 +2178,10 @@ function drawMehari(){
   // pour que les roues touchent bien yGround au lieu de flotter au-dessus.
   ctx.save();
   if(night) ctx.filter='brightness(0.4) saturate(0.75)';
-  ctx.drawImage(carImg, cxc-drawW/2, yGround-drawH*(carImg===MEHARI_IMG?0.82:0.832), drawW, drawH);
+  // Positions arrondies au pixel : avec le petit rebond, des coordonnées
+  // fractionnaires rééchantillonnent l'image à chaque frame (flou qui tremble).
+  ctx.imageSmoothingQuality='high';
+  ctx.drawImage(carImg, Math.round(cxc-drawW/2), Math.round(yGround-drawH*(carImg===MEHARI_IMG?0.82:0.832)), Math.round(drawW), Math.round(drawH));
   if(night) ctx.filter='none';
 
   // Plaque toujours dessinée (y compris voiture vue de plus loin en 30°/45°),
@@ -2186,15 +2189,17 @@ function drawMehari(){
   {
     // Plaque plus petite et un peu plus basse sur les vues de trois quarts.
     const turned=carImg!==MEHARI_IMG;
-    const plw=w*(turned?0.17:0.3), plh=Math.max(2,w*(turned?0.1:0.09));
-    const ply=yGround-drawH*(turned?0.31:0.34);
+    // Plaque et texte calés au pixel (et taille de police par demi-pixel) pour
+    // que le texte ne tremble pas avec le rebond de la voiture.
+    const plw=Math.round(w*(turned?0.17:0.3)), plh=Math.max(2,Math.round(w*(turned?0.1:0.09)));
+    const ply=Math.round(yGround-drawH*(turned?0.31:0.34)), plx=Math.round(cxc-plw/2);
     ctx.fillStyle='#e9e5d7';
-    ctx.fillRect(cxc-plw/2,ply,plw,plh);
+    ctx.fillRect(plx,ply,plw,plh);
     if(plh*0.72>=3){
       ctx.fillStyle='#2b241c';
-      ctx.font=`500 ${(plh*0.72).toFixed(1)}px Archivo, Arial, sans-serif`;
+      ctx.font=`500 ${(Math.round(plh*0.72*2)/2).toFixed(1)}px Archivo, Arial, sans-serif`;
       ctx.textAlign='center'; ctx.textBaseline='middle';
-      ctx.fillText('JF 1968', cxc, ply+plh*0.55, plw*0.92);
+      ctx.fillText('JF 1968', plx+plw/2, Math.round(ply+plh*0.55), plw*0.92);
       ctx.textAlign='left'; ctx.textBaseline='top';
     }
   }

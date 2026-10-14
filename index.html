@@ -335,7 +335,7 @@ canvas#c{position:absolute;inset:0;width:100%;height:100%;touch-action:none;poin
     <div class="leg"><div class="legline"></div>Week-end</div>
     <div class="leg" id="legVac"><div class="legline" style="background:#ffd600;"></div><span id="legVacTxt">Vacances scolaires</span></div>
     <button id="legSync" class="leg" type="button" style="display:none;cursor:pointer;border:none;font-family:inherit;color:inherit;text-align:left;" title="Relancer la synchro Google Agenda"><i class="ti ti-refresh" style="font-size:12px;"></i><span id="legSyncTxt"></span></button>
-    <div id="appVersion" style="font-size:10px;color:#fff;text-shadow:0 1px 2px rgba(0,0,0,0.6);text-align:right;padding-right:4px;">Version 2026-10-14 19:19</div>
+    <div id="appVersion" style="font-size:10px;color:#fff;text-shadow:0 1px 2px rgba(0,0,0,0.6);text-align:right;padding-right:4px;">Version 2026-10-14 19:22</div>
   </div>
   <div id="zbx">
     <button class="zb" id="zi">+</button>
@@ -2100,12 +2100,14 @@ function drawMehari(){
   ctx.drawImage(MEHARI_IMG, cxc-drawW/2, yGround-drawH*0.832, drawW, drawH);
   if(night) ctx.filter='none';
 
-  if(w>58){
+  // Plaque toujours dessinée (y compris voiture vue de plus loin en 30°/45°),
+  // le texte dès qu'il reste lisible.
+  {
     const plw=w*0.3, plh=Math.max(2,w*0.09);
     const ply=yGround-drawH*0.34;
     ctx.fillStyle='#e9e5d7';
     ctx.fillRect(cxc-plw/2,ply,plw,plh);
-    if(w>90){
+    if(plh*0.72>=3){
       ctx.fillStyle='#2b241c';
       ctx.font=`500 ${(plh*0.72).toFixed(1)}px Archivo, Arial, sans-serif`;
       ctx.textAlign='center'; ctx.textBaseline='middle';

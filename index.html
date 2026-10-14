@@ -1755,55 +1755,72 @@ function drawGantry(it,alpha){
   ctx.globalAlpha=1;
 }
 
+// Photo d'un événement : priorité aux URL fournies directement par l'événement
+// (pièces jointes Drive ou liens Google Photos, via Google Agenda) — s'il y en a
+// plusieurs, la vignette les fait défiler automatiquement et le zoom permet de
+// naviguer entre toutes ; sinon repli sur le catalogue PHOTOS codé en dur.
+function resolveSignPhoto(e){
+  const revealOk=!hidePhotos;
+  const photoUrls=(e.photos && e.photos.length) ? e.photos : (e.photo ? [e.photo] : []);
+  let img=null, legende=e.title, urls=null, idx=0, isVideo=false;
+  if(photoUrls.length && revealOk){
+    idx=photoUrls.length>1 ? Math.floor(Date.now()/2500)%photoUrls.length : 0;
+    const cached=getEventPhoto(photoUrls[idx].url);
+    if(cached){ img=cached.img; urls=photoUrls; isVideo=!!photoUrls[idx].isVideo; }
+  }
+  if(!img){
+    const p=PHOTOS.find(p=>p.loaded && p.day===e.day && p.side===e.side && revealOk);
+    if(p){ img=p.img; legende=p.legende; }
+  }
+  return {img,legende,urls,idx,isVideo};
+}
+
+// Couleur d'accent d'un événement : la couleur choisie dans Google Agenda si
+// elle existe, puis vacances, puis couleur de l'agenda.
+function signAccent(e){
+  if(e.gcolor) return e.gcolor;
+  if(isLieVacanceGlobal(e.title)) return '#e65100';
+  return e.color;
+}
+
+// Un seul panneau par jour et par côté de la route : les événements du jour
+// y sont empilés les uns sous les autres (photo éventuelle + titre), séparés
+// par un filet. Le panneau grandit en hauteur selon son contenu.
 function drawEventSign(it,alpha){
-  const e=it.ev;
-  const lat=it.side*(RW+3.0+it.rank*3.3);
-  const hTop=0.5+it.rank*0.35;
+  const evs=it.evs;
+  const lat=it.side*(RW+3.0);
+  const hTop=0.5;
 
   // Largeur fixe ; la hauteur est calculée plus bas selon le contenu réel
-  // (photo + nombre de lignes de titre) pour ne pas laisser de blanc inutile
-  // en bas du panneau. `s` (échelle à cette distance) ne dépend pas de la
-  // hauteur choisie en vue conduite, donc on peut mesurer le contenu avant
-  // de fixer la géométrie finale.
+  // (photos + nombre de lignes de titre de chaque événement). `s` (échelle à
+  // cette distance) ne dépend pas de la hauteur choisie en vue conduite, donc
+  // on peut mesurer le contenu avant de fixer la géométrie finale.
   const pL0=proj(it.dist,lat-1.5,hTop), pR0=proj(it.dist,lat+1.5,hTop);
   const w=pR0.x-pL0.x, s=pR0.s;
   if(w<3||s<=0) return;
 
-  // Photo : priorité aux URL fournies directement par l'événement (pièces jointes
-  // Drive ou liens Google Photos, via Google Agenda) — s'il y en a plusieurs, la
-  // vignette du panneau les fait défiler automatiquement et le zoom permet de
-  // naviguer entre toutes ; sinon repli sur le catalogue PHOTOS codé en dur.
-  const revealOk=!hidePhotos;
-  const photoUrls=(e.photos && e.photos.length) ? e.photos : (e.photo ? [e.photo] : []);
-  let photoImg=null, photoLegende=e.title, photoUrlList=null, photoUrlIdx=0, photoIsVideo=false;
-  if(photoUrls.length && revealOk){
-    photoUrlIdx=photoUrls.length>1 ? Math.floor(Date.now()/2500)%photoUrls.length : 0;
-    const cached=getEventPhoto(photoUrls[photoUrlIdx].url);
-    if(cached){ photoImg=cached.img; photoUrlList=photoUrls; photoIsVideo=!!photoUrls[photoUrlIdx].isVideo; }
-  }
-  if(!photoImg){
-    const p=PHOTOS.find(p=>p.loaded && p.day===e.day && p.side===e.side && revealOk);
-    if(p){ photoImg=p.img; photoLegende=p.legende; }
-  }
-
-  // Contenu mesuré avant la géométrie finale : largeur de texte disponible,
-  // lignes nécessaires pour le titre, taille de la vignette photo.
   const pad=w*0.1;
   const fs=Math.max(8,Math.min(w*0.11,16));
-  ctx.font=`500 ${fs.toFixed(1)}px Archivo, Arial, sans-serif`;
   const textW=w-w*0.18;
   const titleLinesMax=3;
-  const words=e.title.split(' ');
-  const lines=[]; let line='';
-  for(const wd of words){
-    const test=line?line+' '+wd:wd;
-    if(ctx.measureText(test).width>textW && line){ lines.push(line); line=wd; if(lines.length===titleLinesMax) break; }
-    else line=test;
-  }
-  if(lines.length<titleLinesMax && line) lines.push(line);
-  const imgSize=photoImg ? Math.min(w-pad*2, w*0.55) : 0;
-  const contentPx=pad*0.6+(photoImg?imgSize+pad*0.5:0)+lines.length*fs*1.2+pad*0.5;
-  const worldH=Math.max(0.9,Math.min(2.6,contentPx/s));
+  const multi=evs.length>1;
+  ctx.font=`500 ${fs.toFixed(1)}px Archivo, Arial, sans-serif`;
+  const entries=evs.map(e=>{
+    const photo=resolveSignPhoto(e);
+    const words=e.title.split(' ');
+    const lines=[]; let line='';
+    for(const wd of words){
+      const test=line?line+' '+wd:wd;
+      if(ctx.measureText(test).width>textW && line){ lines.push(line); line=wd; if(lines.length===titleLinesMax) break; }
+      else line=test;
+    }
+    if(lines.length<titleLinesMax && line) lines.push(line);
+    const imgSize=photo.img ? Math.min(w-pad*2, w*(multi?0.45:0.55)) : 0;
+    const hPx=pad*0.6+(photo.img?imgSize+pad*0.5:0)+lines.length*fs*1.2+pad*0.5;
+    return {e,photo,lines,imgSize,hPx};
+  });
+  const contentPx=entries.reduce((a,en)=>a+en.hPx,0);
+  const worldH=Math.max(0.9,Math.min(2.6*evs.length,contentPx/s));
 
   const pTL=proj(it.dist,lat-1.5,hTop+worldH), pBR=proj(it.dist,lat+1.5,hTop);
   const pGround=proj(it.dist,lat,0);
@@ -1849,69 +1866,82 @@ function drawEventSign(it,alpha){
     ctx.beginPath();ctx.ellipse(pGround.x,pGround.y,Math.max(2,w*0.42),Math.max(1,w*0.11),0,0,Math.PI*2);ctx.fill();
   }
 
-  // Couleur d'accent du panneau : la couleur choisie pour l'événement dans
-  // Google Agenda si elle existe, puis vacances, puis couleur de l'agenda.
-  let accent=e.color;
-  if(e.gcolor) accent=e.gcolor;
-  else if(isLieVacanceGlobal(e.title)) accent='#e65100';
-
+  // Fond et cadre : couleur du premier événement pour le cadre, chaque
+  // événement garde sa propre bande de couleur à gauche.
+  const borderW=Math.max(1,Math.min(h,w*1.2)*0.07);
   ctx.fillStyle=night?'#e7e3d6':'#fbf9f2';
-  ctx.strokeStyle=accent; ctx.lineWidth=Math.max(1,h*0.07);
   ctx.fillRect(pTL.x,pTL.y,w,h);
-  ctx.strokeRect(pTL.x,pTL.y,w,h);
-  ctx.fillStyle=accent;
-  ctx.fillRect(pTL.x,pTL.y,Math.max(1.5,w*0.055),h);
 
-  // Photo (déjà résolue plus haut) posée en haut, pleine largeur, et le
-  // texte (déjà calculé plus haut) prend la place restante en dessous.
-  let photoBottom=pTL.y;
-  if(photoImg){
-    const imgX=pTL.x+(w-imgSize)/2, imgY=pTL.y+pad*0.6;
-    ctx.drawImage(photoImg,imgX,imgY,imgSize,imgSize);
-    if(photoIsVideo){
-      // Petit triangle "lecture" au centre de la vignette, pour signaler que le
-      // clic ouvre un lecteur vidéo plutôt qu'un simple zoom photo.
-      const cx2=imgX+imgSize/2, cy2=imgY+imgSize/2, r=imgSize*0.18;
-      ctx.fillStyle='rgba(0,0,0,0.45)';
-      ctx.beginPath(); ctx.arc(cx2,cy2,r,0,Math.PI*2); ctx.fill();
-      ctx.fillStyle='#fff';
-      ctx.beginPath();
-      ctx.moveTo(cx2-r*0.42,cy2-r*0.55);
-      ctx.lineTo(cx2-r*0.42,cy2+r*0.55);
-      ctx.lineTo(cx2+r*0.6,cy2);
-      ctx.closePath(); ctx.fill();
+  // Le contenu mesuré peut dépasser la hauteur maximale : on répartit alors
+  // proportionnellement pour que tout tienne dans le panneau.
+  const scaleY=Math.min(1,h/contentPx);
+  let y=pTL.y;
+  const hits=[];
+  entries.forEach((en,i)=>{
+    const eh=en.hPx*scaleY;
+    const accent=signAccent(en.e);
+    ctx.fillStyle=accent;
+    ctx.fillRect(pTL.x,y,Math.max(1.5,w*0.055),eh);
+    if(i>0){
+      ctx.fillStyle='rgba(43,36,28,0.25)';
+      ctx.fillRect(pTL.x+w*0.09,y-0.5,w*0.82,Math.max(1,w*0.012));
     }
-    if(photoUrlList && photoUrlList.length>1){
-      const bs=Math.max(9,imgSize*0.22);
-      ctx.fillStyle='rgba(0,0,0,0.6)';
-      ctx.beginPath(); ctx.roundRect ? ctx.roundRect(imgX+imgSize-bs-2,imgY+2,bs+2,bs*0.62,3) : ctx.rect(imgX+imgSize-bs-2,imgY+2,bs+2,bs*0.62);
-      ctx.fill();
-      ctx.fillStyle='#fff';
-      ctx.font=`600 ${(bs*0.5).toFixed(1)}px Archivo, Arial, sans-serif`;
-      ctx.textAlign='center'; ctx.textBaseline='middle';
-      ctx.fillText(`${photoUrlIdx+1}/${photoUrlList.length}`, imgX+imgSize-bs/2-1, imgY+2+bs*0.31);
+    // Photo posée en haut de l'entrée, puis le titre en dessous.
+    let photoBottom=y;
+    const ph=en.photo;
+    if(ph.img){
+      const sz=en.imgSize*scaleY;
+      const imgX=pTL.x+(w-sz)/2, imgY=y+pad*0.6*scaleY;
+      ctx.drawImage(ph.img,imgX,imgY,sz,sz);
+      if(ph.isVideo){
+        // Petit triangle "lecture" au centre de la vignette, pour signaler que le
+        // clic ouvre un lecteur vidéo plutôt qu'un simple zoom photo.
+        const cx2=imgX+sz/2, cy2=imgY+sz/2, r=sz*0.18;
+        ctx.fillStyle='rgba(0,0,0,0.45)';
+        ctx.beginPath(); ctx.arc(cx2,cy2,r,0,Math.PI*2); ctx.fill();
+        ctx.fillStyle='#fff';
+        ctx.beginPath();
+        ctx.moveTo(cx2-r*0.42,cy2-r*0.55);
+        ctx.lineTo(cx2-r*0.42,cy2+r*0.55);
+        ctx.lineTo(cx2+r*0.6,cy2);
+        ctx.closePath(); ctx.fill();
+      }
+      if(ph.urls && ph.urls.length>1){
+        const bs=Math.max(9,sz*0.22);
+        ctx.fillStyle='rgba(0,0,0,0.6)';
+        ctx.beginPath(); ctx.roundRect ? ctx.roundRect(imgX+sz-bs-2,imgY+2,bs+2,bs*0.62,3) : ctx.rect(imgX+sz-bs-2,imgY+2,bs+2,bs*0.62);
+        ctx.fill();
+        ctx.fillStyle='#fff';
+        ctx.font=`600 ${(bs*0.5).toFixed(1)}px Archivo, Arial, sans-serif`;
+        ctx.textAlign='center'; ctx.textBaseline='middle';
+        ctx.fillText(`${ph.idx+1}/${ph.urls.length}`, imgX+sz-bs/2-1, imgY+2+bs*0.31);
+        ctx.textAlign='left'; ctx.textBaseline='top';
+      }
+      EVENT_PHOTO_HITS.push({x:imgX,y:imgY,w:sz,h:sz,img:ph.img,legende:ph.legende,loaded:true,urls:ph.urls,urlIdx:ph.idx});
+      photoBottom=imgY+sz+pad*0.5*scaleY;
+    }
+    const efs=fs*Math.max(0.75,scaleY);
+    if(efs>=7 && en.lines.length && textW>10){
+      ctx.fillStyle='#2b241c';
+      ctx.font=`500 ${efs.toFixed(1)}px Archivo, Arial, sans-serif`;
       ctx.textAlign='left'; ctx.textBaseline='top';
+      const lh=fs*1.2*scaleY;
+      const blockH=en.lines.length*lh;
+      const y0=photoBottom+((y+eh-pad*0.5*scaleY-photoBottom)-blockH)/2;
+      en.lines.forEach((ln,i2)=>{
+        let t=ln;
+        while(ctx.measureText(t).width>textW && t.length>1) t=t.slice(0,-1);
+        if(t!==ln) t=t.slice(0,-1)+'…';
+        ctx.fillText(t, pTL.x+w*0.09, y0+i2*lh);
+      });
     }
-    EVENT_PHOTO_HITS.push({x:imgX,y:imgY,w:imgSize,h:imgSize,img:photoImg,legende:photoLegende,loaded:true,urls:photoUrlList,urlIdx:photoUrlIdx});
-    photoBottom=imgY+imgSize+pad*0.5;
-  }
-
-  const textX=pTL.x+w*0.09;
-  if(fs>=8 && lines.length && textW>10){
-    ctx.fillStyle='#2b241c';
-    ctx.font=`500 ${fs.toFixed(1)}px Archivo, Arial, sans-serif`;
-    ctx.textAlign='left'; ctx.textBaseline='top';
-    const blockH=lines.length*fs*1.2;
-    const y0=photoBottom+((pTL.y+h-pad*0.5-photoBottom)-blockH)/2;
-    lines.forEach((ln,i2)=>{
-      let t=ln;
-      while(ctx.measureText(t).width>textW && t.length>1) t=t.slice(0,-1);
-      if(t!==ln) t=t.slice(0,-1)+'…';
-      ctx.fillText(t, textX, y0+i2*fs*1.2);
-    });
-  }
+    hits.push({ev:en.e,x0:pTL.x,x1:pTL.x+w,y0:y,y1:y+eh});
+    y+=eh;
+  });
+  ctx.strokeStyle=signAccent(evs[0]); ctx.lineWidth=borderW;
+  ctx.strokeRect(pTL.x,pTL.y,w,h);
   ctx.restore();
-  // Plus de 3 événements ce jour-là : pastille « +N » sur le dernier panneau
+  // Trop d'événements ce jour-là de ce côté : pastille « +N » sur le panneau
   // (clic = liste complète du jour), pour ne pas les masquer en silence.
   if(it.more){
     const r=Math.max(7,Math.min(16,w*0.13));
@@ -1922,10 +1952,10 @@ function drawEventSign(it,alpha){
     ctx.fillStyle='#fff'; ctx.textAlign='center'; ctx.textBaseline='middle';
     ctx.font=`700 ${(r*0.95).toFixed(1)}px Archivo, Arial, sans-serif`;
     ctx.fillText('+'+it.more, bx, by+r*0.05);
-    EVENT_HITBOXES.push({day:e.day,x0:bx-r,x1:bx+r,y0:by-r,y1:by+r});
+    EVENT_HITBOXES.push({day:evs[0].day,x0:bx-r,x1:bx+r,y0:by-r,y1:by+r});
   }
   ctx.globalAlpha=1;
-  EVENT_HITBOXES.push({ev:e,x0:pTL.x,x1:pTL.x+w,y0:pTL.y,y1:pTL.y+h});
+  EVENT_HITBOXES.push(...hits);
 }
 
 function drawRouteObjects(){
@@ -1949,16 +1979,18 @@ function drawRouteObjects(){
       const key=e.side+String.fromCharCode(1)+e.day+String.fromCharCode(1)+e.title;
       if(!AUTO_EXCLUDE.has(key)) evs.push(e);
     });
-    let nL=0,nR=0;
-    const shown=evs.slice(0,3);
-    shown.forEach((e,iShown)=>{
-      const more=(iShown===shown.length-1 && evs.length>3) ? evs.length-3 : 0;
-      const side=e.side==='right' ? 1 : -1; // agenda principal à droite, agenda partagé à gauche
-      // Position fixe au milieu du jour, à égale distance entre le joint noir
-      // du jour précédent et celui du jour suivant : le panneau (et sa
-      // bretelle d'accès) ne suit jamais la voiture, il reste planté à cet
-      // endroit de la route comme les autres repères.
-      items.push({kind:'sign',dist:dist+SP*0.5,ev:e,side,rank:side>0?nR++:nL++,more});
+    // Un seul panneau par côté (agenda principal à droite, agenda partagé à
+    // gauche) regroupant les événements du jour, au plus 4 ; au-delà, une
+    // pastille « +N » ouvre la liste complète du jour.
+    // Position fixe au milieu du jour, à égale distance entre le joint noir
+    // du jour précédent et celui du jour suivant : le panneau (et sa
+    // bretelle d'accès) ne suit jamais la voiture, il reste planté à cet
+    // endroit de la route comme les autres repères.
+    [1,-1].forEach(side=>{
+      const sideEvs=evs.filter(e=>(e.side==='right'?1:-1)===side);
+      if(!sideEvs.length) return;
+      const MAX=4;
+      items.push({kind:'sign',dist:dist+SP*0.5,evs:sideEvs.slice(0,MAX),side,more:Math.max(0,sideEvs.length-MAX)});
     });
     // Repère jour/date à gauche, pour chaque jour, planté au milieu du jour
     // (comme les panneaux d'événement) et non sur le joint entre deux jours.

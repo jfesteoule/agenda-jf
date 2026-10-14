@@ -348,7 +348,7 @@ canvas#c{position:absolute;inset:0;width:100%;height:100%;touch-action:none;poin
     <div class="leg" id="legWeekend"><div class="legline"></div>Week-end</div>
     <div class="leg" id="legVac"><div class="legline" style="background:#ffd600;"></div><span id="legVacTxt">Vacances scolaires</span></div>
     <button id="legSync" class="leg" type="button" style="display:none;cursor:pointer;border:none;font-family:inherit;color:inherit;text-align:left;" title="Relancer la synchro Google Agenda"><i class="ti ti-refresh" style="font-size:12px;"></i><span id="legSyncTxt"></span></button>
-    <div id="appVersion" style="font-size:10px;color:#fff;text-shadow:0 1px 2px rgba(0,0,0,0.6);text-align:right;padding-right:4px;">Version 2026-10-14 20:35 · <a href="confidentialite.html" style="color:#fff">Confidentialité</a> · <a href="conditions.html" style="color:#fff">Conditions</a></div>
+    <div id="appVersion" style="font-size:10px;color:#fff;text-shadow:0 1px 2px rgba(0,0,0,0.6);text-align:right;padding-right:4px;">Version 2026-10-14 20:37 · <a href="confidentialite.html" style="color:#fff">Confidentialité</a> · <a href="conditions.html" style="color:#fff">Conditions</a></div>
   </div>
   <div id="zbx">
     <button class="zb" id="zi">+</button>
@@ -1114,8 +1114,8 @@ MEHARI_IMG.src='mehari-realistic.png';
 // sur la même ligne, arrière centré) affichées dans les virages : la voiture
 // pivote en montrant un peu son flanc.
 const MEHARI_TURN_IMGS={left:new Image(), right:new Image()};
-MEHARI_TURN_IMGS.left.src='mehari-turn-left.png';   // flanc droit visible
-MEHARI_TURN_IMGS.right.src='mehari-turn-right.png'; // flanc gauche visible
+MEHARI_TURN_IMGS.left.src='mehari-turn-left.png';   // virage à gauche : flanc gauche visible
+MEHARI_TURN_IMGS.right.src='mehari-turn-right.png'; // virage à droite : flanc droit visible
 let mehariTurnState=0; // -1 virage à gauche, 0 tout droit, 1 virage à droite
 
 // Vue conducteur (POV) : un bout du volant + du capot (voiture), ou du
@@ -3546,6 +3546,9 @@ async function liveSyncFromGoogleCalendar(force){
     const token = await getGoogleAccessToken();
     const profile = await fetchGoogleUserProfile(token);
     updateGoogleAuthUI(profile);
+    // Réglages enregistrés dans Drive depuis un autre appareil : on les reprend
+    // avant de choisir les agendas à lire.
+    await pullSettingsFromDrive();
     applySideNamesFromProfile(profile);
     showWelcome(false);
 
@@ -3731,6 +3734,7 @@ document.getElementById('calSave').addEventListener('click', () => {
     calListEl.querySelectorAll('input[type=text]').forEach(t=>{ if(t.value.trim()) names[t.dataset.id]=t.value.trim(); });
     saveCalendarConfig({show, names});
   }
+  markSettingsChanged();
   closeCalendarSettings();
   if(prevCfg === JSON.stringify(loadCalendarConfig())) return;
   const cached = readLiveSyncCache();
@@ -3771,6 +3775,74 @@ function updateSyncAge(){
 }
 setInterval(updateSyncAge, 30000);
 document.getElementById('legSync').addEventListener('click', ()=>liveSyncFromGoogleCalendar(true));
+
+// ===== Réglages partagés entre appareils (fichier dans Google Drive) =====
+// Agendas affichés et leurs noms, week-end, zone de vacances : gardés dans le
+// navigateur et copiés dans « Route du temps/reglages.json » sur le Drive du
+// compte connecté (autorisation drive.file déjà utilisée pour les photos),
+// pour retrouver les mêmes réglages sur un autre appareil. Le plus récent gagne.
+const SETTINGS_FILE_NAME='reglages.json', SETTINGS_TS_KEY='settingsUpdated_v1';
+function localSettingsTs(){ try{ return +localStorage.getItem(SETTINGS_TS_KEY)||0; }catch(e){ return 0; } }
+function settingsSnapshot(){
+  return { v:1, updated:localSettingsTs(), calendar:loadCalendarConfig(), showWeekend:showWeekend(), schoolZone:schoolZone() };
+}
+function applySettingsSnapshot(snap){
+  if(!snap || typeof snap!=='object') return;
+  if(snap.calendar) saveCalendarConfig(snap.calendar);
+  try{
+    if(typeof snap.showWeekend==='boolean') localStorage.setItem(SHOW_WEEKEND_KEY, snap.showWeekend?'1':'0');
+    localStorage.setItem(SETTINGS_TS_KEY, String(snap.updated||Date.now()));
+  }catch(e){}
+  applyWeekendLegend();
+  if(snap.schoolZone && snap.schoolZone!==schoolZone()){
+    try{ localStorage.setItem(SCHOOL_ZONE_KEY, snap.schoolZone); }catch(e){}
+    rebuildVacances();
+  }
+}
+// Appels Drive « silencieux » : sans autorisation Drive (ancien consentement),
+// on n'ouvre pas de fenêtre Google, on garde simplement les réglages locaux.
+async function driveFetchQuiet(url, opts){
+  const token = await getGoogleAccessToken();
+  const resp = await fetch(url, { ...opts, headers: { ...(opts && opts.headers), 'Authorization': 'Bearer ' + token } });
+  if(!resp.ok) throw new Error('Drive HTTP ' + resp.status);
+  return resp;
+}
+async function findSettingsFile(){
+  const resp = await driveFetchQuiet('https://www.googleapis.com/drive/v3/files?orderBy=modifiedTime desc&fields=files(id,parents)&q=' + encodeURIComponent("name='" + SETTINGS_FILE_NAME + "' and trashed=false"));
+  const data = await resp.json();
+  return (data.files && data.files[0]) ? data.files[0].id : null;
+}
+async function pullSettingsFromDrive(){
+  try{
+    const id = await findSettingsFile();
+    if(!id) return;
+    const snap = await (await driveFetchQuiet('https://www.googleapis.com/drive/v3/files/' + id + '?alt=media')).json();
+    if((snap.updated||0) > localSettingsTs()) applySettingsSnapshot(snap);
+  }catch(err){ console.warn('Réglages Drive non lus', err); }
+}
+let settingsPushTimer = null;
+function markSettingsChanged(){
+  try{ localStorage.setItem(SETTINGS_TS_KEY, String(Date.now())); }catch(e){}
+  clearTimeout(settingsPushTimer);
+  settingsPushTimer = setTimeout(pushSettingsToDrive, 800);
+}
+async function pushSettingsToDrive(){
+  if(!readLiveSyncCache()) return; // pas connecté
+  try{
+    const body = JSON.stringify(settingsSnapshot());
+    const id = await findSettingsFile();
+    if(id){
+      await driveFetchQuiet('https://www.googleapis.com/upload/drive/v3/files/' + id + '?uploadType=media', {
+        method: 'PATCH', headers: { 'Content-Type': 'application/json' }, body });
+    }else{
+      const folderId = await ensureDriveFolder();
+      const form = new FormData();
+      form.append('metadata', new Blob([JSON.stringify({ name: SETTINGS_FILE_NAME, parents: [folderId], mimeType: 'application/json' })], { type: 'application/json' }));
+      form.append('file', new Blob([body], { type: 'application/json' }));
+      await driveFetchQuiet('https://www.googleapis.com/upload/drive/v3/files?uploadType=multipart&fields=id', { method: 'POST', body: form });
+    }
+  }catch(err){ console.warn('Réglages Drive non enregistrés', err); }
+}
 
 // ===== Vacances scolaires par zone =====
 const SCHOOL_ZONE_KEY='schoolZone_v1', SCHOOL_CAL_CACHE_KEY='schoolCalendar_v1';

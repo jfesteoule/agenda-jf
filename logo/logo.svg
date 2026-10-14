@@ -1,0 +1,42 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" width="512" height="512">
+  <defs>
+    <linearGradient id="sky" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#f6b26b"/>
+      <stop offset="1" stop-color="#e8743b"/>
+    </linearGradient>
+    <linearGradient id="grass" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#8fb35a"/>
+      <stop offset="1" stop-color="#5d8a3a"/>
+    </linearGradient>
+    <linearGradient id="road" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#6b6c67"/>
+      <stop offset="1" stop-color="#3b3c39"/>
+    </linearGradient>
+    <clipPath id="r"><rect width="512" height="512" rx="112"/></clipPath>
+  </defs>
+  <g clip-path="url(#r)">
+    <rect width="512" height="512" fill="url(#sky)"/>
+    <!-- soleil -->
+    <circle cx="256" cy="232" r="70" fill="#ffe2a8" opacity="0.9"/>
+    <!-- sol -->
+    <rect y="232" width="512" height="280" fill="url(#grass)"/>
+    <!-- route sinueuse en perspective -->
+    <path d="M150 512 C 190 420, 330 390, 290 330 C 262 290, 240 262, 252 234 L 262 234 C 254 262, 282 290, 312 330 C 360 392, 300 440, 372 512 Z" fill="url(#road)"/>
+    <!-- axe discontinu -->
+    <path d="M262 512 C 262 440, 330 400, 300 340 C 280 300, 256 270, 257 236" fill="none" stroke="#f4f1e6" stroke-width="9" stroke-dasharray="26 22" stroke-linecap="round"/>
+    <!-- borne de date -->
+    <g transform="translate(96 250)">
+      <rect x="0" y="34" width="84" height="104" rx="6" fill="#1f6b46" stroke="#f4f1e6" stroke-width="6"/>
+      <path d="M0 40 A42 42 0 0 1 84 40 Z" fill="#d93a2b" stroke="#f4f1e6" stroke-width="6" stroke-linejoin="round"/>
+      <text x="42" y="117" text-anchor="middle" font-family="Oswald, 'Arial Narrow', Arial, sans-serif" font-weight="700" font-size="62" fill="#f4f1e6">14</text>
+    </g>
+    <!-- panneau d'événement -->
+    <g transform="translate(330 268)">
+      <rect x="34" y="70" width="12" height="56" fill="#4a4943"/>
+      <rect x="0" y="0" width="92" height="74" rx="6" fill="#fbf9f2" stroke="#1a73e8" stroke-width="7"/>
+      <rect x="14" y="18" width="62" height="9" rx="4" fill="#2b241c" opacity="0.75"/>
+      <rect x="14" y="36" width="46" height="9" rx="4" fill="#2b241c" opacity="0.5"/>
+      <rect x="14" y="54" width="54" height="7" rx="3" fill="#2b241c" opacity="0.35"/>
+    </g>
+  </g>
+</svg>

@@ -223,7 +223,7 @@ canvas#c{position:absolute;inset:0;width:100%;height:100%;touch-action:none;poin
     <button id="menu-right" class="menuitem"><i class="ti ti-user"></i>Masquer mon agenda</button>
     <button id="menu-calendars" class="menuitem"><i class="ti ti-users"></i>Agendas et vacances…</button>
     <button id="menu-signout" class="menuitem" style="display:none;"><i class="ti ti-logout"></i>Se déconnecter de Google</button>
-    <div id="appVersion" style="font-size:11px;color:#9aa0a6;padding:8px 14px 4px;text-align:right;">Version 2026-10-14 18:31</div>
+    <div id="appVersion" style="font-size:11px;color:#9aa0a6;padding:8px 14px 4px;text-align:right;">Version 2026-10-14 18:32</div>
   </div>
   <div id="miniCal">
     <div class="mc-hdr">
@@ -3020,11 +3020,16 @@ function liveSyncCalendars(profile, calendarList){
   if(cfg.secondId) cals.push({id:cfg.secondId, side:'left', who:cfg.secondName || cfg.secondId.split('@')[0]});
   (calendarList||[]).forEach(c=>{
     if(c.primary || !c.selected || c.id===cfg.secondId) return;
+    // Jours fériés : affichés avec mon agenda, sans apparaître dans la légende.
+    const holiday = c.id.indexOf('#holiday@')>=0;
+    const name = c.summaryOverride || c.summary || c.id;
     cals.push({
       id:c.id,
-      side:c.accessRole==='owner' ? 'right' : 'left',
-      who:c.summaryOverride || c.summary || c.id,
-      color:c.backgroundColor || null
+      side:(holiday || c.accessRole==='owner') ? 'right' : 'left',
+      // L'agenda principal d'une autre personne porte son adresse e-mail comme nom.
+      who:name.indexOf('@')>=0 ? shortCalendarName(name) : name,
+      color:c.backgroundColor || null,
+      holiday
     });
   });
   return cals;
@@ -3163,7 +3168,7 @@ async function liveSyncFromGoogleCalendar(force){
     try{ calendarList = await fetchCalendarListRaw(); }
     catch(err){ console.warn('Liste des agendas indisponible', err); listError = err.message || String(err); }
     const cals = liveSyncCalendars(profile, calendarList);
-    const leftName = cals.filter(c=>c.side==='left').map(c=>c.who).join(' · ');
+    const leftName = cals.filter(c=>c.side==='left' && !c.holiday).map(c=>c.who).join(' · ');
     applySideNamesFromProfile(profile, leftName);
     for(const cal of cals){
       try{

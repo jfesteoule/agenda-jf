@@ -3028,9 +3028,11 @@ function liveSyncCalendars(profile, calendarList){
   });
   return cals;
 }
-function applySideNamesFromProfile(profile){
+// leftName : noms des agendas affichés à gauche (sinon, nom du second agenda choisi).
+function applySideNamesFromProfile(profile, leftName){
   const cfg=loadCalendarConfig();
-  setSideNames(profileDisplayName(profile), cfg.secondId ? (cfg.secondName || cfg.secondId.split('@')[0]) : '', profile && profile.name);
+  if(leftName===undefined) leftName = cfg.secondId ? (cfg.secondName || cfg.secondId.split('@')[0]) : '';
+  setSideNames(profileDisplayName(profile), leftName, profile && profile.name);
 }
 
 async function fetchGoogleUserProfile(token){
@@ -3158,7 +3160,10 @@ async function liveSyncFromGoogleCalendar(force){
     let calendarList = [];
     try{ calendarList = await fetchCalendarListRaw(); }
     catch(err){ console.warn('Liste des agendas indisponible', err); }
-    for(const cal of liveSyncCalendars(profile, calendarList)){
+    const cals = liveSyncCalendars(profile, calendarList);
+    const leftName = cals.filter(c=>c.side==='left').map(c=>c.who).join(' · ');
+    applySideNamesFromProfile(profile, leftName);
+    for(const cal of cals){
       try{
         const items = await fetchCalendarEventsRange(cal.id, await getGoogleAccessToken());
         items.forEach(gev=>{
@@ -3175,7 +3180,7 @@ async function liveSyncFromGoogleCalendar(force){
 
     applyEventsData(allEntries);
     try{
-      localStorage.setItem(LIVE_SYNC_CACHE_KEY, JSON.stringify({ts: Date.now(), cfg: cfgSig, events: allEntries, profile}));
+      localStorage.setItem(LIVE_SYNC_CACHE_KEY, JSON.stringify({ts: Date.now(), cfg: cfgSig, events: allEntries, profile, leftName}));
     }catch(e){ console.warn('Cache local indisponible', e); }
     sbtn.style.color = '#34a853';
     LAST_SYNC_TS = Date.now(); updateSyncAge();
@@ -3196,7 +3201,7 @@ function readLiveSyncCache(){
 function applyCachedSync(cached){
   applyEventsData(cached.events || []);
   LAST_SYNC_TS = cached.ts || null; updateSyncAge();
-  if(cached.profile){ updateGoogleAuthUI(cached.profile); applySideNamesFromProfile(cached.profile); }
+  if(cached.profile){ updateGoogleAuthUI(cached.profile); applySideNamesFromProfile(cached.profile, cached.leftName); }
   showWelcome(false);
 }
 

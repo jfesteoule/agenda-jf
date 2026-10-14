@@ -2031,7 +2031,7 @@ function drawEventSign(it,alpha){
       photoBottom=imgY+sz+pad*0.5*scaleY;
     }
     const efs=fs*Math.max(0.75,scaleY);
-    if(efs>=5 && en.lines.length && textW>10){
+    if(efs>=3 && en.lines.length && textW>6){
       ctx.fillStyle='#2b241c';
       ctx.font=`500 ${efs.toFixed(1)}px Archivo, Arial, sans-serif`;
       ctx.textAlign='left'; ctx.textBaseline='top';

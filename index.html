@@ -30,6 +30,7 @@ canvas#c{position:absolute;inset:0;width:100%;height:100%;touch-action:none;poin
 .menuitem:last-child{border-bottom:none;}
 .menuitem i{font-size:17px;color:#c1502f;}
 #addEventOverlay{display:none;position:fixed;inset:0;z-index:2000;background:rgba(20,15,10,0.45);align-items:center;justify-content:center;}
+.picker-dialog-bg,.picker-dialog{z-index:3000 !important;}
 #addEventOverlay.open{display:flex;}
 #addEventBox{background:#fff;border-radius:14px;padding:20px 22px;width:min(340px,92vw);box-shadow:0 12px 32px rgba(0,0,0,0.3);font-family:'Archivo',Arial,sans-serif;}
 #addEventBox h3{margin:0 0 16px;font-family:'Oswald',Arial,sans-serif;font-size:15px;font-weight:600;color:#2b241c;text-transform:uppercase;letter-spacing:0.02em;}
@@ -260,6 +261,10 @@ canvas#c{position:absolute;inset:0;width:100%;height:100%;touch-action:none;poin
       <label>Heure (optionnel)<input type="time" id="addEvTime"></label>
       <label>Titre<input type="text" id="addEvTitle" maxlength="80" placeholder="Ex. Dîner chez des amis"></label>
       <label>Photo ou vidéo (optionnel, envoyée dans Google Drive)<input type="file" id="addEvPhoto" accept="image/*,video/*"></label>
+      <div style="display:flex;align-items:center;gap:8px;margin:-4px 0 12px;">
+        <button type="button" id="addEvPickDrive" class="menuitem" style="border:1px solid #ddd;border-radius:8px;width:auto;flex:none;padding:8px 12px;">Choisir dans Drive…</button>
+        <span id="addEvPicked" style="font-size:12px;color:#5f6368;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;"></span>
+      </div>
       <label>Ou lien Google Drive existant (optionnel)<input type="url" id="addEvAttachment" placeholder="https://drive.google.com/file/d/…"></label>
       <div id="addEvStatus"></div>
       <div id="addEvActions">
@@ -326,7 +331,7 @@ canvas#c{position:absolute;inset:0;width:100%;height:100%;touch-action:none;poin
     <div class="leg"><div class="legline"></div>Week-end</div>
     <div class="leg" id="legVac"><div class="legline" style="background:#ffd600;"></div><span id="legVacTxt">Vacances scolaires</span></div>
     <button id="legSync" class="leg" type="button" style="display:none;cursor:pointer;border:none;font-family:inherit;color:inherit;text-align:left;" title="Relancer la synchro Google Agenda"><i class="ti ti-refresh" style="font-size:12px;"></i><span id="legSyncTxt"></span></button>
-    <div id="appVersion" style="font-size:10px;color:#fff;text-shadow:0 1px 2px rgba(0,0,0,0.6);text-align:right;padding-right:4px;">Version 2026-10-14 18:47</div>
+    <div id="appVersion" style="font-size:10px;color:#fff;text-shadow:0 1px 2px rgba(0,0,0,0.6);text-align:right;padding-right:4px;">Version 2026-10-14 18:55</div>
   </div>
   <div id="zbx">
     <button class="zb" id="zi">+</button>
@@ -2987,6 +2992,14 @@ async function ensureDriveFolder(){
   });
   return created.id;
 }
+// Lisible par toute personne disposant du lien (agendas partagés, vignettes).
+async function shareDriveFileWithLink(fileId){
+  await driveFetch('https://www.googleapis.com/drive/v3/files/' + fileId + '/permissions?fields=id', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ role: 'reader', type: 'anyone' })
+  });
+}
 async function uploadToDrive(file){
   const folderId = await ensureDriveFolder();
   const form = new FormData();
@@ -2995,14 +3008,61 @@ async function uploadToDrive(file){
   const f = await driveFetch('https://www.googleapis.com/upload/drive/v3/files?uploadType=multipart&fields=id,name,mimeType,webViewLink', {
     method: 'POST', body: form
   });
-  // Lisible par toute personne disposant du lien (agendas partagés, vignettes).
-  await driveFetch('https://www.googleapis.com/drive/v3/files/' + f.id + '/permissions?fields=id', {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ role: 'reader', type: 'anyone' })
-  });
+  await shareDriveFileWithLink(f.id);
   return f;
 }
+
+// ===== Choix d'un fichier déjà présent dans Google Drive (Google Picker) =====
+// Le fichier choisi devient accessible à l'appli (autorisation drive.file).
+const GOOGLE_APP_ID = GOOGLE_CLIENT_ID.split('-')[0]; // numéro du projet Google Cloud
+const GOOGLE_PICKER_API_KEY = ''; // clé API facultative (console Google Cloud)
+let pickedDriveFile = null;
+function setPickedDriveFile(f){
+  pickedDriveFile = f;
+  document.getElementById('addEvPicked').textContent = f ? '✓ ' + f.name : '';
+}
+let pickerLoading = null;
+function loadPickerApi(){
+  if(window.google && google.picker) return Promise.resolve();
+  if(pickerLoading) return pickerLoading;
+  pickerLoading = new Promise((resolve, reject) => {
+    const sc = document.createElement('script');
+    sc.src = 'https://apis.google.com/js/api.js';
+    sc.onload = () => gapi.load('picker', { callback: resolve, onerror: () => reject(new Error('Sélecteur Google Drive indisponible')) });
+    sc.onerror = () => { pickerLoading = null; reject(new Error('Sélecteur Google Drive indisponible')); };
+    document.head.appendChild(sc);
+  });
+  return pickerLoading;
+}
+document.getElementById('addEvPickDrive').addEventListener('click', async () => {
+  try{
+    // Vérifie (et demande si besoin) l'autorisation Drive avant d'ouvrir le sélecteur.
+    await driveFetch('https://www.googleapis.com/drive/v3/about?fields=user');
+    const token = await getGoogleAccessToken();
+    await loadPickerApi();
+    const view = new google.picker.DocsView(google.picker.ViewId.DOCS_IMAGES_AND_VIDEOS)
+      .setIncludeFolders(true).setMode(google.picker.DocsViewMode.GRID);
+    const builder = new google.picker.PickerBuilder()
+      .addView(view)
+      .setOAuthToken(token)
+      .setAppId(GOOGLE_APP_ID)
+      .setLocale('fr')
+      .setTitle('Choisir une photo ou une vidéo')
+      .setCallback(data => {
+        if(data.action !== google.picker.Action.PICKED || !data.docs || !data.docs.length) return;
+        const d = data.docs[0];
+        setPickedDriveFile({ id: d.id, name: d.name, mimeType: d.mimeType, url: d.url });
+        document.getElementById('addEvPhoto').value = '';
+      });
+    if(GOOGLE_PICKER_API_KEY) builder.setDeveloperKey(GOOGLE_PICKER_API_KEY);
+    builder.build().setVisible(true);
+  }catch(err){
+    addEvStatus.textContent = 'Erreur : ' + err.message;
+    addEvStatus.className = 'err';
+    console.error(err);
+  }
+});
+document.getElementById('addEvPhoto').addEventListener('change', () => setPickedDriveFile(null));
 
 document.getElementById('addEvSubmit').addEventListener('click', async () => {
   const dateStr = document.getElementById('addEvDate').value;
@@ -3027,6 +3087,13 @@ document.getElementById('addEvSubmit').addEventListener('click', async () => {
     if(photoFile){
       addEvStatus.textContent = 'Envoi de la photo dans Google Drive…';
       const f = await uploadToDrive(photoFile);
+      attachments.push({ fileUrl: f.webViewLink, fileId: f.id, mimeType: f.mimeType, title: f.name });
+    }
+    if(pickedDriveFile){
+      addEvStatus.textContent = 'Partage du fichier Drive…';
+      try{ await shareDriveFileWithLink(pickedDriveFile.id); }
+      catch(err){ console.warn('Partage par lien impossible (fichier non modifiable ?)', err); }
+      const f = await driveFetch('https://www.googleapis.com/drive/v3/files/' + pickedDriveFile.id + '?fields=id,name,mimeType,webViewLink');
       attachments.push({ fileUrl: f.webViewLink, fileId: f.id, mimeType: f.mimeType, title: f.name });
     }
     if(attachUrl){
@@ -3070,6 +3137,7 @@ document.getElementById('addEvSubmit').addEventListener('click', async () => {
     document.getElementById('addEvTitle').value = '';
     document.getElementById('addEvAttachment').value = '';
     document.getElementById('addEvPhoto').value = '';
+    setPickedDriveFile(null);
     setTimeout(closeAddEventModal, 900);
   }catch(err){
     addEvStatus.textContent = 'Erreur : ' + err.message;

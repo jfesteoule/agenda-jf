@@ -291,11 +291,14 @@ canvas#c{position:absolute;inset:0;width:100%;height:100%;touch-action:none;poin
       <p>Cochez les agendas à afficher (par défaut, ceux cochés dans Google Agenda). Vos agendas sont à droite de la route, ceux partagés avec vous à gauche. Le nom peut être modifié pour la légende.</p>
       <div id="calList" style="display:flex;flex-direction:column;gap:6px;margin-bottom:10px;max-height:40vh;overflow:auto;"></div>
       <div id="calListStatus" style="font-size:12px;color:#8a7a5c;margin:-4px 0 10px;"></div>
-      <label>Vacances scolaires<select id="calZone">
+      <div style="display:flex;flex-direction:column;gap:8px;margin-bottom:12px;font-size:13px;color:#2b241c;">
+        <label style="display:flex;flex-direction:row;align-items:center;gap:8px;margin:0;font-size:13px;color:#2b241c;"><input type="checkbox" id="calShowWeekend" style="width:18px;height:18px;margin:0;">Week-end (passage piéton sur la route)</label>
+        <label style="display:flex;flex-direction:row;align-items:center;gap:8px;margin:0;font-size:13px;color:#2b241c;"><input type="checkbox" id="calShowVac" style="width:18px;height:18px;margin:0;">Vacances scolaires</label>
+      </div>
+      <label id="calZoneWrap">Zone des vacances scolaires<select id="calZone">
         <option value="A">Zone A (Grenoble, Lyon, Bordeaux…)</option>
         <option value="B">Zone B (Marseille, Nice, Lille, Rennes…)</option>
         <option value="C">Zone C (Paris, Montpellier, Toulouse)</option>
-        <option value="none">Ne pas afficher</option>
       </select></label>
       <div class="appActions">
         <button id="calCancel" class="menuitem" style="border:1px solid #ddd;">Annuler</button>
@@ -343,7 +346,7 @@ canvas#c{position:absolute;inset:0;width:100%;height:100%;touch-action:none;poin
     <div class="leg" id="legWeekend"><div class="legline"></div>Week-end</div>
     <div class="leg" id="legVac"><div class="legline" style="background:#ffd600;"></div><span id="legVacTxt">Vacances scolaires</span></div>
     <button id="legSync" class="leg" type="button" style="display:none;cursor:pointer;border:none;font-family:inherit;color:inherit;text-align:left;" title="Relancer la synchro Google Agenda"><i class="ti ti-refresh" style="font-size:12px;"></i><span id="legSyncTxt"></span></button>
-    <div id="appVersion" style="font-size:10px;color:#fff;text-shadow:0 1px 2px rgba(0,0,0,0.6);text-align:right;padding-right:4px;">Version 2026-10-14 20:32 · <a href="confidentialite.html" style="color:#fff">Confidentialité</a> · <a href="conditions.html" style="color:#fff">Conditions</a></div>
+    <div id="appVersion" style="font-size:10px;color:#fff;text-shadow:0 1px 2px rgba(0,0,0,0.6);text-align:right;padding-right:4px;">Version 2026-10-14 20:33 · <a href="confidentialite.html" style="color:#fff">Confidentialité</a> · <a href="conditions.html" style="color:#fff">Conditions</a></div>
   </div>
   <div id="zbx">
     <button class="zb" id="zi">+</button>
@@ -583,6 +586,11 @@ function dayToDist(day){ return (day-camDay)*SP; }
 function visible(y){ return y>-60&&y<H+60; }
 
 function isSat(d){ return((TODAY_DOW+d)%7)===6; }
+// Affichage du week-end (passage piéton samedi-dimanche), réglable dans
+// « Agendas et vacances ». Activé par défaut.
+const SHOW_WEEKEND_KEY='showWeekend_v1';
+function showWeekend(){ try{ return localStorage.getItem(SHOW_WEEKEND_KEY)!=='0'; }catch(e){ return true; } }
+function applyWeekendLegend(){ const l=document.getElementById('legWeekend'); if(l) l.style.display=showWeekend()?'':'none'; }
 function isSun(d){ return((TODAY_DOW+d)%7)===0; }
 function isMonday(d){ return((TODAY_DOW+d)%7)===1; }
 
@@ -1305,7 +1313,7 @@ function drawRoadSurface(){
     }
     // week-end : grand passage piéton qui couvre samedi et dimanche ensemble
     // (bandes resserrées pour rester sur la chaussée, pas sur l'accotement)
-    if(k>=0&&k<=TOTAL_DAYS&&isSat(k)){
+    if(k>=0&&k<=TOTAL_DAYS&&isSat(k)&&showWeekend()){
       for(let s=-3;s<=3;s++) drawBand(d0,d0+SP*2, s*0.8-0.28, s*0.8+0.28, white, 0.85);
     }
     // jour férié : bande jaune
@@ -2525,6 +2533,7 @@ document.getElementById('legleft').addEventListener('click',()=>{
   updateCalendarToggleUI();
 });
 updateCalendarToggleUI();
+applyWeekendLegend();
 
 // Le mini calendrier en haut à gauche peut gêner la vue sur la route : bouton
 // pour l'afficher/le masquer.
@@ -3673,8 +3682,14 @@ function renderCalendarChoices(list){
     calListEl.appendChild(row);
   });
 }
+function syncZoneWrap(){ document.getElementById('calZoneWrap').style.display = document.getElementById('calShowVac').checked ? '' : 'none'; }
+document.getElementById('calShowVac').addEventListener('change', syncZoneWrap);
 async function openCalendarSettings(){
-  document.getElementById('calZone').value = schoolZone();
+  const z = schoolZone();
+  document.getElementById('calShowVac').checked = z !== 'none';
+  document.getElementById('calZone').value = z === 'none' ? 'A' : z;
+  document.getElementById('calShowWeekend').checked = showWeekend();
+  syncZoneWrap();
   calListEl.innerHTML='';
   calOverlay.classList.add('open');
   const status = document.getElementById('calListStatus');
@@ -3694,7 +3709,9 @@ document.getElementById('menu-calendars').addEventListener('click', () => { menu
 document.getElementById('calCancel').addEventListener('click', closeCalendarSettings);
 calOverlay.addEventListener('click', (e) => { if(e.target===calOverlay) closeCalendarSettings(); });
 document.getElementById('calSave').addEventListener('click', () => {
-  const zone = document.getElementById('calZone').value;
+  const zone = document.getElementById('calShowVac').checked ? document.getElementById('calZone').value : 'none';
+  try{ localStorage.setItem(SHOW_WEEKEND_KEY, document.getElementById('calShowWeekend').checked ? '1' : '0'); }catch(e){}
+  applyWeekendLegend();
   if(zone !== schoolZone()){
     try{ localStorage.setItem(SCHOOL_ZONE_KEY, zone); }catch(e){}
     rebuildVacances();

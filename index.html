@@ -3213,16 +3213,32 @@ const calOverlay = document.getElementById('calOverlay');
 // Liste des agendas partagés avec le compte connecté (hors agenda principal),
 // pour choisir le second agenda sans avoir à taper son adresse.
 async function fetchCalendarList(){
-  const call = async (token) => fetch('https://www.googleapis.com/calendar/v3/users/me/calendarList?minAccessRole=reader&maxResults=250',
-    { headers: { 'Authorization': 'Bearer ' + token } });
-  let resp = await call(await getGoogleAccessToken());
-  if(resp.status === 401 || resp.status === 403){
-    // Jeton obtenu avant l'ajout de l'autorisation « liste des agendas » : on la redemande une fois.
-    resp = await call(await requestGoogleToken('consent'));
-  }
-  if(!resp.ok) throw new Error('HTTP ' + resp.status);
-  const data = await resp.json();
-  return (data.items || []).filter(c => !c.primary).map(c => ({ id: c.id, name: c.summaryOverride || c.summary || c.id }))
+  // showHidden : inclure aussi les agendas masqués dans la liste de Google Agenda
+  // (sinon l'API les omet). On suit nextPageToken pour ne rien perdre.
+  const call = async (token, pageToken) => {
+    const url = new URL('https://www.googleapis.com/calendar/v3/users/me/calendarList');
+    url.searchParams.set('minAccessRole', 'reader');
+    url.searchParams.set('showHidden', 'true');
+    url.searchParams.set('maxResults', '250');
+    if(pageToken) url.searchParams.set('pageToken', pageToken);
+    return fetch(url.toString(), { headers: { 'Authorization': 'Bearer ' + token } });
+  };
+  let token = await getGoogleAccessToken();
+  const items = [];
+  let pageToken = '';
+  do{
+    let resp = await call(token, pageToken);
+    if(resp.status === 401 || resp.status === 403){
+      // Jeton obtenu avant l'ajout de l'autorisation « liste des agendas » : on la redemande une fois.
+      token = await requestGoogleToken('consent');
+      resp = await call(token, pageToken);
+    }
+    if(!resp.ok) throw new Error('HTTP ' + resp.status);
+    const data = await resp.json();
+    items.push(...(data.items || []));
+    pageToken = data.nextPageToken || '';
+  } while(pageToken);
+  return items.filter(c => !c.primary).map(c => ({ id: c.id, name: c.summaryOverride || c.summary || c.id }))
     .sort((a,b) => a.name.localeCompare(b.name, 'fr'));
 }
 function shortCalendarName(name){

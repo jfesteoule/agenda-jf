@@ -331,7 +331,7 @@ canvas#c{position:absolute;inset:0;width:100%;height:100%;touch-action:none;poin
     <div class="leg"><div class="legline"></div>Week-end</div>
     <div class="leg" id="legVac"><div class="legline" style="background:#ffd600;"></div><span id="legVacTxt">Vacances scolaires</span></div>
     <button id="legSync" class="leg" type="button" style="display:none;cursor:pointer;border:none;font-family:inherit;color:inherit;text-align:left;" title="Relancer la synchro Google Agenda"><i class="ti ti-refresh" style="font-size:12px;"></i><span id="legSyncTxt"></span></button>
-    <div id="appVersion" style="font-size:10px;color:#fff;text-shadow:0 1px 2px rgba(0,0,0,0.6);text-align:right;padding-right:4px;">Version 2026-10-14 18:55</div>
+    <div id="appVersion" style="font-size:10px;color:#fff;text-shadow:0 1px 2px rgba(0,0,0,0.6);text-align:right;padding-right:4px;">Version 2026-10-14 18:56</div>
   </div>
   <div id="zbx">
     <button class="zb" id="zi">+</button>
@@ -3064,6 +3064,17 @@ document.getElementById('addEvPickDrive').addEventListener('click', async () => 
 });
 document.getElementById('addEvPhoto').addEventListener('change', () => setPickedDriveFile(null));
 
+// Pendant l'envoi (photo + création), le bouton « Créer » est bloqué et le montre.
+function setAddEvBusy(busy){
+  const btn = document.getElementById('addEvSubmit');
+  btn.disabled = busy;
+  btn.textContent = busy ? 'Envoi…' : 'Créer';
+  btn.style.opacity = busy ? '0.55' : '';
+  btn.style.cursor = busy ? 'wait' : '';
+  document.getElementById('addEvPickDrive').disabled = busy;
+  document.getElementById('addEvPhoto').disabled = busy;
+}
+
 document.getElementById('addEvSubmit').addEventListener('click', async () => {
   const dateStr = document.getElementById('addEvDate').value;
   const timeStr = document.getElementById('addEvTime').value;
@@ -3075,7 +3086,8 @@ document.getElementById('addEvSubmit').addEventListener('click', async () => {
     return;
   }
   const btn = document.getElementById('addEvSubmit');
-  btn.disabled = true;
+  if(btn.disabled) return;
+  setAddEvBusy(true);
   addEvStatus.textContent = 'Connexion à Google Agenda…';
   addEvStatus.className = '';
   try{
@@ -3138,13 +3150,13 @@ document.getElementById('addEvSubmit').addEventListener('click', async () => {
     document.getElementById('addEvAttachment').value = '';
     document.getElementById('addEvPhoto').value = '';
     setPickedDriveFile(null);
-    setTimeout(closeAddEventModal, 900);
+    // Le bouton reste bloqué jusqu'à la fermeture (pas de double création).
+    setTimeout(() => { closeAddEventModal(); setAddEvBusy(false); }, 900);
   }catch(err){
     addEvStatus.textContent = 'Erreur : ' + err.message;
     addEvStatus.className = 'err';
     console.error(err);
-  }finally{
-    btn.disabled = false;
+    setAddEvBusy(false);
   }
 });
 

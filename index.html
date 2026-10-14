@@ -18,7 +18,7 @@
 <style>
 *{box-sizing:border-box;margin:0;padding:0;}
 body{font-family:'Archivo',Arial,sans-serif;}
-#wrap{position:relative;width:100vw;height:100vh;overflow:hidden;}
+#wrap{position:relative;width:100vw;height:100vh;height:100dvh;overflow:hidden;}
 canvas#c{position:absolute;inset:0;width:100%;height:100%;touch-action:none;pointer-events:none;}
 #hud{position:absolute;top:12px;left:12px;right:12px;z-index:1000;display:flex;gap:8px;align-items:center;}
 #sbox{display:block;width:100%;height:40px;background:#fff;border:none;border-radius:20px;padding:0 16px 0 40px;font-family:'Oswald',Arial,sans-serif;font-size:13px;color:#2b241c;outline:none;box-shadow:0 2px 6px rgba(0,0,0,0.2);}
@@ -260,7 +260,7 @@ canvas#c{position:absolute;inset:0;width:100%;height:100%;touch-action:none;poin
       <label>Date<input type="date" id="addEvDate"></label>
       <label>Heure (optionnel)<input type="time" id="addEvTime"></label>
       <label>Titre<input type="text" id="addEvTitle" maxlength="80" placeholder="Ex. Dîner chez des amis"></label>
-      <label>Photo ou vidéo (optionnel, envoyée dans Google Drive)<input type="file" id="addEvPhoto" accept="image/*,video/*"></label>
+      <label>Photo ou vidéo (optionnel, envoyée dans Google Drive et visible par toute personne ayant le lien)<input type="file" id="addEvPhoto" accept="image/*,video/*"></label>
       <div style="display:flex;align-items:center;gap:8px;margin:-4px 0 12px;">
         <button type="button" id="addEvPickDrive" class="menuitem" style="border:1px solid #ddd;border-radius:8px;width:auto;flex:none;padding:8px 12px;">Choisir dans Drive…</button>
         <span id="addEvPicked" style="font-size:12px;color:#5f6368;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;"></span>
@@ -335,7 +335,7 @@ canvas#c{position:absolute;inset:0;width:100%;height:100%;touch-action:none;poin
     <div class="leg"><div class="legline"></div>Week-end</div>
     <div class="leg" id="legVac"><div class="legline" style="background:#ffd600;"></div><span id="legVacTxt">Vacances scolaires</span></div>
     <button id="legSync" class="leg" type="button" style="display:none;cursor:pointer;border:none;font-family:inherit;color:inherit;text-align:left;" title="Relancer la synchro Google Agenda"><i class="ti ti-refresh" style="font-size:12px;"></i><span id="legSyncTxt"></span></button>
-    <div id="appVersion" style="font-size:10px;color:#fff;text-shadow:0 1px 2px rgba(0,0,0,0.6);text-align:right;padding-right:4px;">Version 2026-10-14 19:13</div>
+    <div id="appVersion" style="font-size:10px;color:#fff;text-shadow:0 1px 2px rgba(0,0,0,0.6);text-align:right;padding-right:4px;">Version 2026-10-14 19:18</div>
   </div>
   <div id="zbx">
     <button class="zb" id="zi">+</button>
@@ -362,6 +362,8 @@ canvas#c{position:absolute;inset:0;width:100%;height:100%;touch-action:none;poin
     <div class="row"><i class="ti ti-clock"></i><span id="ed-day"></span></div>
     <div class="row"><i class="ti ti-user"></i><span id="ed-who"></span></div>
     <div class="row"><span class="daydot" id="ed-dot"></span><span id="ed-cat"></span></div>
+    <div class="row" id="ed-locrow" style="display:none;"><i class="ti ti-map-pin"></i><span id="ed-loc"></span></div>
+    <div class="row" id="ed-linkrow" style="display:none;"><i class="ti ti-external-link"></i><a id="ed-link" target="_blank" rel="noopener noreferrer" style="color:#1a73e8;text-decoration:none;">Ouvrir dans Google Agenda</a></div>
   </div>
 
   <div id="dayPanelScrim"></div>
@@ -441,7 +443,15 @@ function refreshVisibleCache(){
 function visibleEvents(){ return refreshVisibleCache().list; }
 function visibleEventsOn(day){ return refreshVisibleCache().byDay.get(day) || []; }
 
-function resize(){ const r=wrap.getBoundingClientRect(); W=canvas.width=r.width; H=canvas.height=r.height; }
+// Canvas à la densité réelle de l'écran (×2 ou ×3 sur smartphone), plafonnée à 2
+// pour la batterie : sans ça tout le rendu est agrandi, donc flou. W et H restent
+// en pixels CSS : tout le dessin et les zones cliquables gardent les mêmes unités.
+function resize(){
+  const r=wrap.getBoundingClientRect(), dpr=Math.min(2,window.devicePixelRatio||1);
+  W=r.width; H=r.height;
+  canvas.width=Math.round(W*dpr); canvas.height=Math.round(H*dpr);
+  ctx.setTransform(dpr,0,0,dpr,0,0);
+}
 
 // === ROUTE DE CONDUITE : la caméra avance jour après jour, vue depuis la Méhari ===
 const RW=3.1;     // demi-largeur de chaussée (m)
@@ -1274,9 +1284,10 @@ function drawRoadSurface(){
   // scintillement en avançant.
   if(whitePebblesLoaded){
     const step=3.2, maxD=Math.min(dF,70), nearD=Math.max(dN,4);
-    for(let d=nearD; d<maxD; d+=step){
+    for(let cell=Math.ceil((camW_+nearD)/step);;cell++){
+      const d=cell*step-camW_;
+      if(d>=maxD) break;
       [-1,1].forEach(side=>{
-        const cell=Math.round(d/step);
         const seed=cell*1.618+side*91.7;
         if(hash01(seed)>=0.78) return; // régulier mais pas continu
         const jig=(hash01(seed+3.3)-0.5)*step*0.3;
@@ -1846,7 +1857,7 @@ function drawEventSign(it,alpha){
   ctx.font=`500 ${(REF_W*0.11).toFixed(1)}px Archivo, Arial, sans-serif`;
   const entries=evs.map(e=>{
     const photo=resolveSignPhoto(e);
-    const words=e.title.split(' ');
+    const words=withTime(e).split(' ');
     const lines=[]; let line='';
     for(const wd of words){
       const test=line?line+' '+wd:wd;
@@ -2163,11 +2174,16 @@ function drawFirstPersonOverlay(){
   if(night) ctx.filter='none';
 }
 
+// Nom de l'agenda d'un événement, avec repli sur le nom du côté de la route
+// (évite d'afficher « undefined » quand l'agenda n'a pas de nom).
+// Titre précédé de l'heure de début, pour les événements qui en ont une.
+function withTime(ev){ return ev.time ? ev.time+' '+ev.title : ev.title; }
+function whoOf(ev){ return ev.who || (ev.side==='left' ? LEFT_NAME : RIGHT_NAME) || 'Agenda'; }
 function updateEta(){
   const upcoming=visibleEvents().filter(e=>e.day>camDay);
   if(upcoming.length){
     const n=upcoming[0],diff=Math.max(0,Math.round(n.day-camDay));
-    document.getElementById('eta-who').textContent=`Prochain — ${n.who}`;
+    document.getElementById('eta-who').textContent=`Prochain — ${whoOf(n)}`;
     document.getElementById('eta-who').style.color=n.side==='right'?'#1a73e8':'#e67c73';
     document.getElementById('eta-name').textContent=n.title.length>30?n.title.slice(0,28)+'…':n.title;
     document.getElementById('eta-d').textContent=diff;
@@ -2271,7 +2287,7 @@ function renderWeekPanel(){
         const row=document.createElement('button');
         row.className='wp-evrow'; row.type='button';
         const dot=document.createElement('span'); dot.className='daydot'; dot.style.background=ev.color;
-        const title=document.createElement('span'); title.style.flex='1'; title.textContent=ev.title;
+        const title=document.createElement('span'); title.style.flex='1'; title.textContent=withTime(ev);
         row.append(dot,title);
         row.addEventListener('click',()=>{ jumpToDay(k); openEventDetail(ev); });
         dayDiv.appendChild(row);
@@ -2447,7 +2463,8 @@ updateCalendarToggleUI();
 
 // Le mini calendrier en haut à gauche peut gêner la vue sur la route : bouton
 // pour l'afficher/le masquer.
-let miniCalVisible=true;
+// Replié par défaut sur téléphone : il y cachait près de la moitié de la route.
+let miniCalVisible=!window.matchMedia('(max-width:480px)').matches;
 function updateMiniCalUI(){
   const miniCal=document.getElementById('miniCal');
   const btn=document.getElementById('minicalbtn');
@@ -2458,6 +2475,7 @@ function updateMiniCalUI(){
   btn.title=miniCalVisible?'Masquer le mini calendrier':'Afficher le mini calendrier';
   menuItem.lastChild.textContent=miniCalVisible?'Masquer le mini calendrier':'Afficher le mini calendrier';
 }
+updateMiniCalUI();
 document.getElementById('minicalbtn').addEventListener('click',()=>{
   miniCalVisible=!miniCalVisible;
   updateMiniCalUI();
@@ -2556,7 +2574,7 @@ wrap.addEventListener('pointerup',e=>{
   if(!wasMoved && zoomedPhoto){
     if(ZOOM_NAV){
       const rect=canvas.getBoundingClientRect();
-      const scaleX=canvas.width/rect.width, scaleY=canvas.height/rect.height;
+      const scaleX=W/rect.width, scaleY=H/rect.height;
       const cx=(e.clientX-rect.left)*scaleX, cy=(e.clientY-rect.top)*scaleY;
       if(cy>=ZOOM_NAV.y0 && cy<=ZOOM_NAV.y1){
         const n=zoomedPhoto.urls.length;
@@ -2584,7 +2602,7 @@ wrap.addEventListener('click',e=>{
   if(e.target.closest('button')||e.target.closest('input')) return;
   if(e.target.closest('#eventDetail')||e.target.closest('#eventDetailScrim')||e.target.closest('#dayPanel')||e.target.closest('#dayPanelScrim')||e.target.closest('#searchResults')||e.target.closest('#datejumpPanel')||e.target.closest('#addEventOverlay')||e.target.closest('#videoOverlay')||e.target.closest('.appOverlay')||e.target.closest('#welcomeCard')) return;
   const rect=canvas.getBoundingClientRect();
-  const scaleX=canvas.width/rect.width, scaleY=canvas.height/rect.height;
+  const scaleX=W/rect.width, scaleY=H/rect.height;
   const cx=(e.clientX-rect.left)*scaleX, cy=(e.clientY-rect.top)*scaleY;
 
   if(monthViewActive){
@@ -2620,7 +2638,7 @@ wrap.addEventListener('pointermove',e=>{
   if(pStartY!==null) return; // pendant un drag, on garde le curseur de scroll
   if(e.target.closest('button')||e.target.closest('input')) return;
   const rect=canvas.getBoundingClientRect();
-  const scaleX=canvas.width/rect.width, scaleY=canvas.height/rect.height;
+  const scaleX=W/rect.width, scaleY=H/rect.height;
   const cx=(e.clientX-rect.left)*scaleX, cy=(e.clientY-rect.top)*scaleY;
   let clickable=false;
   if(monthViewActive){
@@ -2643,10 +2661,15 @@ function jumpToDay(day){
 function openEventDetail(ev){
   document.getElementById('ed-accent').style.background=ev.color;
   document.getElementById('ed-title').textContent=ev.title;
-  document.getElementById('ed-day').textContent=ev.label;
-  document.getElementById('ed-who').textContent=ev.who;
+  document.getElementById('ed-day').textContent=ev.label+(ev.time ? ' · '+ev.time+(ev.endTime ? ' – '+ev.endTime : '') : '');
+  document.getElementById('ed-who').textContent=whoOf(ev);
   document.getElementById('ed-dot').style.background=ev.color;
-  document.getElementById('ed-cat').textContent='Agenda '+ev.who;
+  document.getElementById('ed-cat').textContent='Agenda '+whoOf(ev);
+  document.getElementById('ed-loc').textContent=ev.location||'';
+  document.getElementById('ed-locrow').style.display=ev.location?'':'none';
+  const link=ev.link && /^https:\/\/(www|calendar)\.google\.com\//.test(ev.link) ? ev.link : '';
+  document.getElementById('ed-link').href=link||'#';
+  document.getElementById('ed-linkrow').style.display=link?'':'none';
   document.getElementById('eventDetail').classList.add('open');
   document.getElementById('eventDetailScrim').classList.add('open');
 }
@@ -2669,8 +2692,8 @@ function openDayPanel(dayIdx){
     row.type='button';
     row.className='dayrow';
     const dot=document.createElement('span'); dot.className='daydot'; dot.style.background=ev.color;
-    const title=document.createElement('span'); title.style.flex='1'; title.textContent=ev.title;
-    const who=document.createElement('span'); who.style.cssText='font-size:11px;color:#8a7a5c;'; who.textContent=ev.who;
+    const title=document.createElement('span'); title.style.flex='1'; title.textContent=withTime(ev);
+    const who=document.createElement('span'); who.style.cssText='font-size:11px;color:#8a7a5c;'; who.textContent=whoOf(ev);
     row.append(dot,title,who);
     row.addEventListener('click',()=>openEventDetail(ev));
     list.appendChild(row);
@@ -2764,6 +2787,8 @@ document.getElementById('djdate').addEventListener('change',e=>{
 // Remplit EVT_RIGHT / EVT_LEFT / EXPLICIT_RUNS / ALL_EVENTS à partir d'une liste brute
 // {day, title, side, who, day2?, gcolor?} issue de la synchro Google Agenda en direct
 // (ou de son cache local).
+// Tri des événements : par jour, puis par heure (journée entière en premier).
+function byDayThenTime(a,b){ return a.day-b.day || (a.time||'').localeCompare(b.time||''); }
 function applyEventsData(events){
   const ORIGIN = new Date('2023-01-01T00:00:00Z');
 
@@ -2792,7 +2817,13 @@ function applyEventsData(events){
       // (sinon un tableau à une seule entrée, ou vide) : la vignette du panneau
       // les fait défiler et le zoom permet de naviguer entre elles ; une vidéo
       // s'ouvre dans le lecteur intégré (voir renderVideoOverlay()).
-      photos: (ev.photos && ev.photos.length) ? ev.photos : (ev.photo ? [ev.photo] : [])
+      photos: (ev.photos && ev.photos.length) ? ev.photos : (ev.photo ? [ev.photo] : []),
+      // Heure de début et de fin (« 09:00 », heure locale), lieu et lien vers
+      // l'événement dans Google Agenda ; absents pour un événement sans heure.
+      time: ev.time || null,
+      endTime: ev.endTime || null,
+      location: ev.location ? String(ev.location).slice(0,120) : null,
+      link: ev.link || null
     };
     if(side==='right') EVT_RIGHT.push(item);
     else EVT_LEFT.push(item);
@@ -2811,7 +2842,7 @@ function applyEventsData(events){
   });
 
   ALL_EVENTS.length=0;
-  [...EVT_RIGHT,...EVT_LEFT].sort((a,b)=>a.day-b.day).forEach(e=>ALL_EVENTS.push(e));
+  [...EVT_RIGHT,...EVT_LEFT].sort(byDayThenTime).forEach(e=>ALL_EVENTS.push(e));
   EVENTS_VERSION++;
 
   // La route ne doit jamais s'arrêter : on la prolonge pour garder au moins
@@ -3011,11 +3042,23 @@ document.getElementById('menu-nophoto').addEventListener('click',()=>{ menuPanel
 
 // ===== Envoi d'une photo dans Google Drive (dossier « Route du temps ») =====
 const DRIVE_FOLDER_NAME = 'Route du temps';
+// Un 403 ne veut pas toujours dire « autorisation manquante » (fichier non
+// modifiable, quota...) : on ne rouvre l'écran de consentement Google que
+// lorsque l'API dit vraiment qu'il manque une autorisation au jeton.
+async function needsConsent(resp){
+  if(resp.status === 401) return true;
+  if(resp.status !== 403) return false;
+  const body = await resp.clone().json().catch(()=>({}));
+  const err = body.error || {};
+  return (err.errors||[]).some(e=>e.reason==='insufficientPermissions')
+    || (err.details||[]).some(d=>d.reason==='ACCESS_TOKEN_SCOPE_INSUFFICIENT')
+    || /scope/i.test(err.message||'');
+}
 async function driveFetch(url, opts){
   let token = await getGoogleAccessToken();
   const call = t => fetch(url, { ...opts, headers: { ...(opts && opts.headers), 'Authorization': 'Bearer ' + t } });
   let resp = await call(token);
-  if(resp.status === 401 || resp.status === 403){
+  if(await needsConsent(resp)){
     // Jeton obtenu avant l'ajout de l'autorisation Drive : on la demande une fois.
     token = await requestGoogleToken('consent');
     resp = await call(token);
@@ -3147,9 +3190,13 @@ document.getElementById('addEvSubmit').addEventListener('click', async () => {
       attachments.push({ fileUrl: f.webViewLink, fileId: f.id, mimeType: f.mimeType, title: f.name });
     }
     if(pickedDriveFile){
-      addEvStatus.textContent = 'Partage du fichier Drive…';
-      try{ await shareDriveFileWithLink(pickedDriveFile.id); }
-      catch(err){ console.warn('Partage par lien impossible (fichier non modifiable ?)', err); }
+      // Le partage par lien d'un fichier qui existait déjà change ses droits dans
+      // Drive : on le demande au lieu de le faire en silence.
+      if(confirm('Rendre « ' + pickedDriveFile.name + ' » visible par toute personne disposant du lien ?\n\nSans ce partage, la photo reste privée et ne s\'affichera que pour vous.')){
+        addEvStatus.textContent = 'Partage du fichier Drive…';
+        try{ await shareDriveFileWithLink(pickedDriveFile.id); }
+        catch(err){ console.warn('Partage par lien impossible (fichier non modifiable ?)', err); }
+      }
       const f = await driveFetch('https://www.googleapis.com/drive/v3/files/' + pickedDriveFile.id + '?fields=id,name,mimeType,webViewLink');
       attachments.push({ fileUrl: f.webViewLink, fileId: f.id, mimeType: f.mimeType, title: f.name });
     }
@@ -3183,10 +3230,10 @@ document.getElementById('addEvSubmit').addEventListener('click', async () => {
     const d = new Date(MONTH_ORIGIN_MS + day*86400000);
     const label = d.getUTCDate() + ' ' + d.toLocaleString('fr-FR',{month:'short',timeZone:'UTC'});
     const photos = attachments.map(a => ({ url: a.fileUrl, isVideo: !!(a.mimeType && a.mimeType.indexOf('video/')===0) }));
-    const item = { day, label, title: title.slice(0,40), color:'#1a73e8', side:'right', who:RIGHT_NAME, photo: photos[0] || null, photos };
+    const item = { day, label, title: title.slice(0,40), color:'#1a73e8', side:'right', who:RIGHT_NAME, photo: photos[0] || null, photos, time: timeStr || null, endTime: timeStr ? addOneHour(timeStr) : null };
     EVT_RIGHT.push(item);
     ALL_EVENTS.push(item);
-    ALL_EVENTS.sort((a,b)=>a.day-b.day);
+    ALL_EVENTS.sort(byDayThenTime);
     EVENTS_VERSION++;
 
     addEvStatus.textContent = '✓ Événement créé dans Google Agenda.';
@@ -3335,8 +3382,12 @@ function extractEventPhotos(gev){
 }
 // Palette officielle des couleurs d'événement Google Agenda (colorId 1 à 11).
 const GOOGLE_EVENT_COLORS = {'1':'#7986cb','2':'#33b679','3':'#8e24aa','4':'#e67c73','5':'#f6bf26','6':'#f4511e','7':'#039be5','8':'#616161','9':'#3f51b5','10':'#0b8043','11':'#d50000'};
+function localTimeStr(dt){ return dt.toLocaleTimeString('fr-FR',{hour:'2-digit',minute:'2-digit'}); }
 function googleEventToEntry(gev, side, who){
   if(gev.status === 'cancelled') return null;
+  const extra = {};
+  if(gev.location) extra.location = gev.location;
+  if(gev.htmlLink) extra.link = gev.htmlLink;
   const title = (gev.summary || '(Sans titre)').slice(0, 40);
   const photos = extractEventPhotos(gev);
   const gcolor = GOOGLE_EVENT_COLORS[gev.colorId] || null;
@@ -3344,16 +3395,25 @@ function googleEventToEntry(gev, side, who){
     // Événement toute la journée : end.date est exclusif côté API Calendar.
     const day = dayIndexFromDateStr(gev.start.date);
     const day2 = dayIndexFromDateStr(gev.end.date) - 1;
-    const entry = { day, title, side, who };
+    const entry = { day, title, side, who, ...extra };
     if(gcolor) entry.gcolor = gcolor;
     if(day2 > day) entry.day2 = day2;
     if(photos.length){ entry.photo = photos[0]; entry.photos = photos; }
     return entry;
   }
   if(gev.start && gev.start.dateTime){
-    // Événement avec heure : on retient le jour local (fuseau du navigateur).
-    const dateStr = new Date(gev.start.dateTime).toLocaleDateString('en-CA');
-    const entry = { day: dayIndexFromDateStr(dateStr), title, side, who };
+    // Événement avec heure : on retient le jour et l'heure locaux (fuseau du navigateur).
+    const start = new Date(gev.start.dateTime);
+    const entry = { day: dayIndexFromDateStr(start.toLocaleDateString('en-CA')), title, side, who, time: localTimeStr(start), ...extra };
+    if(gev.end && gev.end.dateTime){
+      const end = new Date(gev.end.dateTime);
+      entry.endTime = localTimeStr(end);
+      // Sur plusieurs jours (ex. vendredi 18 h → dimanche 12 h) : tracé comme un
+      // séjour, comme les événements « journée entière ». Une soirée qui finit
+      // après minuit (moins de 12 h en tout) reste un simple panneau.
+      const endDay = dayIndexFromDateStr(new Date(end.getTime()-1).toLocaleDateString('en-CA'));
+      if(endDay > entry.day && end - start >= 12*3600000) entry.day2 = endDay;
+    }
     if(gcolor) entry.gcolor = gcolor;
     if(photos.length){ entry.photo = photos[0]; entry.photos = photos; }
     return entry;
@@ -3480,7 +3540,7 @@ async function fetchCalendarListRaw(){
   let pageToken = '';
   do{
     let resp = await call(token, pageToken);
-    if(resp.status === 401 || resp.status === 403){
+    if(await needsConsent(resp)){
       // Jeton obtenu avant l'ajout de l'autorisation « liste des agendas » : on la redemande une fois.
       token = await requestGoogleToken('consent');
       resp = await call(token, pageToken);

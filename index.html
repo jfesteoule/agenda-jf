@@ -348,7 +348,7 @@ canvas#c{position:absolute;inset:0;width:100%;height:100%;touch-action:none;poin
     <div class="leg" id="legWeekend"><div class="legline"></div>Week-end</div>
     <div class="leg" id="legVac"><div class="legline" style="background:#ffd600;"></div><span id="legVacTxt">Vacances scolaires</span></div>
     <button id="legSync" class="leg" type="button" style="display:none;cursor:pointer;border:none;font-family:inherit;color:inherit;text-align:left;" title="Relancer la synchro Google Agenda"><i class="ti ti-refresh" style="font-size:12px;"></i><span id="legSyncTxt"></span></button>
-    <div id="appVersion" style="font-size:10px;color:#fff;text-shadow:0 1px 2px rgba(0,0,0,0.6);text-align:right;padding-right:4px;">Version 2026-10-14 20:46 · <a href="confidentialite.html" style="color:#fff">Confidentialité</a> · <a href="conditions.html" style="color:#fff">Conditions</a></div>
+    <div id="appVersion" style="font-size:10px;color:#fff;text-shadow:0 1px 2px rgba(0,0,0,0.6);text-align:right;padding-right:4px;">Version 2026-10-14 20:48 · <a href="confidentialite.html" style="color:#fff">Confidentialité</a> · <a href="conditions.html" style="color:#fff">Conditions</a></div>
   </div>
   <div id="zbx">
     <button class="zb" id="zi">+</button>
@@ -423,7 +423,9 @@ function applyPhotoTitleRules(){}
 
 
 const canvas=document.getElementById('c');
-const ctx=canvas.getContext('2d');
+// `let` : ctx est momentanément redirigé vers un canvas caché pour mettre en
+// cache les calques de fond (voir cachedLayer).
+let ctx=canvas.getContext('2d');
 const wrap=document.getElementById('wrap');
 let W,H;
 
@@ -461,7 +463,7 @@ function visibleEventsOn(day){ return refreshVisibleCache().byDay.get(day) || []
 // seconde à pleine résolution rendait l'appli très lente. Si les images restent
 // lentes malgré tout, la densité baisse encore d'un cran (voir adaptQuality).
 // W et H restent en pixels CSS : dessin et zones cliquables gardent leurs unités.
-const MAX_CANVAS_PX=1.3e6;
+const MAX_CANVAS_PX=1.0e6;
 let dprScale=1;   // réduit par adaptQuality() quand le rendu est trop lent
 function resize(){
   const r=wrap.getBoundingClientRect();
@@ -593,7 +595,13 @@ function isSat(d){ return((TODAY_DOW+d)%7)===6; }
 // Affichage du week-end (passage piéton samedi-dimanche), réglable dans
 // « Agendas et vacances ». Activé par défaut.
 const SHOW_WEEKEND_KEY='showWeekend_v1';
-function showWeekend(){ try{ return localStorage.getItem(SHOW_WEEKEND_KEY)!=='0'; }catch(e){ return true; } }
+// Lu une fois puis gardé en mémoire : appelé à chaque image pour chaque samedi
+// visible, et une lecture de localStorage est lente sur certains navigateurs.
+let showWeekendCache=null;
+function showWeekend(){
+  if(showWeekendCache===null){ try{ showWeekendCache=localStorage.getItem(SHOW_WEEKEND_KEY)!=='0'; }catch(e){ showWeekendCache=true; } }
+  return showWeekendCache;
+}
 function applyWeekendLegend(){ const l=document.getElementById('legWeekend'); if(l) l.style.display=showWeekend()?'':'none'; }
 function isSun(d){ return((TODAY_DOW+d)%7)===0; }
 function isMonday(d){ return((TODAY_DOW+d)%7)===1; }
@@ -606,6 +614,7 @@ function shortDate(d){
 
 // ===== DRAW FUNCTIONS =====
 
+let lastDrawSig='', lastFullDraw=0, prevFrameFull=false;
 function draw(ts){
   // Économie de batterie : onglet caché ou app en arrière-plan sur mobile →
   // on arrête complètement la boucle plutôt que de continuer à redessiner
@@ -613,7 +622,6 @@ function draw(ts){
   if(document.hidden) return;
   if(!lastTs)lastTs=ts;
   const frameMs=ts-lastTs;
-  if(frameMs>0 && frameMs<500) adaptQuality(frameMs);
   // Plafond à 0,25 s (et non 0,1) : sur un appareil lent, la voiture garde sa
   // vitesse réelle au lieu de presque s'arrêter.
   const dt=Math.min(frameMs/1000,0.25); lastTs=ts;
@@ -644,6 +652,16 @@ function draw(ts){
     camDay=Math.max(0,camDay-dt*speed);
     if(camDay<=0){playingReverse=false;document.getElementById("revbtn").style.background="";document.getElementById("revbtn").style.color="";}
   }
+
+  // À l'arrêt (rien ne bouge, aucun réglage changé), on ne redessine que
+  // ~12 fois par seconde : nuages, oiseaux et photos qui défilent restent
+  // animés, mais la tablette ou le téléphone ne chauffent plus pour rien.
+  const sig=[camDay,tilt,CAMH,SP,night,walkMode,firstPerson,weekMode,hidePhotos,showRight,showLeft,EVENTS_VERSION,W,H,canvas.width,!!zoomedPhoto&&zoomedPhoto.index].join('|');
+  if(sig===lastDrawSig && ts-lastFullDraw<80){ prevFrameFull=false; requestAnimationFrame(draw); return; }
+  lastDrawSig=sig; lastFullDraw=ts;
+  // Seules des images complètes consécutives mesurent la vraie vitesse de rendu.
+  if(prevFrameFull && frameMs>0 && frameMs<500) adaptQuality(frameMs);
+  prevFrameFull=true;
 
   updateEta();
   ctx.clearRect(0,0,W,H);
@@ -955,9 +973,37 @@ let grassTextureLoaded=false;
 GRASS_TEXTURE.onload=()=>{ grassTextureLoaded=true; };
 GRASS_TEXTURE.src='grass-ground.jpg';
 
+// Calques coûteux à peindre (photo du ciel, dégradés et texture d'herbe sur
+// tout l'écran, voile et vignettage) mais qui ne changent que rarement : on les
+// peint une fois dans un canvas caché, puis on recopie ce canvas en une seule
+// opération à chaque image. Sur tablette, ces remplissages plein écran
+// superposés étaient l'essentiel du temps de rendu.
+const LAYER_CACHE={};
+function cachedLayer(name,key,paint){
+  let L=LAYER_CACHE[name];
+  if(!L){ const c=document.createElement('canvas'); L=LAYER_CACHE[name]={c,cx:c.getContext('2d'),key:null}; }
+  key+='|'+canvas.width+'x'+canvas.height;
+  if(L.key!==key){
+    L.c.width=canvas.width; L.c.height=canvas.height;
+    L.cx.setTransform(ctx.getTransform());
+    const main=ctx; ctx=L.cx;
+    try{ paint(); } finally { ctx=main; }
+    L.key=key;
+  }
+  ctx.drawImage(L.c,0,0,W,H);
+}
 function drawSkyAndLand(){
   const hzL=horizonScreenY();
   seasonBlend=computeSeasonBlend(camDay);
+  const sb=seasonBlend, imgsLoaded=Object.values(LANDSCAPE_SEASON_LOADED).filter(Boolean).length;
+  // Sans photo chargée, les collines vectorielles défilent avec camDay : on
+  // l'inclut alors dans la clé (pas de cache tant que les images manquent).
+  const key=[W,H,Math.round(hzL),sb.a,sb.b,Math.round(sb.t*40),night,imgsLoaded,landscapeBgLoaded,grassTextureLoaded,
+    (imgsLoaded||landscapeBgLoaded)?'':camDay.toFixed(2)].join('|');
+  cachedLayer('sky',key,paintSkyAndLand);
+}
+function paintSkyAndLand(){
+  const hzL=horizonScreenY();
   const imgA=LANDSCAPE_SEASON_IMGS[seasonBlend.a], imgB=LANDSCAPE_SEASON_IMGS[seasonBlend.b];
   const loadedA=LANDSCAPE_SEASON_LOADED[seasonBlend.a], loadedB=LANDSCAPE_SEASON_LOADED[seasonBlend.b];
   if(loadedA||loadedB){
@@ -1162,6 +1208,9 @@ const LANDMARKS=LANDMARK_SRCS.map(loadLandmark);
 const LANDMARK_SCALE=[1,1,0.22];
 
 function drawHaze(){
+  cachedLayer('haze',[W,H,Math.round(horizonScreenY()),night,weekMode].join('|'),paintHaze);
+}
+function paintHaze(){
   const hzL=horizonScreenY();
   const haze=ctx.createLinearGradient(0,hzL-H*0.12,0,hzL+H*0.14);
   const hzc=night?'44,52,70':'208,214,206';
@@ -3743,6 +3792,7 @@ calOverlay.addEventListener('click', (e) => { if(e.target===calOverlay) closeCal
 document.getElementById('calSave').addEventListener('click', () => {
   const zone = document.getElementById('calShowVac').checked ? document.getElementById('calZone').value : 'none';
   try{ localStorage.setItem(SHOW_WEEKEND_KEY, document.getElementById('calShowWeekend').checked ? '1' : '0'); }catch(e){}
+  showWeekendCache=null;
   applyWeekendLegend();
   if(zone !== schoolZone()){
     try{ localStorage.setItem(SCHOOL_ZONE_KEY, zone); }catch(e){}
@@ -3812,7 +3862,7 @@ function applySettingsSnapshot(snap){
   if(!snap || typeof snap!=='object') return;
   if(snap.calendar) saveCalendarConfig(snap.calendar);
   try{
-    if(typeof snap.showWeekend==='boolean') localStorage.setItem(SHOW_WEEKEND_KEY, snap.showWeekend?'1':'0');
+    if(typeof snap.showWeekend==='boolean'){ localStorage.setItem(SHOW_WEEKEND_KEY, snap.showWeekend?'1':'0'); showWeekendCache=null; }
     localStorage.setItem(SETTINGS_TS_KEY, String(snap.updated||Date.now()));
   }catch(e){}
   applyWeekendLegend();

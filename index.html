@@ -348,7 +348,7 @@ canvas#c{position:absolute;inset:0;width:100%;height:100%;touch-action:none;poin
     <div class="leg" id="legWeekend"><div class="legline"></div>Week-end</div>
     <div class="leg" id="legVac"><div class="legline" style="background:#ffd600;"></div><span id="legVacTxt">Vacances scolaires</span></div>
     <button id="legSync" class="leg" type="button" style="display:none;cursor:pointer;border:none;font-family:inherit;color:inherit;text-align:left;" title="Relancer la synchro Google Agenda"><i class="ti ti-refresh" style="font-size:12px;"></i><span id="legSyncTxt"></span></button>
-    <div id="appVersion" style="font-size:10px;color:#fff;text-shadow:0 1px 2px rgba(0,0,0,0.6);text-align:right;padding-right:4px;">Version 2026-10-14 20:53 · <a href="confidentialite.html" style="color:#fff">Confidentialité</a> · <a href="conditions.html" style="color:#fff">Conditions</a></div>
+    <div id="appVersion" style="font-size:10px;color:#fff;text-shadow:0 1px 2px rgba(0,0,0,0.6);text-align:right;padding-right:4px;">Version 2026-10-14 20:58 · <a href="confidentialite.html" style="color:#fff">Confidentialité</a> · <a href="conditions.html" style="color:#fff">Conditions</a></div>
   </div>
   <div id="zbx">
     <button class="zb" id="zi">+</button>
@@ -1162,8 +1162,9 @@ MEHARI_IMG.src='mehari-arriere-hd.png';
 // sur la même ligne, arrière centré) affichées dans les virages : la voiture
 // pivote en montrant un peu son flanc.
 const MEHARI_TURN_IMGS={left:new Image(), right:new Image()};
-MEHARI_TURN_IMGS.left.src='mehari-virage-gauche-hd2.png';   // virage à gauche : flanc gauche visible
-MEHARI_TURN_IMGS.right.src='mehari-virage-droite-hd.png'; // virage à droite : flanc droit visible
+MEHARI_TURN_IMGS.left.src='mehari-virage-gauche-doux.png';   // virage à gauche : flanc gauche visible
+MEHARI_TURN_IMGS.right.src='mehari-virage-droite-doux.png'; // virage à droite : flanc droit visible
+// Flanc comprimé à 40 % dans les images « doux » : pivot plus discret.
 let mehariTurnState=0; // -1 virage à gauche, 0 tout droit, 1 virage à droite
 
 // Vue conducteur (POV) : un bout du volant + du capot (voiture), ou du
@@ -1824,15 +1825,30 @@ function drawDayPost(it,alpha){
   const w2=Math.abs(p1.x-p0.x), h2=p0.y-p1.y;
   if(w2<2.5){ ctx.globalAlpha=1; return; }
   const x0=Math.min(p0.x,p1.x), cx=(p0.x+p1.x)/2;
-  // Fût vert
-  ctx.fillStyle=night?'#0f3f2e':'#15613f';
-  ctx.fillRect(x0,p1.y,w2,h2);
-  ctx.strokeStyle=isWeekStart?'#8ab4f8':'#eceadf';
-  ctx.lineWidth=Math.max(1,h2*(isWeekStart?0.07:0.05));
-  ctx.strokeRect(x0+w2*0.1,p1.y+h2*0.08,w2*0.8,h2*0.78);
-  // Chapeau rouge arrondi (demi-cercle sur un court rectangle)
+  const rad=Math.min(w2*0.12,6);
+  const rr=(x,y,w,h,r)=>{ ctx.beginPath(); if(ctx.roundRect) ctx.roundRect(x,y,w,h,r); else ctx.rect(x,y,w,h); };
+  // Ombre au sol et socle sombre
+  ctx.fillStyle='rgba(0,0,0,0.22)';
+  ctx.beginPath(); ctx.ellipse(cx+w2*0.15,p0.y,w2*0.75,Math.max(1,w2*0.16),0,0,Math.PI*2); ctx.fill();
+  const baseH=Math.max(1,h2*0.07);
+  ctx.fillStyle=night?'#2a2a27':'#4a4943';
+  rr(x0-w2*0.06,p0.y-baseH,w2*1.12,baseH,Math.min(2,rad)); ctx.fill();
+  // Fût vert en dégradé (arrondi), coins bas arrondis
+  const gB=ctx.createLinearGradient(x0,0,x0+w2,0);
+  if(night){ gB.addColorStop(0,'#14523b'); gB.addColorStop(0.45,'#0f3f2e'); gB.addColorStop(1,'#0a2b20'); }
+  else{ gB.addColorStop(0,'#239062'); gB.addColorStop(0.45,'#17704a'); gB.addColorStop(1,'#0f5234'); }
+  ctx.fillStyle=gB;
+  rr(x0,p1.y,w2,h2-baseH,[0,0,rad,rad]); ctx.fill();
+  // Cadre intérieur blanc arrondi (bleu le lundi : début de semaine)
+  ctx.strokeStyle=isWeekStart?'#8ab4f8':'rgba(245,243,234,0.9)';
+  ctx.lineWidth=Math.max(1,h2*(isWeekStart?0.06:0.035));
+  rr(x0+w2*0.11,p1.y+h2*0.08,w2*0.78,h2*0.74,rad*0.7); ctx.stroke();
+  // Chapeau rouge arrondi en dégradé, avec reflet
   const capH=p1.y-pc.y, r=Math.min(w2/2,capH);
-  ctx.fillStyle=night?'#a32424':'#d32f2f';
+  const gC=ctx.createLinearGradient(x0,0,x0+w2,0);
+  if(night){ gC.addColorStop(0,'#b52a2a'); gC.addColorStop(1,'#7a1717'); }
+  else{ gC.addColorStop(0,'#ef5350'); gC.addColorStop(0.5,'#d32f2f'); gC.addColorStop(1,'#a31f1f'); }
+  ctx.fillStyle=gC;
   ctx.beginPath();
   ctx.moveTo(x0,p1.y);
   ctx.lineTo(x0,pc.y+r);
@@ -1840,6 +1856,10 @@ function drawDayPost(it,alpha){
   ctx.lineTo(x0+w2,p1.y);
   ctx.closePath();
   ctx.fill();
+  if(!night && w2>8){
+    ctx.fillStyle='rgba(255,255,255,0.28)';
+    ctx.beginPath(); ctx.ellipse(cx-w2*0.18,pc.y+r*0.75,w2*0.16,r*0.42,-0.5,0,Math.PI*2); ctx.fill();
+  }
   // Liseré blanc entre chapeau et fût
   ctx.fillStyle='#f5f3ea';
   ctx.fillRect(x0,p1.y-Math.max(1,h2*0.03),w2,Math.max(1.5,h2*0.06));
@@ -2163,7 +2183,10 @@ function drawRouteObjects(){
   items.sort((a,b)=>b.dist-a.dist);
 
   items.forEach(it=>{
-    const nearCut=it.kind==='sign'?5:12;
+    // Bornes : gardées jusqu'à sortir de l'écran (elles disparaissaient à 12 m,
+    // juste quand la voiture, dessinée 9 m devant la caméra, arrivait à leur
+    // hauteur) ; en vue 30°/45° on voit même derrière la caméra.
+    const nearCut=it.kind==='sign'?5:(it.kind==='gantry'?12:(tilt>0.01?-30:2.5));
     if(it.dist<nearCut) return;
     const alpha=Math.min(1,Math.max(0,(R-it.dist)/40))*Math.min(1,Math.max(0,(it.dist-nearCut)/3));
     if(it.kind==='borne'){ drawBorne(it,alpha); return; }

@@ -1250,10 +1250,13 @@ function drawRoadSurface(){
   };
 
   const white=night?'#d8d4c6':'#eceadf';
-  const dayStart=Math.floor(camDay), dayEnd=Math.ceil(camDay+dF/SP);
+  // On part des jours déjà dépassés encore visibles (dN peut être négatif en
+  // vue de dessus), plus un jour : le passage piéton du week-end est dessiné
+  // depuis le samedi et doit rester visible quand on est sur le dimanche.
+  const dayStart=Math.floor(camDay+dN/SP)-1, dayEnd=Math.ceil(camDay+dF/SP);
   for(let k=dayStart;k<=dayEnd;k++){
     const d0=(k-camDay)*SP, d1=d0+SP;
-    if(d1<dN) continue;
+    if(d0+SP*2<dN) continue;
     // joint noir entre deux jours
     drawBand(d0-0.16,d0+0.16,-RW+0.42,RW-0.42, night?'#0b0c0e':'#121316', 0.85);
     if(!walkMode){

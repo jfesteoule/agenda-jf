@@ -3009,10 +3009,23 @@ function saveCalendarConfig(cfg){
 function profileDisplayName(profile){
   return (profile && (profile.given_name || profile.name || (profile.email||'').split('@')[0])) || 'Moi';
 }
-function liveSyncCalendars(profile){
+// Agendas synchronisés : l'agenda principal (à droite), le second agenda choisi
+// (à gauche), plus tous les autres agendas cochés dans Google Agenda : ceux dont
+// le compte est propriétaire à droite, les agendas partagés à gauche. Chaque
+// agenda supplémentaire garde sa couleur Google et son nom dans la légende.
+function liveSyncCalendars(profile, calendarList){
   const cfg=loadCalendarConfig();
   const cals=[{id:'primary', side:'right', who:profileDisplayName(profile), primary:true}];
   if(cfg.secondId) cals.push({id:cfg.secondId, side:'left', who:cfg.secondName || cfg.secondId.split('@')[0]});
+  (calendarList||[]).forEach(c=>{
+    if(c.primary || !c.selected || c.id===cfg.secondId) return;
+    cals.push({
+      id:c.id,
+      side:c.accessRole==='owner' ? 'right' : 'left',
+      who:c.summaryOverride || c.summary || c.id,
+      color:c.backgroundColor || null
+    });
+  });
   return cals;
 }
 function applySideNamesFromProfile(profile){
@@ -3142,11 +3155,15 @@ async function liveSyncFromGoogleCalendar(force){
 
     const allEntries = [];
     const failures = [];
-    for(const cal of liveSyncCalendars(profile)){
+    let calendarList = [];
+    try{ calendarList = await fetchCalendarListRaw(); }
+    catch(err){ console.warn('Liste des agendas indisponible', err); }
+    for(const cal of liveSyncCalendars(profile, calendarList)){
       try{
-        const items = await fetchCalendarEventsRange(cal.id, token);
+        const items = await fetchCalendarEventsRange(cal.id, await getGoogleAccessToken());
         items.forEach(gev=>{
           const entry = googleEventToEntry(gev, cal.side, cal.who);
+          if(entry && cal.color && !entry.gcolor) entry.gcolor = cal.color;
           if(entry) allEntries.push(entry);
         });
       }catch(err){
@@ -3212,7 +3229,7 @@ document.getElementById('menu-signout').addEventListener('click', () => { menuPa
 const calOverlay = document.getElementById('calOverlay');
 // Liste des agendas partagés avec le compte connecté (hors agenda principal),
 // pour choisir le second agenda sans avoir à taper son adresse.
-async function fetchCalendarList(){
+async function fetchCalendarListRaw(){
   // showHidden : inclure aussi les agendas masqués dans la liste de Google Agenda
   // (sinon l'API les omet). On suit nextPageToken pour ne rien perdre.
   const call = async (token, pageToken) => {
@@ -3238,7 +3255,10 @@ async function fetchCalendarList(){
     items.push(...(data.items || []));
     pageToken = data.nextPageToken || '';
   } while(pageToken);
-  return items.filter(c => !c.primary).map(c => ({ id: c.id, name: c.summaryOverride || c.summary || c.id }))
+  return items;
+}
+async function fetchCalendarList(){
+  return (await fetchCalendarListRaw()).filter(c => !c.primary).map(c => ({ id: c.id, name: c.summaryOverride || c.summary || c.id }))
     .sort((a,b) => a.name.localeCompare(b.name, 'fr'));
 }
 function shortCalendarName(name){

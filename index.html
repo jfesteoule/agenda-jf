@@ -1162,8 +1162,8 @@ MEHARI_IMG.src='mehari-realistic.png';
 // sur la même ligne, arrière centré) affichées dans les virages : la voiture
 // pivote en montrant un peu son flanc.
 const MEHARI_TURN_IMGS={left:new Image(), right:new Image()};
-MEHARI_TURN_IMGS.left.src='mehari-virage-gauche.png';   // virage à gauche : flanc gauche visible
-MEHARI_TURN_IMGS.right.src='mehari-virage-droite.png'; // virage à droite : flanc droit visible
+MEHARI_TURN_IMGS.left.src='mehari-virage-gauche-hd.png';   // virage à gauche : flanc gauche visible
+MEHARI_TURN_IMGS.right.src='mehari-virage-droite-hd.png'; // virage à droite : flanc droit visible
 let mehariTurnState=0; // -1 virage à gauche, 0 tout droit, 1 virage à droite
 
 // Vue conducteur (POV) : un bout du volant + du capot (voiture), ou du
@@ -2240,8 +2240,8 @@ function drawMehari(){
     const turned=carImg!==MEHARI_IMG;
     // Plaque et texte calés au pixel (et taille de police par demi-pixel) pour
     // que le texte ne tremble pas avec le rebond de la voiture.
-    const plw=Math.round(w*(turned?0.17:0.3)), plh=Math.max(2,Math.round(w*(turned?0.1:0.09)));
-    const ply=Math.round(yGround-drawH*(turned?0.31:0.34)), plx=Math.round(cxc-plw/2);
+    const plw=Math.round(w*(turned?0.163:0.3)), plh=Math.max(2,Math.round(w*(turned?0.101:0.09)));
+    const ply=Math.round(yGround-drawH*(turned?0.288:0.34)), plx=Math.round(cxc-plw/2);
     ctx.fillStyle='#e9e5d7';
     ctx.fillRect(plx,ply,plw,plh);
     if(plh*0.72>=3){

@@ -325,7 +325,7 @@ canvas#c{position:absolute;inset:0;width:100%;height:100%;touch-action:none;poin
     <div class="leg"><div class="legline"></div>Week-end</div>
     <div class="leg" id="legVac"><div class="legline" style="background:#ffd600;"></div><span id="legVacTxt">Vacances scolaires</span></div>
     <button id="legSync" class="leg" type="button" style="display:none;cursor:pointer;border:none;font-family:inherit;color:inherit;text-align:left;" title="Relancer la synchro Google Agenda"><i class="ti ti-refresh" style="font-size:12px;"></i><span id="legSyncTxt"></span></button>
-    <div id="appVersion" style="font-size:10px;color:#fff;text-shadow:0 1px 2px rgba(0,0,0,0.6);text-align:right;padding-right:4px;">Version 2026-10-14 18:41</div>
+    <div id="appVersion" style="font-size:10px;color:#fff;text-shadow:0 1px 2px rgba(0,0,0,0.6);text-align:right;padding-right:4px;">Version 2026-10-14 18:44</div>
   </div>
   <div id="zbx">
     <button class="zb" id="zi">+</button>
@@ -1799,19 +1799,24 @@ function drawEventSign(it,alpha){
   const w=pR0.x-pL0.x, s=pR0.s;
   if(w<3||s<=0) return;
 
+  // Tout est proportionnel à la largeur du panneau (texte compris) : la
+  // coupure des titres est calculée une fois pour une largeur de référence,
+  // si bien que le panneau garde la même mise en page (mêmes lignes, mêmes
+  // proportions) quelle que soit sa distance.
   const pad=w*0.1;
-  const fs=Math.max(8,Math.min(w*0.11,16));
+  const fs=w*0.11;
   const textW=w-w*0.18;
   const titleLinesMax=3;
   const multi=evs.length>1;
-  ctx.font=`500 ${fs.toFixed(1)}px Archivo, Arial, sans-serif`;
+  const REF_W=120;
+  ctx.font=`500 ${(REF_W*0.11).toFixed(1)}px Archivo, Arial, sans-serif`;
   const entries=evs.map(e=>{
     const photo=resolveSignPhoto(e);
     const words=e.title.split(' ');
     const lines=[]; let line='';
     for(const wd of words){
       const test=line?line+' '+wd:wd;
-      if(ctx.measureText(test).width>textW && line){ lines.push(line); line=wd; if(lines.length===titleLinesMax) break; }
+      if(ctx.measureText(test).width>REF_W*0.8 && line){ lines.push(line); line=wd; if(lines.length===titleLinesMax) break; }
       else line=test;
     }
     if(lines.length<titleLinesMax && line) lines.push(line);
@@ -1921,7 +1926,7 @@ function drawEventSign(it,alpha){
       photoBottom=imgY+sz+pad*0.5*scaleY;
     }
     const efs=fs*Math.max(0.75,scaleY);
-    if(efs>=7 && en.lines.length && textW>10){
+    if(efs>=5 && en.lines.length && textW>10){
       ctx.fillStyle='#2b241c';
       ctx.font=`500 ${efs.toFixed(1)}px Archivo, Arial, sans-serif`;
       ctx.textAlign='left'; ctx.textBaseline='top';

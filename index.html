@@ -99,7 +99,8 @@ canvas#c{position:absolute;inset:0;width:100%;height:100%;touch-action:none;poin
   #legend{right:8px;gap:3px;align-items:flex-end;max-width:calc(100vw - 262px);min-width:96px;}
   #legend .leg{padding:3px 8px;font-size:10px;max-width:100%;box-sizing:border-box;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
   #legWeekend,#legVac{display:none !important;}
-  #appVersion{font-size:8px !important;white-space:normal;}
+  /* Version et liens légaux : dans le menu ☰ sur téléphone. */
+  #appVersion{display:none;}
 }
 .leg{background:#fff;border-radius:20px;padding:4px 10px;font-family:'Archivo',Arial,sans-serif;font-size:11px;font-weight:500;box-shadow:0 1px 4px rgba(0,0,0,0.18);display:flex;align-items:center;gap:6px;}
 .legdot{width:10px;height:10px;border-radius:50%;}
@@ -236,6 +237,7 @@ canvas#c{position:absolute;inset:0;width:100%;height:100%;touch-action:none;poin
     <button id="menu-right" class="menuitem"><i class="ti ti-user"></i>Masquer mon agenda</button>
     <button id="menu-calendars" class="menuitem"><i class="ti ti-users"></i>Agendas et vacances…</button>
     <button id="menu-signout" class="menuitem" style="display:none;"><i class="ti ti-logout"></i>Se déconnecter de Google</button>
+    <div id="menuVersion" style="font-size:11px;color:#8a7a5c;padding:10px 16px;line-height:1.6;"></div>
   </div>
   <div id="miniCal">
     <div class="mc-hdr">
@@ -346,7 +348,7 @@ canvas#c{position:absolute;inset:0;width:100%;height:100%;touch-action:none;poin
     <div class="leg" id="legWeekend"><div class="legline"></div>Week-end</div>
     <div class="leg" id="legVac"><div class="legline" style="background:#ffd600;"></div><span id="legVacTxt">Vacances scolaires</span></div>
     <button id="legSync" class="leg" type="button" style="display:none;cursor:pointer;border:none;font-family:inherit;color:inherit;text-align:left;" title="Relancer la synchro Google Agenda"><i class="ti ti-refresh" style="font-size:12px;"></i><span id="legSyncTxt"></span></button>
-    <div id="appVersion" style="font-size:10px;color:#fff;text-shadow:0 1px 2px rgba(0,0,0,0.6);text-align:right;padding-right:4px;">Version 2026-10-14 20:33 · <a href="confidentialite.html" style="color:#fff">Confidentialité</a> · <a href="conditions.html" style="color:#fff">Conditions</a></div>
+    <div id="appVersion" style="font-size:10px;color:#fff;text-shadow:0 1px 2px rgba(0,0,0,0.6);text-align:right;padding-right:4px;">Version 2026-10-14 20:35 · <a href="confidentialite.html" style="color:#fff">Confidentialité</a> · <a href="conditions.html" style="color:#fff">Conditions</a></div>
   </div>
   <div id="zbx">
     <button class="zb" id="zi">+</button>
@@ -2147,14 +2149,14 @@ function drawMehari(){
   if(!mehariImgLoaded) return;
   const aspect=MEHARI_IMG.naturalHeight/MEHARI_IMG.naturalWidth;
   const drawW=w*1.55, drawH=drawW*aspect;
-  // Virage : direction de la chaussée sous la voiture comparée à celle d'une
-  // route droite (qui file vers le point de fuite), avec un peu d'hystérésis
-  // pour ne pas clignoter entre deux images.
-  const pA=proj(CD-2.5,CL,0), pB=proj(CD+2.5,CL,0);
-  const roadAng=Math.atan2(pB.x-pA.x, pA.y-pB.y);
-  const vpX=weekMode ? Math.max(W*0.28,(W-340)/2) : W/2;
-  const turn=roadAng-Math.atan2(vpX-pA.x, pA.y-horizonScreenY());
-  if(mehariTurnState===0){ if(turn<-0.07) mehariTurnState=-1; else if(turn>0.07) mehariTurnState=1; }
+  // Virage : direction réelle de la route sous la voiture (pente latérale du
+  // tracé, 0 en ligne droite), indépendante de la rotation de la caméra —
+  // sur ordinateur la vue tourne avec la route, l'angle à l'écran ne suffit
+  // pas. Un peu d'hystérésis pour ne pas clignoter entre deux images.
+  const carW=camDay*SP+CD;
+  const turn=(curve(carW+3)-curve(carW-3))/6;
+  if(turn<-0.06) mehariTurnState=-1;
+  else if(turn>0.06) mehariTurnState=1;
   else if(Math.abs(turn)<0.03) mehariTurnState=0;
   const turnImg=mehariTurnState<0 ? MEHARI_TURN_IMGS.left : mehariTurnState>0 ? MEHARI_TURN_IMGS.right : null;
   const carImg=(turnImg && turnImg.complete && turnImg.naturalWidth) ? turnImg : MEHARI_IMG;
@@ -2534,6 +2536,11 @@ document.getElementById('legleft').addEventListener('click',()=>{
 });
 updateCalendarToggleUI();
 applyWeekendLegend();
+// Menu ☰ (téléphone) : même version et mêmes liens que sous la légende.
+(function(){
+  const src=document.getElementById('appVersion'), dst=document.getElementById('menuVersion');
+  if(src && dst){ dst.innerHTML=src.innerHTML; dst.querySelectorAll('a').forEach(a=>{ a.style.color='#1a73e8'; }); }
+})();
 
 // Le mini calendrier en haut à gauche peut gêner la vue sur la route : bouton
 // pour l'afficher/le masquer.

@@ -1109,8 +1109,8 @@ function loadLandmark(src){
 const LANDMARK_SRCS=['landscape-lake.png','landscape-windmill.png','landscape-bridge.png','landscape-sheep.png'];
 const LANDMARKS=LANDMARK_SRCS.map(loadLandmark);
 // Échelle propre à chaque repère (même ordre que LANDMARK_SRCS) : le troupeau
-// (4 moutons) mesure ~5 m de large, pas la taille d'un lac ou d'un moulin.
-const LANDMARK_SCALE=[1,1,1,0.35];
+// (4 moutons, ~1 m chacun) mesure ~3,5 m de large, pas la taille d'un lac ou d'un moulin.
+const LANDMARK_SCALE=[1,1,1,0.22];
 
 function drawHaze(){
   const hzL=horizonScreenY();

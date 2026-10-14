@@ -348,7 +348,7 @@ canvas#c{position:absolute;inset:0;width:100%;height:100%;touch-action:none;poin
     <div class="leg" id="legWeekend"><div class="legline"></div>Week-end</div>
     <div class="leg" id="legVac"><div class="legline" style="background:#ffd600;"></div><span id="legVacTxt">Vacances scolaires</span></div>
     <button id="legSync" class="leg" type="button" style="display:none;cursor:pointer;border:none;font-family:inherit;color:inherit;text-align:left;" title="Relancer la synchro Google Agenda"><i class="ti ti-refresh" style="font-size:12px;"></i><span id="legSyncTxt"></span></button>
-    <div id="appVersion" style="font-size:10px;color:#fff;text-shadow:0 1px 2px rgba(0,0,0,0.6);text-align:right;padding-right:4px;">Version 2026-10-14 20:58 · <a href="confidentialite.html" style="color:#fff">Confidentialité</a> · <a href="conditions.html" style="color:#fff">Conditions</a></div>
+    <div id="appVersion" style="font-size:10px;color:#fff;text-shadow:0 1px 2px rgba(0,0,0,0.6);text-align:right;padding-right:4px;">Version 2026-10-14 21:03 · <a href="confidentialite.html" style="color:#fff">Confidentialité</a> · <a href="conditions.html" style="color:#fff">Conditions</a></div>
   </div>
   <div id="zbx">
     <button class="zb" id="zi">+</button>
@@ -1818,12 +1818,14 @@ function drawDayPost(it,alpha){
   // séparés par un liseré blanc. Le lundi (début de semaine) garde un cadre
   // bleu pour repérer où une nouvelle semaine commence.
   const isWeekStart=isMonday(it.day);
-  const lat=-(RW+1.15);
-  const BODY_H=1.35, CAP_H=0.62;
-  const p0=proj(it.dist,lat-0.44,0), p1=proj(it.dist,lat+0.44,BODY_H), pc=proj(it.dist,lat+0.44,BODY_H+CAP_H);
+  // Taille réduite (~70 %) et posée au ras de la chaussée, à l'écart du
+  // panneau d'événement du même côté (qui commence à RW+1,6 m).
+  const lat=-(RW+0.7);
+  const BODY_H=0.95, CAP_H=0.44, HALF_W=0.31;
+  const p0=proj(it.dist,lat-HALF_W,0), p1=proj(it.dist,lat+HALF_W,BODY_H), pc=proj(it.dist,lat+HALF_W,BODY_H+CAP_H);
   ctx.globalAlpha=alpha;
   const w2=Math.abs(p1.x-p0.x), h2=p0.y-p1.y;
-  if(w2<2.5){ ctx.globalAlpha=1; return; }
+  if(w2<1.8){ ctx.globalAlpha=1; return; }
   const x0=Math.min(p0.x,p1.x), cx=(p0.x+p1.x)/2;
   const rad=Math.min(w2*0.12,6);
   const rr=(x,y,w,h,r)=>{ ctx.beginPath(); if(ctx.roundRect) ctx.roundRect(x,y,w,h,r); else ctx.rect(x,y,w,h); };
@@ -1891,6 +1893,28 @@ function drawDayPost(it,alpha){
 // haut de l'écran, les panneaux doivent pouvoir y apparaître au loin.
 function signClipTop(){ return tilt>0.01 ? 0 : H*0.14; }
 
+const GANTRY_CACHE=new Map();
+if(document.fonts && document.fonts.ready) document.fonts.ready.then(()=>GANTRY_CACHE.clear());
+function gantryPanelImage(day){
+  const key=day+(night?'n':'d');
+  let c=GANTRY_CACHE.get(key);
+  if(c) return c;
+  // 10,8 m × 3 m → 1080 × 300 px
+  c=document.createElement('canvas'); c.width=1080; c.height=300;
+  const g=c.getContext('2d');
+  g.fillStyle=night?'#0f3f2e':'#15613f'; g.fillRect(0,0,1080,300);
+  g.strokeStyle='#eceadf'; g.lineWidth=14; g.strokeRect(21,21,1038,258);
+  const dt=new Date(MONTH_ORIGIN_MS+day*86400000);
+  const mois=dt.toLocaleDateString('fr-FR',{month:'long'});
+  g.fillStyle='#fff'; g.textAlign='center'; g.textBaseline='middle';
+  g.font='600 110px Oswald, Arial, sans-serif';
+  g.fillText(mois.toUpperCase()+' '+dt.getUTCFullYear(), 540, 112, 980);
+  g.font='400 56px Archivo, Arial, sans-serif';
+  g.fillText('semaine '+isoWeekNum(day), 540, 215, 980);
+  if(GANTRY_CACHE.size>40) GANTRY_CACHE.clear();
+  GANTRY_CACHE.set(key,c);
+  return c;
+}
 function drawGantry(it,alpha){
   ctx.save();
   ctx.beginPath(); ctx.rect(0,signClipTop(),W,H-12-signClipTop()); ctx.clip();
@@ -1905,25 +1929,12 @@ function drawGantry(it,alpha){
   ctx.fillRect(Math.min(pa.x,pb.x),pa.y,Math.abs(pb.x-pa.x),Math.max(1,pbeam.y-pa.y)*0.3);
   const pl=proj(it.dist,-5.4,8.0), pr=proj(it.dist,5.4,5.0);
   const pw=pr.x-pl.x, ph=pr.y-pl.y;
-  if(pw>8){
-    ctx.fillStyle=night?'#0f3f2e':'#15613f';
-    ctx.fillRect(pl.x,pl.y,pw,ph);
-    ctx.strokeStyle='#eceadf'; ctx.lineWidth=Math.max(1,ph*0.05);
-    ctx.strokeRect(pl.x+ph*0.07,pl.y+ph*0.07,pw-ph*0.14,ph-ph*0.14);
-    const fs2=Math.min(ph*0.36,22);
-    if(fs2>4){
-      const dt=new Date(MONTH_ORIGIN_MS+it.day*86400000);
-      const mois=dt.toLocaleDateString('fr-FR',{month:'long'});
-      ctx.fillStyle='#fff'; ctx.textAlign='center'; ctx.textBaseline='middle';
-      ctx.font=`600 ${fs2.toFixed(1)}px Oswald, Arial, sans-serif`;
-      ctx.fillText((mois.charAt(0).toUpperCase()+mois.slice(1)).toUpperCase()+' '+dt.getUTCFullYear(), (pl.x+pr.x)/2, pl.y+ph*0.36);
-      const sub=fs2*0.5;
-      if(sub>4){
-        ctx.font=`400 ${sub.toFixed(1)}px Archivo, Arial, sans-serif`;
-        ctx.fillText('semaine '+isoWeekNum(it.day), (pl.x+pr.x)/2, pl.y+ph*0.7);
-      }
-    }
-    ctx.textAlign='left'; ctx.textBaseline='top';
+  if(pw>4){
+    // Panneau dessiné une fois en haute résolution puis mis à l'échelle :
+    // texte lisible dès que le portique apparaît, et plus de tremblement
+    // (avant, la police changeait de taille à chaque image).
+    ctx.imageSmoothingQuality='high';
+    ctx.drawImage(gantryPanelImage(it.day), pl.x, pl.y, pw, ph);
   }
   ctx.restore();
   ctx.globalAlpha=1;
@@ -2178,6 +2189,9 @@ function drawRouteObjects(){
     // Poussé après les panneaux d'événement du même jour pour rester dessiné
     // devant eux (le tri par distance étant stable, une distance égale garde
     // l'ordre d'insertion).
+    // À la hauteur du panneau du jour mais plus près de la chaussée (voir
+    // drawDayPost) : en perspective, une borne placée devant ou derrière son
+    // panneau finit toujours par le chevaucher.
     items.push({kind:'daypost',dist:dist+SP*0.5,day:k});
   }
   items.sort((a,b)=>b.dist-a.dist);

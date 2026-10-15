@@ -353,7 +353,7 @@ canvas#c{position:absolute;inset:0;width:100%;height:100%;touch-action:none;poin
     <div class="leg" id="legWeekend"><div class="legline"></div>Week-end</div>
     <div class="leg" id="legVac"><div class="legline" style="background:#ffd600;"></div><span id="legVacTxt">Vacances scolaires</span></div>
     <button id="legSync" class="leg" type="button" style="display:none;cursor:pointer;border:none;font-family:inherit;color:inherit;text-align:left;" title="Relancer la synchro Google Agenda"><i class="ti ti-refresh" style="font-size:12px;"></i><span id="legSyncTxt"></span></button>
-    <div id="appVersion" style="font-size:10px;color:#fff;text-shadow:0 1px 2px rgba(0,0,0,0.6);text-align:right;padding-right:4px;">Version 2026-10-14 21:15 · <a href="confidentialite.html" style="color:#fff">Confidentialité</a> · <a href="conditions.html" style="color:#fff">Conditions</a></div>
+    <div id="appVersion" style="font-size:10px;color:#fff;text-shadow:0 1px 2px rgba(0,0,0,0.6);text-align:right;padding-right:4px;">Version 2026-10-15 17:18 · <a href="confidentialite.html" style="color:#fff">Confidentialité</a> · <a href="conditions.html" style="color:#fff">Conditions</a></div>
   </div>
   <div id="zbx">
     <button class="zb" id="zi">+</button>
@@ -435,10 +435,16 @@ const wrap=document.getElementById('wrap');
 let W,H;
 
 // === État de la caméra (route de conduite, façon Méhari) ===
-// La voiture/le marcheur est positionné un jour avant la date du jour : plus
-// lisible (le panneau du jour même reste bien visible devant, pas juste sous le nez).
-let camDay=TODAY_DAY-1, playing=false, playingReverse=false, speed=1, lastTs=null;
+// La voiture/la trottinette est dessinée devant la caméra (9,2 m, un peu plus
+// en vue plongeante) : carOffsetDays() convertit cet écart en jours. Au
+// démarrage (et avec « Auj »), elle est posée au tout début du jour même, pour
+// voir devant elle tous les événements de la journée.
 let SP=14;              // mètres de route par jour (remplace l'ancien zoom en pixels)
+function carOffsetDays(){ return firstPerson ? 0 : (9.2+tilt*4.5)/SP; }
+function camDayForCarAt(day){ return day+0.05-carOffsetDays(); }
+// Jour où se trouve la voiture (ou la caméra en vue conducteur).
+function carDay(){ return Math.floor(camDay+carOffsetDays()+1e-6); }
+let camDay=TODAY_DAY+0.05-9.2/SP, playing=false, playingReverse=false, speed=1, lastTs=null;
 let night=false;
 let viewAngle=0, tilt=0;   // viewAngle cible en degrés (0, 30 ou 45) ; tilt s'anime vers viewAngle/45
 let walkMode=false;   // remplace la voiture par un marcheur et la route par un chemin
@@ -752,7 +758,7 @@ function drawMonthView(){
   ctx.fillStyle='#ffffff';
   ctx.fillRect(0,0,W,H);
 
-  const dt=new Date(MONTH_ORIGIN_MS+Math.round(camDay)*86400000);
+  const dt=new Date(MONTH_ORIGIN_MS+carDay()*86400000);
   const year=dt.getUTCFullYear(), month=dt.getUTCMonth();
   const moisNom=dt.toLocaleDateString('fr-FR',{month:'long'});
   const title=moisNom.charAt(0).toUpperCase()+moisNom.slice(1)+' '+year;
@@ -801,7 +807,7 @@ function drawMonthView(){
     const cellDate=new Date(MONTH_ORIGIN_MS+dayIdx*86400000);
     const dayNum=cellDate.getUTCDate();
     const isToday=dayIdx===TODAY_DAY;
-    const isCam=dayIdx===Math.round(camDay);
+    const isCam=dayIdx===carDay();
 
     ctx.textAlign='left'; ctx.textBaseline='top';
     if(isToday){
@@ -1852,6 +1858,7 @@ function drawDayPost(it,alpha){
   rr(x0+w2*0.11,p1.y+h2*0.08,w2*0.78,h2*0.74,rad*0.7); ctx.stroke();
   // Chapeau rouge arrondi en dégradé, avec reflet
   const capH=p1.y-pc.y, r=Math.min(w2/2,capH);
+  if(capH<=0||h2<=0){ ctx.globalAlpha=1; return; } // borne derrière la caméra (vue plongeante)
   const gC=ctx.createLinearGradient(x0,0,x0+w2,0);
   if(night){ gC.addColorStop(0,'#b52a2a'); gC.addColorStop(1,'#7a1717'); }
   else{ gC.addColorStop(0,'#ef5350'); gC.addColorStop(0.5,'#d32f2f'); gC.addColorStop(1,'#a31f1f'); }
@@ -2364,14 +2371,15 @@ function drawFirstPersonOverlay(){
 function withTime(ev){ return ev.time ? ev.time+' '+ev.title : ev.title; }
 function whoOf(ev){ return ev.who || (ev.side==='left' ? LEFT_NAME : RIGHT_NAME) || 'Agenda'; }
 function updateEta(){
-  const upcoming=visibleEvents().filter(e=>e.day>camDay);
+  const cd=carDay();
+  const upcoming=visibleEvents().filter(e=>e.day>=cd);
   if(upcoming.length){
-    const n=upcoming[0],diff=Math.max(0,Math.round(n.day-camDay));
+    const n=upcoming[0],diff=Math.max(0,n.day-cd);
     document.getElementById('eta-who').textContent=`Prochain — ${whoOf(n)}`;
     document.getElementById('eta-who').style.color=n.side==='right'?'#1a73e8':'#e67c73';
     document.getElementById('eta-name').textContent=n.title.length>30?n.title.slice(0,28)+'…':n.title;
-    document.getElementById('eta-d').textContent=diff;
-    document.getElementById('eta-u').textContent=diff<=1?'jour':'jours';
+    document.getElementById('eta-d').textContent=diff===0?'Auj.':diff;
+    document.getElementById('eta-u').textContent=diff===0?'':(diff<=1?'jour':'jours');
   } else {
     document.getElementById('eta-who').textContent='Fin du parcours';
     document.getElementById('eta-who').style.color='#5f6368';
@@ -2389,7 +2397,7 @@ function updatePlay(){ document.getElementById('pico').className=playing?'ti ti-
 // === Agenda mensuel cliquable (toujours visible, top gauche) ===
 let lastMiniCalDay=null;
 function renderMiniCal(){
-  const cur=Math.round(camDay);
+  const cur=carDay();
   if(cur===lastMiniCalDay) return;
   lastMiniCalDay=cur;
   const dt=new Date(MONTH_ORIGIN_MS+cur*86400000);
@@ -2441,7 +2449,7 @@ document.getElementById('mc-next').addEventListener('click',()=>{ shiftMonth(1);
 
 // === Volet hebdomadaire ===
 function renderWeekPanel(){
-  const cur=Math.round(camDay);
+  const cur=carDay();
   const m=mondayOfDay(cur);
   document.getElementById('wp-title').textContent='Semaine '+isoWeekNum(cur);
   document.getElementById('wp-range').textContent=shortDate(m)+' → '+shortDate(m+6);
@@ -2492,8 +2500,8 @@ function closeWeekPanel(){
 }
 document.getElementById('wp-close').addEventListener('click',closeWeekPanel);
 document.getElementById('weekPanelScrim').addEventListener('click',closeWeekPanel);
-document.getElementById('wp-prev').addEventListener('click',()=>{ camDay=Math.max(0,mondayOfDay(Math.round(camDay))-7); renderWeekPanel(); });
-document.getElementById('wp-next').addEventListener('click',()=>{ camDay=Math.min(TOTAL_DAYS,mondayOfDay(Math.round(camDay))+7); renderWeekPanel(); });
+document.getElementById('wp-prev').addEventListener('click',()=>{ camDay=Math.max(0,mondayOfDay(carDay())-7); renderWeekPanel(); });
+document.getElementById('wp-next').addEventListener('click',()=>{ camDay=Math.min(TOTAL_DAYS,mondayOfDay(carDay())+7); renderWeekPanel(); });
 
 // === Vue drone (30°/45°) / nuit / volet hebdomadaire : boutons du HUD ===
 const aerialbtn=document.getElementById('aerialbtn');
@@ -2576,7 +2584,7 @@ document.getElementById('revbtn').addEventListener('click',()=>{
   document.getElementById('revbtn').style.color=playingReverse?'#fff':'';
 });
 document.getElementById('resetbtn').addEventListener('click',()=>{playing=false;updatePlay();camDay=0;lastTs=null;});
-document.getElementById('todaybtn').addEventListener('click',()=>{playing=false;updatePlay();camDay=TODAY_DAY-1;lastTs=null;});
+document.getElementById('todaybtn').addEventListener('click',()=>{playing=false;updatePlay();camDay=camDayForCarAt(TODAY_DAY);lastTs=null;});
 document.getElementById('monthbtn').addEventListener('click',()=>{
   monthViewActive=!monthViewActive;
   const btn=document.getElementById('monthbtn');
@@ -2588,7 +2596,7 @@ document.getElementById('monthbtn').addEventListener('click',()=>{
   document.getElementById('monthNextBtn').classList.toggle('active',monthViewActive);
 });
 function shiftMonth(delta){
-  const dt=new Date(MONTH_ORIGIN_MS+Math.round(camDay)*86400000);
+  const dt=new Date(MONTH_ORIGIN_MS+carDay()*86400000);
   dt.setUTCMonth(dt.getUTCMonth()+delta);
   camDay=Math.max(0,Math.min(TOTAL_DAYS,Math.round((dt.getTime()-MONTH_ORIGIN_MS)/86400000)));
 }
@@ -2860,7 +2868,7 @@ wrap.addEventListener('pointermove',e=>{
 function jumpToDay(day){
   if(monthViewActive) document.getElementById('monthbtn').click();
   playing=false; updatePlay();
-  camDay=day;
+  camDay=camDayForCarAt(day);
   lastTs=null;
 }
 
@@ -2974,10 +2982,10 @@ document.getElementById('menu-datejump').addEventListener('click',e=>{
 document.addEventListener('click',e=>{
   if(!datejumpPanel.contains(e.target) && !datejumpbtn.contains(e.target)) datejumpPanel.classList.remove('open');
 });
-document.getElementById('dj-today').addEventListener('click',()=>{ jumpToDay(TODAY_DAY-1); datejumpPanel.classList.remove('open'); });
-document.getElementById('dj-week').addEventListener('click',()=>{ jumpToDay(Math.round(camDay)+7); datejumpPanel.classList.remove('open'); });
+document.getElementById('dj-today').addEventListener('click',()=>{ jumpToDay(TODAY_DAY); datejumpPanel.classList.remove('open'); });
+document.getElementById('dj-week').addEventListener('click',()=>{ jumpToDay(carDay()+7); datejumpPanel.classList.remove('open'); });
 document.getElementById('dj-month').addEventListener('click',()=>{
-  const dt=new Date(MONTH_ORIGIN_MS+Math.round(camDay)*86400000);
+  const dt=new Date(MONTH_ORIGIN_MS+carDay()*86400000);
   dt.setUTCMonth(dt.getUTCMonth()+1);
   jumpToDay(Math.round((dt.getTime()-MONTH_ORIGIN_MS)/86400000));
   datejumpPanel.classList.remove('open');
@@ -3179,7 +3187,7 @@ function openAddEventModal(dayOverride){
     const d = new Date(MONTH_ORIGIN_MS + dayOverride*86400000);
     dateInput.value = d.toISOString().slice(0,10);
   }else if(!dateInput.value){
-    const d = new Date(MONTH_ORIGIN_MS + Math.round(camDay)*86400000);
+    const d = new Date(MONTH_ORIGIN_MS + carDay()*86400000);
     dateInput.value = d.toISOString().slice(0,10);
   }
   addEvStatus.textContent='';

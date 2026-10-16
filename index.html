@@ -334,6 +334,11 @@ canvas#c{position:absolute;inset:0;width:100%;height:100%;touch-action:none;poin
       <button class="jchip jchip-on" id="vp-car" type="button">Voiture</button>
       <button class="jchip" id="vp-walk" type="button">Trottinette</button>
     </div>
+    <div style="font-family:'Oswald',Arial,sans-serif;font-size:12px;font-weight:600;color:#2b241c;margin-top:4px;">Panneaux</div>
+    <div class="jchips">
+      <button class="jchip" id="vp-sign-classic" type="button">Classiques</button>
+      <button class="jchip" id="vp-sign-hwy" type="button">Autoroute</button>
+    </div>
     <div style="font-family:'Oswald',Arial,sans-serif;font-size:12px;font-weight:600;color:#2b241c;margin-top:4px;">Options</div>
     <div class="jchips">
       <button class="jchip" id="vp-fpv" type="button">Vue conducteur</button>
@@ -354,7 +359,7 @@ canvas#c{position:absolute;inset:0;width:100%;height:100%;touch-action:none;poin
     <div class="leg" id="legWeekend"><div class="legline"></div>Week-end</div>
     <div class="leg" id="legVac"><div class="legline" style="background:#ffd600;"></div><span id="legVacTxt">Vacances scolaires</span></div>
     <button id="legSync" class="leg" type="button" style="display:none;cursor:pointer;border:none;font-family:inherit;color:inherit;text-align:left;" title="Relancer la synchro Google Agenda"><i class="ti ti-refresh" style="font-size:12px;"></i><span id="legSyncTxt"></span></button>
-    <div id="appVersion" style="font-size:10px;color:#fff;text-shadow:0 1px 2px rgba(0,0,0,0.6);text-align:right;padding-right:4px;">Version 2026-10-16 19:35 · <a href="confidentialite.html" style="color:#fff">Confidentialité</a> · <a href="conditions.html" style="color:#fff">Conditions</a></div>
+    <div id="appVersion" style="font-size:10px;color:#fff;text-shadow:0 1px 2px rgba(0,0,0,0.6);text-align:right;padding-right:4px;">Version 2026-10-16 22:11 · <a href="confidentialite.html" style="color:#fff">Confidentialité</a> · <a href="conditions.html" style="color:#fff">Conditions</a></div>
   </div>
   <div id="zbx">
     <button class="zb" id="zi">+</button>
@@ -1946,13 +1951,14 @@ function signClipTop(){ return tilt>0.01 ? 0 : H*0.14; }
 const GANTRY_CACHE=new Map();
 if(document.fonts && document.fonts.ready) document.fonts.ready.then(()=>GANTRY_CACHE.clear());
 function gantryPanelImage(day){
-  const key=day+(night?'n':'d');
+  const key=day+(night?'n':'d')+signStyle;
   let c=GANTRY_CACHE.get(key);
   if(c) return c;
   // 10,8 m × 3 m → 1080 × 300 px
   c=document.createElement('canvas'); c.width=1080; c.height=300;
   const g=c.getContext('2d');
-  g.fillStyle=night?'#0f3f2e':'#15613f'; g.fillRect(0,0,1080,300);
+  // Vert (style classique) ou bleu autoroute.
+  g.fillStyle=signStyle==='autoroute' ? (night?HW_BLUE_NIGHT:HW_BLUE) : (night?'#0f3f2e':'#15613f'); g.fillRect(0,0,1080,300);
   g.strokeStyle='#eceadf'; g.lineWidth=14; g.strokeRect(21,21,1038,258);
   const dt=new Date(MONTH_ORIGIN_MS+day*86400000);
   const mois=dt.toLocaleDateString('fr-FR',{month:'long'});
@@ -2044,6 +2050,12 @@ function signTitleLines(title, maxLines){
   SIGN_LINES_CACHE.set(key,lines);
   return lines;
 }
+// Style des panneaux d'événement : « classic » (crème, cadre de couleur) ou
+// « autoroute » (bleu, liseré blanc, capitales blanches, bande de date en bas
+// comme le « 2000 m » des panneaux autoroutiers). Gardé dans le navigateur.
+const SIGN_STYLE_KEY='signStyle_v1';
+let signStyle=(()=>{ try{ return localStorage.getItem(SIGN_STYLE_KEY)||'classic'; }catch(e){ return 'classic'; } })();
+const HW_BLUE='#1f56a8', HW_BLUE_NIGHT='#163d78';
 function drawEventSign(it,alpha){
   const evs=it.evs;
   const lat=it.side*(RW+3.0);
@@ -2065,10 +2077,11 @@ function drawEventSign(it,alpha){
     ctx.globalAlpha=alpha;
     ctx.fillStyle=night?'#4a4943':'#6b6a63';
     ctx.fillRect(pG.x-Math.max(0.5,w*0.04),pBR.y,Math.max(1,w*0.08),pG.y-pBR.y);
-    ctx.fillStyle=signAccent(evs[0]);
+    const hwy=signStyle==='autoroute';
+    ctx.fillStyle=hwy ? '#f4f4f4' : signAccent(evs[0]);
     ctx.fillRect(pTL.x,pTL.y,pBR.x-pTL.x,pBR.y-pTL.y);
-    const bw=Math.max(0.6,w*0.07);
-    ctx.fillStyle=night?'#e7e3d6':'#fbf9f2';
+    const bw=Math.max(0.6,w*(hwy?0.04:0.07));
+    ctx.fillStyle=hwy ? (night?HW_BLUE_NIGHT:HW_BLUE) : (night?'#e7e3d6':'#fbf9f2');
     ctx.fillRect(pTL.x+bw,pTL.y+bw,pBR.x-pTL.x-2*bw,pBR.y-pTL.y-2*bw);
     ctx.globalAlpha=1;
     return;
@@ -2083,14 +2096,17 @@ function drawEventSign(it,alpha){
   const textW=w-w*0.18;
   const titleLinesMax=3;
   const multi=evs.length>1;
+  const hwy=signStyle==='autoroute';
   const entries=evs.map(e=>{
     const photo=resolveSignPhoto(e);
-    const lines=signTitleLines(withTime(e), titleLinesMax);
+    const lines=signTitleLines(hwy ? withTime(e).toUpperCase() : withTime(e), titleLinesMax);
     const imgSize=photo.img ? Math.min(w-pad*2, w*(multi?0.45:0.55)) : 0;
-    const hPx=pad*0.6+(photo.img?imgSize+pad*0.5:0)+lines.length*fs*1.2+pad*0.5;
+    // Style autoroute : place réservée en haut pour le cartouche de couleur.
+    const hPx=pad*0.6+(hwy?fs*0.85:0)+(photo.img?imgSize+pad*0.5:0)+lines.length*fs*1.2+pad*0.5;
     return {e,photo,lines,imgSize,hPx};
   });
-  const contentPx=entries.reduce((a,en)=>a+en.hPx,0);
+  const stripPx=hwy ? fs*1.9 : 0; // bande de date en bas (style autoroute)
+  const contentPx=entries.reduce((a,en)=>a+en.hPx,0)+stripPx;
   const worldH=Math.max(0.9,Math.min(2.6*evs.length,contentPx/s));
 
   const pTL=proj(it.dist,lat-1.5,hTop+worldH), pBR=proj(it.dist,lat+1.5,hTop);
@@ -2140,8 +2156,9 @@ function drawEventSign(it,alpha){
   // Fond et cadre : couleur du premier événement pour le cadre, chaque
   // événement garde sa propre bande de couleur à gauche.
   const borderW=Math.max(1,Math.min(h,w*1.2)*0.07);
-  ctx.fillStyle=night?'#e7e3d6':'#fbf9f2';
-  ctx.fillRect(pTL.x,pTL.y,w,h);
+  ctx.fillStyle=hwy ? (night?HW_BLUE_NIGHT:HW_BLUE) : (night?'#e7e3d6':'#fbf9f2');
+  if(hwy){ ctx.beginPath(); ctx.roundRect ? ctx.roundRect(pTL.x,pTL.y,w,h,Math.min(w*0.05,8)) : ctx.rect(pTL.x,pTL.y,w,h); ctx.fill(); }
+  else ctx.fillRect(pTL.x,pTL.y,w,h);
 
   // Le contenu mesuré peut dépasser la hauteur maximale : on répartit alors
   // proportionnellement pour que tout tienne dans le panneau.
@@ -2152,9 +2169,13 @@ function drawEventSign(it,alpha){
     const eh=en.hPx*scaleY;
     const accent=signAccent(en.e);
     ctx.fillStyle=accent;
-    ctx.fillRect(pTL.x,y,Math.max(1.5,w*0.055),eh);
+    if(hwy){
+      // Petit cartouche de la couleur de l'agenda, comme « A4 » sur les panneaux.
+      const tw=w*0.13, th=fs*0.75;
+      ctx.beginPath(); ctx.roundRect ? ctx.roundRect(pTL.x+w*0.06,y+pad*0.45*scaleY,tw,th,th*0.25) : ctx.rect(pTL.x+w*0.06,y+pad*0.45*scaleY,tw,th); ctx.fill();
+    }else ctx.fillRect(pTL.x,y,Math.max(1.5,w*0.055),eh);
     if(i>0){
-      ctx.fillStyle='rgba(43,36,28,0.25)';
+      ctx.fillStyle=hwy ? 'rgba(255,255,255,0.75)' : 'rgba(43,36,28,0.25)';
       ctx.fillRect(pTL.x+w*0.09,y-0.5,w*0.82,Math.max(1,w*0.012));
     }
     // Photo posée en haut de l'entrée, puis le titre en dessous.
@@ -2162,7 +2183,7 @@ function drawEventSign(it,alpha){
     const ph=en.photo;
     if(ph.img){
       const sz=en.imgSize*scaleY;
-      const imgX=pTL.x+(w-sz)/2, imgY=y+pad*0.6*scaleY;
+      const imgX=pTL.x+(w-sz)/2, imgY=y+(pad*0.6+(hwy?fs*0.85:0))*scaleY;
       ctx.drawImage(ph.img,imgX,imgY,sz,sz);
       if(ph.isVideo){
         // Petit triangle "lecture" au centre de la vignette, pour signaler que le
@@ -2193,12 +2214,13 @@ function drawEventSign(it,alpha){
     }
     const efs=fs*Math.max(0.75,scaleY);
     if(efs>=3 && en.lines.length && textW>6){
-      ctx.fillStyle='#2b241c';
-      ctx.font=`500 ${efs.toFixed(1)}px Archivo, Arial, sans-serif`;
+      ctx.fillStyle=hwy ? '#fff' : '#2b241c';
+      ctx.font=hwy ? `700 ${(efs*0.92).toFixed(1)}px "Arial Narrow", Archivo, Arial, sans-serif` : `500 ${efs.toFixed(1)}px Archivo, Arial, sans-serif`;
       ctx.textAlign='left'; ctx.textBaseline='top';
       const lh=fs*1.2*scaleY;
       const blockH=en.lines.length*lh;
-      const y0=photoBottom+((y+eh-pad*0.5*scaleY-photoBottom)-blockH)/2;
+      const top=hwy ? Math.max(photoBottom, y+(pad*0.45+fs*0.75+pad*0.25)*scaleY) : photoBottom;
+      const y0=top+((y+eh-pad*0.5*scaleY-top)-blockH)/2;
       en.lines.forEach((ln,i2)=>{
         let t=ln;
         while(ctx.measureText(t).width>textW && t.length>1) t=t.slice(0,-1);
@@ -2209,8 +2231,28 @@ function drawEventSign(it,alpha){
     hits.push({ev:en.e,x0:pTL.x,x1:pTL.x+w,y0:y,y1:y+eh});
     y+=eh;
   });
-  ctx.strokeStyle=signAccent(evs[0]); ctx.lineWidth=borderW;
-  ctx.strokeRect(pTL.x,pTL.y,w,h);
+  if(hwy){
+    // Bande du bas : date du jour, séparée par un filet blanc (« 2000 m »).
+    const sh=stripPx*scaleY, sy=pTL.y+h-sh;
+    ctx.fillStyle='rgba(255,255,255,0.9)';
+    ctx.fillRect(pTL.x+w*0.05,sy,w*0.9,Math.max(1,w*0.012));
+    const dfs=fs*1.05*Math.max(0.75,scaleY);
+    if(dfs>=3){
+      const dt=new Date(MONTH_ORIGIN_MS+evs[0].day*86400000);
+      const lbl=['DIM','LUN','MAR','MER','JEU','VEN','SAM'][dt.getUTCDay()]+' '+dt.getUTCDate()+' '+['JANV','FÉV','MARS','AVR','MAI','JUIN','JUIL','AOÛT','SEPT','OCT','NOV','DÉC'][dt.getUTCMonth()];
+      ctx.fillStyle='#fff'; ctx.font=`700 ${dfs.toFixed(1)}px "Arial Narrow", Archivo, Arial, sans-serif`;
+      ctx.textAlign='center'; ctx.textBaseline='middle';
+      ctx.fillText(lbl, pTL.x+w/2, sy+sh*0.55, w*0.85);
+      ctx.textAlign='left'; ctx.textBaseline='top';
+    }
+    // Liseré blanc intérieur, coins arrondis
+    const ins=Math.max(1,w*0.025);
+    ctx.strokeStyle='#fff'; ctx.lineWidth=Math.max(1,w*0.014);
+    ctx.beginPath(); ctx.roundRect ? ctx.roundRect(pTL.x+ins,pTL.y+ins,w-2*ins,h-2*ins,Math.min(w*0.04,6)) : ctx.rect(pTL.x+ins,pTL.y+ins,w-2*ins,h-2*ins); ctx.stroke();
+  }else{
+    ctx.strokeStyle=signAccent(evs[0]); ctx.lineWidth=borderW;
+    ctx.strokeRect(pTL.x,pTL.y,w,h);
+  }
   ctx.restore();
   // Trop d'événements ce jour-là de ce côté : pastille « +N » sur le panneau
   // (clic = liste complète du jour), pour ne pas les masquer en silence.
@@ -2610,6 +2652,17 @@ viewAnglePanel.querySelectorAll('.jchip[data-angle]').forEach(c=>{
   c.addEventListener('click',()=>setViewAngle(+c.dataset.angle));
 });
 document.getElementById('vp-fpv').addEventListener('click',()=>document.getElementById('fpvbtn').click());
+// Style des panneaux : classiques ou autoroute.
+function setSignStyle(st){
+  signStyle=st;
+  try{ localStorage.setItem(SIGN_STYLE_KEY,st); }catch(e){}
+  document.getElementById('vp-sign-classic').classList.toggle('jchip-on',st!=='autoroute');
+  document.getElementById('vp-sign-hwy').classList.toggle('jchip-on',st==='autoroute');
+  EVENTS_VERSION++; // force un nouveau dessin même à l'arrêt
+}
+document.getElementById('vp-sign-classic').addEventListener('click',()=>setSignStyle('classic'));
+document.getElementById('vp-sign-hwy').addEventListener('click',()=>setSignStyle('autoroute'));
+setSignStyle(signStyle);
 // Choix exclusif voiture / trottinette.
 document.getElementById('vp-car').addEventListener('click',()=>{ if(walkMode) document.getElementById('walkbtn').click(); });
 document.getElementById('vp-walk').addEventListener('click',()=>{ if(!walkMode) document.getElementById('walkbtn').click(); });

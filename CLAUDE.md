@@ -6,3 +6,6 @@
 - Ne jamais modifier le contenu d'une image (ou autre fichier chargé par la page) en
   gardant son nom : le navigateur la garde en cache. Toujours lui donner un nouveau
   nom de fichier et mettre à jour la référence dans `index.html`.
+- Tests visuels et de fluidité : simuler en priorité des appareils Android (téléphone
+  « Galaxy S24 », tablette « Galaxy Tab S9 landscape » dans Playwright) — ce sont ceux
+  utilisés au quotidien.

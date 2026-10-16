@@ -353,7 +353,7 @@ canvas#c{position:absolute;inset:0;width:100%;height:100%;touch-action:none;poin
     <div class="leg" id="legWeekend"><div class="legline"></div>Week-end</div>
     <div class="leg" id="legVac"><div class="legline" style="background:#ffd600;"></div><span id="legVacTxt">Vacances scolaires</span></div>
     <button id="legSync" class="leg" type="button" style="display:none;cursor:pointer;border:none;font-family:inherit;color:inherit;text-align:left;" title="Relancer la synchro Google Agenda"><i class="ti ti-refresh" style="font-size:12px;"></i><span id="legSyncTxt"></span></button>
-    <div id="appVersion" style="font-size:10px;color:#fff;text-shadow:0 1px 2px rgba(0,0,0,0.6);text-align:right;padding-right:4px;">Version 2026-10-16 17:41 · <a href="confidentialite.html" style="color:#fff">Confidentialité</a> · <a href="conditions.html" style="color:#fff">Conditions</a></div>
+    <div id="appVersion" style="font-size:10px;color:#fff;text-shadow:0 1px 2px rgba(0,0,0,0.6);text-align:right;padding-right:4px;">Version 2026-10-16 18:00 · <a href="confidentialite.html" style="color:#fff">Confidentialité</a> · <a href="conditions.html" style="color:#fff">Conditions</a></div>
   </div>
   <div id="zbx">
     <button class="zb" id="zi">+</button>
@@ -1845,9 +1845,9 @@ const DAYPOST_CACHE=new Map();
 if(document.fonts && document.fonts.ready) document.fonts.ready.then(()=>DAYPOST_CACHE.clear());
 function dayPostSprite(day){
   const key=day+(night?'n':'d');
-  let c=DAYPOST_CACHE.get(key);
-  if(c) return c;
-  c=document.createElement('canvas');
+  const cached=DAYPOST_CACHE.get(key);
+  if(cached) return cached;
+  const c=document.createElement('canvas');
   c.width=DP_PADL+DP_W+DP_PADR; c.height=DP_CAP+DP_H+DP_PADB;
   const g=c.getContext('2d');
   const x0=DP_PADL, w2=DP_W, h2=DP_H, capH=DP_CAP, topY=DP_CAP, groundY=DP_CAP+DP_H, cx=x0+w2/2;
@@ -1897,9 +1897,20 @@ function dayPostSprite(day){
   g.fillText(dow, cx, topY+h2*0.13, w2*0.74);
   g.font=`700 ${(fs*1.05).toFixed(1)}px Oswald, Arial, sans-serif`;
   g.fillText(String(dt.getUTCDate()), cx, topY+h2*0.42, w2*0.78);
+  // Versions réduites de moitié en moitié (comme des mipmaps) : réduire
+  // d'un coup l'image de 160 px à quelques pixels la faisait scintiller en
+  // avançant ; on affiche la version la plus proche de la taille voulue.
+  const levels=[c];
+  while(levels[levels.length-1].width>24){
+    const prev=levels[levels.length-1], h=document.createElement('canvas');
+    h.width=Math.max(1,Math.round(prev.width/2)); h.height=Math.max(1,Math.round(prev.height/2));
+    const hg=h.getContext('2d'); hg.imageSmoothingEnabled=true; hg.imageSmoothingQuality='high';
+    hg.drawImage(prev,0,0,h.width,h.height);
+    levels.push(h);
+  }
   if(DAYPOST_CACHE.size>120) DAYPOST_CACHE.clear();
-  DAYPOST_CACHE.set(key,c);
-  return c;
+  DAYPOST_CACHE.set(key,levels);
+  return levels;
 }
 function drawDayPost(it,alpha){
   // Taille réduite et posée au ras de la chaussée, à l'écart du panneau
@@ -1909,9 +1920,14 @@ function drawDayPost(it,alpha){
   const w2=Math.abs(p1.x-p0.x), h2=p0.y-p1.y, capH=p1.y-pc.y;
   if(w2<1.8 || h2<=0 || capH<=0) return; // trop loin, ou derrière la caméra (vue plongeante)
   const k=w2/DP_W, x0=Math.min(p0.x,p1.x);
-  const spr=dayPostSprite(it.day);
+  const levels=dayPostSprite(it.day), full=levels[0];
+  // Plus petite version encore au moins aussi grande que l'affichage.
+  const target=full.width*k;
+  let spr=levels[0];
+  for(const lv of levels){ if(lv.width>=target) spr=lv; else break; }
   ctx.globalAlpha=alpha;
-  ctx.drawImage(spr, x0-DP_PADL*k, pc.y, spr.width*k, spr.height*k);
+  ctx.imageSmoothingEnabled=true; ctx.imageSmoothingQuality='high';
+  ctx.drawImage(spr, x0-DP_PADL*k, pc.y, full.width*k, full.height*k);
   ctx.globalAlpha=1;
 }
 

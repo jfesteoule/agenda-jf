@@ -359,7 +359,7 @@ canvas#c{position:absolute;inset:0;width:100%;height:100%;touch-action:none;poin
     <div class="leg" id="legWeekend"><div class="legline"></div>Week-end</div>
     <div class="leg" id="legVac"><div class="legline" style="background:#ffd600;"></div><span id="legVacTxt">Vacances scolaires</span></div>
     <button id="legSync" class="leg" type="button" style="display:none;cursor:pointer;border:none;font-family:inherit;color:inherit;text-align:left;" title="Relancer la synchro Google Agenda"><i class="ti ti-refresh" style="font-size:12px;"></i><span id="legSyncTxt"></span></button>
-    <div id="appVersion" style="font-size:10px;color:#fff;text-shadow:0 1px 2px rgba(0,0,0,0.6);text-align:right;padding-right:4px;">Version 2026-10-16 22:55 · <a href="confidentialite.html" style="color:#fff">Confidentialité</a> · <a href="conditions.html" style="color:#fff">Conditions</a></div>
+    <div id="appVersion" style="font-size:10px;color:#fff;text-shadow:0 1px 2px rgba(0,0,0,0.6);text-align:right;padding-right:4px;">Version 2026-10-16 23:08 · <a href="confidentialite.html" style="color:#fff">Confidentialité</a> · <a href="conditions.html" style="color:#fff">Conditions</a></div>
   </div>
   <div id="zbx">
     <button class="zb" id="zi">+</button>
@@ -2056,21 +2056,16 @@ function signTitleLines(title, maxLines){
 const SIGN_STYLE_KEY='signStyle_v1';
 let signStyle=(()=>{ try{ return localStorage.getItem(SIGN_STYLE_KEY)||'classic'; }catch(e){ return 'classic'; } })();
 const HW_BLUE='#1f56a8', HW_BLUE_NIGHT='#163d78';
-// Icône ronde « Bridge » (dessinée pour l'appli), en plusieurs tailles
-// réduites de moitié en moitié pour ne pas scintiller au loin.
-const BRIDGE_ICON=new Image(); BRIDGE_ICON.src='icone-bridge.png';
-let bridgeIconCache=null;
-function bridgeIconLevels(){
-  if(bridgeIconCache) return bridgeIconCache;
-  if(!BRIDGE_ICON.complete || !BRIDGE_ICON.naturalWidth) return null;
-  const levels=[BRIDGE_ICON];
-  while(levels[levels.length-1].width>16){
-    const prev=levels[levels.length-1], c=document.createElement('canvas');
-    c.width=c.height=Math.round(prev.width/2);
-    const g=c.getContext('2d'); g.imageSmoothingQuality='high'; g.drawImage(prev,0,0,c.width,c.height);
-    levels.push(c);
-  }
-  return bridgeIconCache=levels;
+// Petite carte à jouer (carreau rouge) placée après le mot « bridge ».
+function drawMiniDiamondCard(x,y,w,h){
+  const fill=ctx.fillStyle;
+  ctx.fillStyle='#ffffff';
+  ctx.beginPath(); ctx.roundRect ? ctx.roundRect(x,y,w,h,Math.max(1,w*0.18)) : ctx.rect(x,y,w,h); ctx.fill();
+  ctx.strokeStyle='rgba(0,0,0,0.35)'; ctx.lineWidth=Math.max(0.6,w*0.06); ctx.stroke();
+  const cx=x+w/2, cy=y+h/2, dx=w*0.3, dy=h*0.32;
+  ctx.fillStyle='#d62828';
+  ctx.beginPath(); ctx.moveTo(cx,cy-dy); ctx.lineTo(cx+dx,cy); ctx.lineTo(cx,cy+dy); ctx.lineTo(cx-dx,cy); ctx.closePath(); ctx.fill();
+  ctx.fillStyle=fill;
 }
 function drawEventSign(it,alpha){
   const evs=it.evs;
@@ -2241,7 +2236,17 @@ function drawEventSign(it,alpha){
         let t=ln;
         while(ctx.measureText(t).width>textW && t.length>1) t=t.slice(0,-1);
         if(t!==ln) t=t.slice(0,-1)+'…';
-        ctx.fillText(t, pTL.x+w*0.09, y0+i2*lh);
+        const tx=pTL.x+w*0.09, ty=y0+i2*lh;
+        // Mot « bridge » : petite carte à carreau rouge juste après le mot.
+        const m=/bridge/i.exec(t);
+        if(m){
+          const head=t.slice(0,m.index+m[0].length), tail=t.slice(m.index+m[0].length);
+          ctx.fillText(head, tx, ty);
+          const ch=efs*0.95, cw=ch*0.7, gap=efs*0.25;
+          const cx0=tx+ctx.measureText(head).width+gap, cy0=ty+efs*0.02;
+          drawMiniDiamondCard(cx0, cy0, cw, ch);
+          if(tail) ctx.fillText(tail, cx0+cw+gap*0.6, ty);
+        }else ctx.fillText(t, tx, ty);
       });
     }
     hits.push({ev:en.e,x0:pTL.x,x1:pTL.x+w,y0:y,y1:y+eh});
@@ -2268,18 +2273,6 @@ function drawEventSign(it,alpha){
   }else{
     ctx.strokeStyle=signAccent(evs[0]); ctx.lineWidth=borderW;
     ctx.strokeRect(pTL.x,pTL.y,w,h);
-  }
-  // Pastille ronde « Bridge » à côté du panneau (côté extérieur à la route)
-  // quand un événement du panneau parle de bridge.
-  if(evs.some(e=>/bridge/i.test(e.title||''))){
-    const lv=bridgeIconLevels();
-    if(lv){
-      const d=Math.min(h, w*0.5), gap=w*0.04;
-      const bx=it.side>0 ? pTL.x+w+gap : pTL.x-gap-d;
-      let spr=lv[0]; for(const l of lv){ if(l.width>=d) spr=l; else break; }
-      ctx.imageSmoothingEnabled=true; ctx.imageSmoothingQuality='high';
-      ctx.drawImage(spr, bx, pTL.y, d, d);
-    }
   }
   ctx.restore();
   // Trop d'événements ce jour-là de ce côté : pastille « +N » sur le panneau

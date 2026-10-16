@@ -353,7 +353,7 @@ canvas#c{position:absolute;inset:0;width:100%;height:100%;touch-action:none;poin
     <div class="leg" id="legWeekend"><div class="legline"></div>Week-end</div>
     <div class="leg" id="legVac"><div class="legline" style="background:#ffd600;"></div><span id="legVacTxt">Vacances scolaires</span></div>
     <button id="legSync" class="leg" type="button" style="display:none;cursor:pointer;border:none;font-family:inherit;color:inherit;text-align:left;" title="Relancer la synchro Google Agenda"><i class="ti ti-refresh" style="font-size:12px;"></i><span id="legSyncTxt"></span></button>
-    <div id="appVersion" style="font-size:10px;color:#fff;text-shadow:0 1px 2px rgba(0,0,0,0.6);text-align:right;padding-right:4px;">Version 2026-10-16 18:00 · <a href="confidentialite.html" style="color:#fff">Confidentialité</a> · <a href="conditions.html" style="color:#fff">Conditions</a></div>
+    <div id="appVersion" style="font-size:10px;color:#fff;text-shadow:0 1px 2px rgba(0,0,0,0.6);text-align:right;padding-right:4px;">Version 2026-10-16 18:10 · <a href="confidentialite.html" style="color:#fff">Confidentialité</a> · <a href="conditions.html" style="color:#fff">Conditions</a></div>
   </div>
   <div id="zbx">
     <button class="zb" id="zi">+</button>
@@ -626,6 +626,7 @@ function shortDate(d){
 // ===== DRAW FUNCTIONS =====
 
 let lastDrawSig='', lastFullDraw=0, prevFrameFull=false;
+let dtSmooth=0;
 function draw(ts){
   // Économie de batterie : onglet caché ou app en arrière-plan sur mobile →
   // on arrête complètement la boucle plutôt que de continuer à redessiner
@@ -636,6 +637,11 @@ function draw(ts){
   // Plafond à 0,25 s (et non 0,1) : sur un appareil lent, la voiture garde sa
   // vitesse réelle au lieu de presque s'arrêter.
   const dt=Math.min(frameMs/1000,0.25); lastTs=ts;
+  // Pas de temps lissé pour le défilement : sur Android, l'intervalle entre
+  // deux images varie d'une image à l'autre et la route avançait par à-coups
+  // (très visible au ralenti). Les vrais ralentissements restent rattrapés.
+  dtSmooth = (dt>0.1 || !dtSmooth) ? dt : dtSmooth + (dt-dtSmooth)*0.15;
+  const dtMove = dtSmooth;
 
   if(monthViewActive){
     ctx.clearRect(0,0,W,H);
@@ -656,11 +662,11 @@ function draw(ts){
     fling*=Math.pow(0.12,dt);
   }
   if(playing){
-    camDay=Math.max(0,Math.min(TOTAL_DAYS,camDay+speed*dt));
+    camDay=Math.max(0,Math.min(TOTAL_DAYS,camDay+speed*dtMove));
   }
   if(playingReverse){
     // Recul à la vitesse choisie (×⅕, ×½, ×1, ×3), comme la marche avant.
-    camDay=Math.max(0,camDay-dt*speed);
+    camDay=Math.max(0,camDay-dtMove*speed);
     if(camDay<=0){playingReverse=false;document.getElementById("revbtn").style.background="";document.getElementById("revbtn").style.color="";}
   }
 
@@ -2336,33 +2342,52 @@ function drawMehari(){
   const carImg=(turnImg && turnImg.complete && turnImg.naturalWidth) ? turnImg : MEHARI_IMG;
   // 0.832 = ligne de contact pneu/sol mesurée dans le PNG (fond supprimé),
   // pour que les roues touchent bien yGround au lieu de flotter au-dessus.
+  // Image de la voiture avec sa plaque « JF 1968 » déjà peinte dessus, en
+  // plusieurs tailles : dessinée à des positions fractionnaires, elle suit le
+  // rebond en douceur (au ralenti, l'arrondi au pixel la faisait avancer par
+  // à-coups) sans que le texte de la plaque tremble.
+  const levels=carSpriteLevels(carImg);
+  const target=drawW;
+  let spr=levels[0];
+  for(const lv of levels){ if(lv.width>=target) spr=lv; else break; }
   ctx.save();
   if(night) ctx.filter='brightness(0.4) saturate(0.75)';
-  // Positions arrondies au pixel : avec le petit rebond, des coordonnées
-  // fractionnaires rééchantillonnent l'image à chaque frame (flou qui tremble).
-  ctx.imageSmoothingQuality='high';
-  ctx.drawImage(carImg, Math.round(cxc-drawW/2), Math.round(yGround-drawH*0.832), Math.round(drawW), Math.round(drawH));
-  if(night) ctx.filter='none';
-
-  // Plaque toujours dessinée (y compris voiture vue de plus loin en 30°/45°),
-  // le texte dès qu'il reste lisible.
-  {
-    // Plaque blanche de l'image (même position sur les trois vues HD),
-    // calée au pixel (et police par demi-pixel) pour ne pas trembler avec le
-    // rebond de la voiture.
-    const plw=Math.round(w*0.162), plh=Math.max(2,Math.round(w*0.101));
-    const ply=Math.round(yGround-drawH*0.286), plx=Math.round(cxc-plw/2);
-    ctx.fillStyle='#e9e5d7';
-    ctx.fillRect(plx,ply,plw,plh);
-    if(plh*0.72>=3){
-      ctx.fillStyle='#2b241c';
-      ctx.font=`500 ${(Math.round(plh*0.72*2)/2).toFixed(1)}px Archivo, Arial, sans-serif`;
-      ctx.textAlign='center'; ctx.textBaseline='middle';
-      ctx.fillText('JF 1968', plx+plw/2, Math.round(ply+plh*0.55), plw*0.92);
-      ctx.textAlign='left'; ctx.textBaseline='top';
-    }
-  }
+  ctx.imageSmoothingEnabled=true; ctx.imageSmoothingQuality='high';
+  ctx.drawImage(spr, cxc-drawW/2, yGround-drawH*0.832, drawW, drawH);
   ctx.restore();
+}
+
+// Voiture + plaque peintes une fois par image source, puis réduites de
+// moitié en moitié (évite le scintillement d'une forte réduction d'un coup).
+const CAR_SPRITE_CACHE=new Map();
+if(document.fonts && document.fonts.ready) document.fonts.ready.then(()=>CAR_SPRITE_CACHE.clear());
+function carSpriteLevels(img){
+  let levels=CAR_SPRITE_CACHE.get(img);
+  if(levels) return levels;
+  const Wc=img.naturalWidth, Hc=img.naturalHeight;
+  const c=document.createElement('canvas'); c.width=Wc; c.height=Hc;
+  const g=c.getContext('2d');
+  g.drawImage(img,0,0);
+  // Plaque blanche de l'image (même position sur les trois vues HD) :
+  // largeur 0,162 w, hauteur 0,101 w, haut à 0,286 de la hauteur au-dessus de
+  // la ligne des pneus (0,832), avec w = largeur d'image / 1,55.
+  const wv=Wc/1.55, plw=wv*0.162, plh=wv*0.101;
+  const ply=Hc*0.832-Hc*0.286, plx=Wc/2-plw/2;
+  g.fillStyle='#e9e5d7'; g.fillRect(plx,ply,plw,plh);
+  g.fillStyle='#2b241c';
+  g.font=`500 ${(plh*0.72).toFixed(1)}px Archivo, Arial, sans-serif`;
+  g.textAlign='center'; g.textBaseline='middle';
+  g.fillText('JF 1968', Wc/2, ply+plh*0.55, plw*0.92);
+  levels=[c];
+  while(levels[levels.length-1].width>120){
+    const prev=levels[levels.length-1], h=document.createElement('canvas');
+    h.width=Math.round(prev.width/2); h.height=Math.round(prev.height/2);
+    const hg=h.getContext('2d'); hg.imageSmoothingEnabled=true; hg.imageSmoothingQuality='high';
+    hg.drawImage(prev,0,0,h.width,h.height);
+    levels.push(h);
+  }
+  CAR_SPRITE_CACHE.set(img,levels);
+  return levels;
 }
 
 // === Marcheur (remplace la Méhari en mode "marcher à pied") ===

@@ -353,7 +353,7 @@ canvas#c{position:absolute;inset:0;width:100%;height:100%;touch-action:none;poin
     <div class="leg" id="legWeekend"><div class="legline"></div>Week-end</div>
     <div class="leg" id="legVac"><div class="legline" style="background:#ffd600;"></div><span id="legVacTxt">Vacances scolaires</span></div>
     <button id="legSync" class="leg" type="button" style="display:none;cursor:pointer;border:none;font-family:inherit;color:inherit;text-align:left;" title="Relancer la synchro Google Agenda"><i class="ti ti-refresh" style="font-size:12px;"></i><span id="legSyncTxt"></span></button>
-    <div id="appVersion" style="font-size:10px;color:#fff;text-shadow:0 1px 2px rgba(0,0,0,0.6);text-align:right;padding-right:4px;">Version 2026-10-15 17:18 · <a href="confidentialite.html" style="color:#fff">Confidentialité</a> · <a href="conditions.html" style="color:#fff">Conditions</a></div>
+    <div id="appVersion" style="font-size:10px;color:#fff;text-shadow:0 1px 2px rgba(0,0,0,0.6);text-align:right;padding-right:4px;">Version 2026-10-16 17:41 · <a href="confidentialite.html" style="color:#fff">Confidentialité</a> · <a href="conditions.html" style="color:#fff">Conditions</a></div>
   </div>
   <div id="zbx">
     <button class="zb" id="zi">+</button>
@@ -1070,7 +1070,7 @@ function paintSkyAndLand(){
   if(grassTextureLoaded){
     const snowAmt=night?0:seasonNum('snowAmt');
     ctx.globalAlpha=(night?0.35:0.75)*(1-snowAmt*0.6);
-    ctx.fillStyle=ctx.createPattern(GRASS_TEXTURE,'repeat');
+    ctx.fillStyle=cachedPattern(GRASS_TEXTURE);
     ctx.fillRect(0,hzL,W,H-hzL);
     ctx.globalAlpha=1;
   }
@@ -1252,6 +1252,15 @@ function pathEdgeWobble(worldPos,seed){
        + 0.07*Math.sin(worldPos*0.55+seed*3.7);
 }
 
+// Motifs (herbe, chemin, grain de l'asphalte) créés une seule fois par image
+// source au lieu de chaque image : createPattern est coûteux sur mobile.
+const PATTERN_CACHE=new Map();
+function cachedPattern(img){
+  let pat=PATTERN_CACHE.get(img);
+  if(!pat){ pat=ctx.createPattern(img,'repeat'); if(pat) PATTERN_CACHE.set(img,pat); }
+  return pat;
+}
+
 // === CHAUSSÉE : accotement, asphalte, marquages, week-end, jours fériés, 1er du mois ===
 function drawRoadSurface(){
   const hzL=horizonScreenY();
@@ -1292,7 +1301,7 @@ function drawRoadSurface(){
     const snowAmt=night?0:seasonNum('snowAmt');
     ctx.save(); ctx.clip();
     ctx.globalAlpha=(night?0.3:0.7)*(1-snowAmt*0.6);
-    ctx.fillStyle=ctx.createPattern(GRASS_TEXTURE,'repeat');
+    ctx.fillStyle=cachedPattern(GRASS_TEXTURE);
     ctx.fillRect(0,hzL-4,W,H-hzL+4);
     ctx.globalAlpha=1;
     ctx.restore();
@@ -1322,12 +1331,12 @@ function drawRoadSurface(){
   ctx.fillStyle=asph; ctx.fillRect(0,hzL-4,W,H-hzL+4);
   if(walkMode && dirtPathTextureLoaded){
     ctx.globalAlpha=night?0.5:0.85;
-    ctx.fillStyle=ctx.createPattern(DIRT_PATH_TEXTURE,'repeat');
+    ctx.fillStyle=cachedPattern(DIRT_PATH_TEXTURE);
     ctx.fillRect(0,hzL-4,W,H-hzL+4);
     ctx.globalAlpha=1;
   } else {
     ctx.globalAlpha=night?0.05:0.11;
-    ctx.fillStyle=ctx.createPattern(ROAD_NOISE,'repeat');
+    ctx.fillStyle=cachedPattern(ROAD_NOISE);
     ctx.fillRect(0,hzL-4,W,H-hzL+4);
     ctx.globalAlpha=1;
   }
@@ -1823,80 +1832,86 @@ function drawBorne(it,alpha){
 // Repère jour/date à gauche de la route, tous les 2 jours, dans le même style
 // que le portique "OCTOBRE 2026" (fond vert, liseré blanc) mais en petit
 // panneau sur poteau simple. Jour de la semaine (3 lettres) + numéro du jour.
-function drawDayPost(it,alpha){
-  // Borne façon borne kilométrique : fût vert (jour de la semaine + date)
-  // surmonté d'un chapeau rouge arrondi portant le mois en 3 lettres,
-  // séparés par un liseré blanc. Le lundi (début de semaine) garde un cadre
-  // bleu pour repérer où une nouvelle semaine commence.
-  const isWeekStart=isMonday(it.day);
-  // Taille réduite (~70 %) et posée au ras de la chaussée, à l'écart du
-  // panneau d'événement du même côté (qui commence à RW+1,6 m).
-  const lat=-(RW+0.7);
-  const BODY_H=0.95, CAP_H=0.44, HALF_W=0.31;
-  const p0=proj(it.dist,lat-HALF_W,0), p1=proj(it.dist,lat+HALF_W,BODY_H), pc=proj(it.dist,lat+HALF_W,BODY_H+CAP_H);
-  ctx.globalAlpha=alpha;
-  const w2=Math.abs(p1.x-p0.x), h2=p0.y-p1.y;
-  if(w2<1.8){ ctx.globalAlpha=1; return; }
-  const x0=Math.min(p0.x,p1.x), cx=(p0.x+p1.x)/2;
-  const rad=Math.min(w2*0.12,6);
-  const rr=(x,y,w,h,r)=>{ ctx.beginPath(); if(ctx.roundRect) ctx.roundRect(x,y,w,h,r); else ctx.rect(x,y,w,h); };
+// Borne façon borne kilométrique : fût vert (jour de la semaine + date)
+// surmonté d'un chapeau rouge arrondi portant le mois en 3 lettres, séparés
+// par un liseré blanc. Le lundi (début de semaine) garde un cadre bleu.
+// Chaque borne est peinte une seule fois dans une petite image (dégradés et
+// texte compris) puis affichée à l'échelle : la redessiner à chaque image
+// coûtait l'essentiel du temps de rendu sur téléphone.
+const DAYPOST_BODY_H=0.95, DAYPOST_CAP_H=0.44, DAYPOST_HALF_W=0.31;
+const DP_W=160, DP_H=Math.round(DP_W*DAYPOST_BODY_H/(2*DAYPOST_HALF_W)), DP_CAP=Math.round(DP_W*DAYPOST_CAP_H/(2*DAYPOST_HALF_W));
+const DP_PADL=Math.round(DP_W*0.14), DP_PADR=Math.round(DP_W*0.46), DP_PADB=Math.round(DP_W*0.18);
+const DAYPOST_CACHE=new Map();
+if(document.fonts && document.fonts.ready) document.fonts.ready.then(()=>DAYPOST_CACHE.clear());
+function dayPostSprite(day){
+  const key=day+(night?'n':'d');
+  let c=DAYPOST_CACHE.get(key);
+  if(c) return c;
+  c=document.createElement('canvas');
+  c.width=DP_PADL+DP_W+DP_PADR; c.height=DP_CAP+DP_H+DP_PADB;
+  const g=c.getContext('2d');
+  const x0=DP_PADL, w2=DP_W, h2=DP_H, capH=DP_CAP, topY=DP_CAP, groundY=DP_CAP+DP_H, cx=x0+w2/2;
+  const isWeekStart=isMonday(day);
+  const rad=w2*0.12;
+  const rr=(x,y,w,h,r)=>{ g.beginPath(); if(g.roundRect) g.roundRect(x,y,w,h,r); else g.rect(x,y,w,h); };
   // Ombre au sol et socle sombre
-  ctx.fillStyle='rgba(0,0,0,0.22)';
-  ctx.beginPath(); ctx.ellipse(cx+w2*0.15,p0.y,w2*0.75,Math.max(1,w2*0.16),0,0,Math.PI*2); ctx.fill();
-  const baseH=Math.max(1,h2*0.07);
-  ctx.fillStyle=night?'#2a2a27':'#4a4943';
-  rr(x0-w2*0.06,p0.y-baseH,w2*1.12,baseH,Math.min(2,rad)); ctx.fill();
+  g.fillStyle='rgba(0,0,0,0.22)';
+  g.beginPath(); g.ellipse(cx+w2*0.15,groundY,w2*0.75,w2*0.16,0,0,Math.PI*2); g.fill();
+  const baseH=h2*0.07;
+  g.fillStyle=night?'#2a2a27':'#4a4943';
+  rr(x0-w2*0.06,groundY-baseH,w2*1.12,baseH,3); g.fill();
   // Fût vert en dégradé (arrondi), coins bas arrondis
-  const gB=ctx.createLinearGradient(x0,0,x0+w2,0);
+  const gB=g.createLinearGradient(x0,0,x0+w2,0);
   if(night){ gB.addColorStop(0,'#14523b'); gB.addColorStop(0.45,'#0f3f2e'); gB.addColorStop(1,'#0a2b20'); }
   else{ gB.addColorStop(0,'#239062'); gB.addColorStop(0.45,'#17704a'); gB.addColorStop(1,'#0f5234'); }
-  ctx.fillStyle=gB;
-  rr(x0,p1.y,w2,h2-baseH,[0,0,rad,rad]); ctx.fill();
+  g.fillStyle=gB;
+  rr(x0,topY,w2,h2-baseH,[0,0,rad,rad]); g.fill();
   // Cadre intérieur blanc arrondi (bleu le lundi : début de semaine)
-  ctx.strokeStyle=isWeekStart?'#8ab4f8':'rgba(245,243,234,0.9)';
-  ctx.lineWidth=Math.max(1,h2*(isWeekStart?0.06:0.035));
-  rr(x0+w2*0.11,p1.y+h2*0.08,w2*0.78,h2*0.74,rad*0.7); ctx.stroke();
+  g.strokeStyle=isWeekStart?'#8ab4f8':'rgba(245,243,234,0.9)';
+  g.lineWidth=h2*(isWeekStart?0.06:0.035);
+  rr(x0+w2*0.11,topY+h2*0.08,w2*0.78,h2*0.74,rad*0.7); g.stroke();
   // Chapeau rouge arrondi en dégradé, avec reflet
-  const capH=p1.y-pc.y, r=Math.min(w2/2,capH);
-  if(capH<=0||h2<=0){ ctx.globalAlpha=1; return; } // borne derrière la caméra (vue plongeante)
-  const gC=ctx.createLinearGradient(x0,0,x0+w2,0);
+  const r=Math.min(w2/2,capH);
+  const gC=g.createLinearGradient(x0,0,x0+w2,0);
   if(night){ gC.addColorStop(0,'#b52a2a'); gC.addColorStop(1,'#7a1717'); }
   else{ gC.addColorStop(0,'#ef5350'); gC.addColorStop(0.5,'#d32f2f'); gC.addColorStop(1,'#a31f1f'); }
-  ctx.fillStyle=gC;
-  ctx.beginPath();
-  ctx.moveTo(x0,p1.y);
-  ctx.lineTo(x0,pc.y+r);
-  ctx.ellipse(cx,pc.y+r,w2/2,r,0,Math.PI,0);
-  ctx.lineTo(x0+w2,p1.y);
-  ctx.closePath();
-  ctx.fill();
-  if(!night && w2>8){
-    ctx.fillStyle='rgba(255,255,255,0.28)';
-    ctx.beginPath(); ctx.ellipse(cx-w2*0.18,pc.y+r*0.75,w2*0.16,r*0.42,-0.5,0,Math.PI*2); ctx.fill();
+  g.fillStyle=gC;
+  g.beginPath(); g.moveTo(x0,topY); g.lineTo(x0,r); g.ellipse(cx,r,w2/2,r,0,Math.PI,0); g.lineTo(x0+w2,topY); g.closePath(); g.fill();
+  if(!night){
+    g.fillStyle='rgba(255,255,255,0.28)';
+    g.beginPath(); g.ellipse(cx-w2*0.18,r*0.75,w2*0.16,r*0.42,-0.5,0,Math.PI*2); g.fill();
   }
   // Liseré blanc entre chapeau et fût
-  ctx.fillStyle='#f5f3ea';
-  ctx.fillRect(x0,p1.y-Math.max(1,h2*0.03),w2,Math.max(1.5,h2*0.06));
+  g.fillStyle='#f5f3ea';
+  g.fillRect(x0,topY-h2*0.03,w2,h2*0.06);
+  // Textes : mois dans le chapeau, jour de la semaine et date dans le fût
   const fs=w2*0.55;
-  if(fs>3.5){
-    const dow=['DIM','LUN','MAR','MER','JEU','VEN','SAM'][((it.day%7)+7)%7];
-    const dayNum=new Date(MONTH_ORIGIN_MS+it.day*86400000).getUTCDate();
-    ctx.textAlign='center'; ctx.textBaseline='middle';
-    // Mois (3 lettres, JUN/JUL pour juin/juillet) dans le chapeau rouge
-    const mois=['JAN','FÉV','MAR','AVR','MAI','JUN','JUL','AOÛ','SEP','OCT','NOV','DÉC'][new Date(MONTH_ORIGIN_MS+it.day*86400000).getUTCMonth()];
-    ctx.fillStyle='#fff';
-    ctx.font=`700 ${Math.min(fs*0.8,capH*0.62).toFixed(1)}px Oswald, Arial, sans-serif`;
-    const moisW=ctx.measureText(mois).width, capMaxW=w2*0.86;
-    if(moisW>capMaxW) ctx.font=`700 ${(Math.min(fs*0.8,capH*0.62)*capMaxW/moisW).toFixed(1)}px Oswald, Arial, sans-serif`;
-    ctx.fillText(mois, cx, pc.y+capH*0.56);
-    ctx.textBaseline='top';
-    ctx.font=`600 ${fs.toFixed(1)}px Oswald, Arial, sans-serif`;
-    const dowW=ctx.measureText(dow).width, maxW=w2*0.74;
-    if(dowW>maxW) ctx.font=`600 ${(fs*maxW/dowW).toFixed(1)}px Oswald, Arial, sans-serif`;
-    ctx.fillText(dow, cx, p1.y+h2*0.13);
-    ctx.font=`700 ${(fs*1.05).toFixed(1)}px Oswald, Arial, sans-serif`;
-    ctx.fillText(String(dayNum), cx, p1.y+h2*0.42);
-  }
+  const dt=new Date(MONTH_ORIGIN_MS+day*86400000);
+  const dow=['DIM','LUN','MAR','MER','JEU','VEN','SAM'][((day%7)+7)%7];
+  const mois=['JAN','FÉV','MAR','AVR','MAI','JUN','JUL','AOÛ','SEP','OCT','NOV','DÉC'][dt.getUTCMonth()];
+  g.fillStyle='#fff'; g.textAlign='center'; g.textBaseline='middle';
+  g.font=`700 ${Math.min(fs*0.8,capH*0.62).toFixed(1)}px Oswald, Arial, sans-serif`;
+  g.fillText(mois, cx, capH*0.56, w2*0.86);
+  g.textBaseline='top';
+  g.font=`600 ${fs.toFixed(1)}px Oswald, Arial, sans-serif`;
+  g.fillText(dow, cx, topY+h2*0.13, w2*0.74);
+  g.font=`700 ${(fs*1.05).toFixed(1)}px Oswald, Arial, sans-serif`;
+  g.fillText(String(dt.getUTCDate()), cx, topY+h2*0.42, w2*0.78);
+  if(DAYPOST_CACHE.size>120) DAYPOST_CACHE.clear();
+  DAYPOST_CACHE.set(key,c);
+  return c;
+}
+function drawDayPost(it,alpha){
+  // Taille réduite et posée au ras de la chaussée, à l'écart du panneau
+  // d'événement du même côté (qui commence à RW+1,6 m).
+  const lat=-(RW+0.7);
+  const p0=proj(it.dist,lat-DAYPOST_HALF_W,0), p1=proj(it.dist,lat+DAYPOST_HALF_W,DAYPOST_BODY_H), pc=proj(it.dist,lat+DAYPOST_HALF_W,DAYPOST_BODY_H+DAYPOST_CAP_H);
+  const w2=Math.abs(p1.x-p0.x), h2=p0.y-p1.y, capH=p1.y-pc.y;
+  if(w2<1.8 || h2<=0 || capH<=0) return; // trop loin, ou derrière la caméra (vue plongeante)
+  const k=w2/DP_W, x0=Math.min(p0.x,p1.x);
+  const spr=dayPostSprite(it.day);
+  ctx.globalAlpha=alpha;
+  ctx.drawImage(spr, x0-DP_PADL*k, pc.y, spr.width*k, spr.height*k);
   ctx.globalAlpha=1;
 }
 
@@ -1983,6 +1998,29 @@ function signAccent(e){
 // Un seul panneau par jour et par côté de la route : les événements du jour
 // y sont empilés les uns sous les autres (photo éventuelle + titre), séparés
 // par un filet. Le panneau grandit en hauteur selon son contenu.
+// Coupure d'un titre en lignes pour une largeur de panneau de référence :
+// indépendante de la distance, donc calculée une fois par titre et gardée.
+const SIGN_LINES_CACHE=new Map();
+if(document.fonts && document.fonts.ready) document.fonts.ready.then(()=>SIGN_LINES_CACHE.clear());
+function signTitleLines(title, maxLines){
+  const key=maxLines+'|'+title;
+  let lines=SIGN_LINES_CACHE.get(key);
+  if(lines) return lines;
+  const REF_W=120;
+  ctx.save();
+  ctx.font=`500 ${(REF_W*0.11).toFixed(1)}px Archivo, Arial, sans-serif`;
+  lines=[]; let line='';
+  for(const wd of title.split(' ')){
+    const test=line?line+' '+wd:wd;
+    if(ctx.measureText(test).width>REF_W*0.8 && line){ lines.push(line); line=wd; if(lines.length===maxLines) break; }
+    else line=test;
+  }
+  if(lines.length<maxLines && line) lines.push(line);
+  ctx.restore();
+  if(SIGN_LINES_CACHE.size>500) SIGN_LINES_CACHE.clear();
+  SIGN_LINES_CACHE.set(key,lines);
+  return lines;
+}
 function drawEventSign(it,alpha){
   const evs=it.evs;
   const lat=it.side*(RW+3.0);
@@ -1995,6 +2033,23 @@ function drawEventSign(it,alpha){
   const pL0=proj(it.dist,lat-1.5,hTop), pR0=proj(it.dist,lat+1.5,hTop);
   const w=pR0.x-pL0.x, s=pR0.s;
   if(w<3||s<=0) return;
+  // Panneau lointain (texte illisible à cette taille) : simple rectangle
+  // avec cadre et poteau, sans mise en page ni photo — bien moins coûteux.
+  if(w<12){
+    const wh=Math.min(2.6*evs.length,0.9+0.8*evs.length);
+    const pTL=proj(it.dist,lat-1.5,hTop+wh), pBR=proj(it.dist,lat+1.5,hTop), pG=proj(it.dist,lat,0);
+    if(pBR.x<0||pTL.x>W||pBR.y<signClipTop()) return;
+    ctx.globalAlpha=alpha;
+    ctx.fillStyle=night?'#4a4943':'#6b6a63';
+    ctx.fillRect(pG.x-Math.max(0.5,w*0.04),pBR.y,Math.max(1,w*0.08),pG.y-pBR.y);
+    ctx.fillStyle=signAccent(evs[0]);
+    ctx.fillRect(pTL.x,pTL.y,pBR.x-pTL.x,pBR.y-pTL.y);
+    const bw=Math.max(0.6,w*0.07);
+    ctx.fillStyle=night?'#e7e3d6':'#fbf9f2';
+    ctx.fillRect(pTL.x+bw,pTL.y+bw,pBR.x-pTL.x-2*bw,pBR.y-pTL.y-2*bw);
+    ctx.globalAlpha=1;
+    return;
+  }
 
   // Tout est proportionnel à la largeur du panneau (texte compris) : la
   // coupure des titres est calculée une fois pour une largeur de référence,
@@ -2005,18 +2060,9 @@ function drawEventSign(it,alpha){
   const textW=w-w*0.18;
   const titleLinesMax=3;
   const multi=evs.length>1;
-  const REF_W=120;
-  ctx.font=`500 ${(REF_W*0.11).toFixed(1)}px Archivo, Arial, sans-serif`;
   const entries=evs.map(e=>{
     const photo=resolveSignPhoto(e);
-    const words=withTime(e).split(' ');
-    const lines=[]; let line='';
-    for(const wd of words){
-      const test=line?line+' '+wd:wd;
-      if(ctx.measureText(test).width>REF_W*0.8 && line){ lines.push(line); line=wd; if(lines.length===titleLinesMax) break; }
-      else line=test;
-    }
-    if(lines.length<titleLinesMax && line) lines.push(line);
+    const lines=signTitleLines(withTime(e), titleLinesMax);
     const imgSize=photo.img ? Math.min(w-pad*2, w*(multi?0.45:0.55)) : 0;
     const hPx=pad*0.6+(photo.img?imgSize+pad*0.5:0)+lines.length*fs*1.2+pad*0.5;
     return {e,photo,lines,imgSize,hPx};

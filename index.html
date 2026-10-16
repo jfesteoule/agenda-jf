@@ -359,7 +359,7 @@ canvas#c{position:absolute;inset:0;width:100%;height:100%;touch-action:none;poin
     <div class="leg" id="legWeekend"><div class="legline"></div>Week-end</div>
     <div class="leg" id="legVac"><div class="legline" style="background:#ffd600;"></div><span id="legVacTxt">Vacances scolaires</span></div>
     <button id="legSync" class="leg" type="button" style="display:none;cursor:pointer;border:none;font-family:inherit;color:inherit;text-align:left;" title="Relancer la synchro Google Agenda"><i class="ti ti-refresh" style="font-size:12px;"></i><span id="legSyncTxt"></span></button>
-    <div id="appVersion" style="font-size:10px;color:#fff;text-shadow:0 1px 2px rgba(0,0,0,0.6);text-align:right;padding-right:4px;">Version 2026-10-16 23:08 · <a href="confidentialite.html" style="color:#fff">Confidentialité</a> · <a href="conditions.html" style="color:#fff">Conditions</a></div>
+    <div id="appVersion" style="font-size:10px;color:#fff;text-shadow:0 1px 2px rgba(0,0,0,0.6);text-align:right;padding-right:4px;">Version 2026-10-16 23:27 · <a href="confidentialite.html" style="color:#fff">Confidentialité</a> · <a href="conditions.html" style="color:#fff">Conditions</a></div>
   </div>
   <div id="zbx">
     <button class="zb" id="zi">+</button>
@@ -2067,6 +2067,35 @@ function drawMiniDiamondCard(x,y,w,h){
   ctx.beginPath(); ctx.moveTo(cx,cy-dy); ctx.lineTo(cx+dx,cy); ctx.lineTo(cx,cy+dy); ctx.lineTo(cx-dx,cy); ctx.closePath(); ctx.fill();
   ctx.fillStyle=fill;
 }
+// Logo Gym Active Meylan (fourni par l'utilisateur), réduit de moitié en
+// moitié pour rester net et ne pas scintiller une fois tout petit.
+const GYM_LOGO=new Image(); GYM_LOGO.src='logo-gym-active.png';
+let gymLogoLevels=null;
+function gymLogoReady(){
+  if(gymLogoLevels) return true;
+  if(!GYM_LOGO.complete || !GYM_LOGO.naturalWidth) return false;
+  gymLogoLevels=[GYM_LOGO];
+  while(gymLogoLevels[gymLogoLevels.length-1].width>20){
+    const prev=gymLogoLevels[gymLogoLevels.length-1], c=document.createElement('canvas');
+    c.width=Math.round(prev.width/2); c.height=Math.round(prev.height/2);
+    const g=c.getContext('2d'); g.imageSmoothingQuality='high'; g.drawImage(prev,0,0,c.width,c.height);
+    gymLogoLevels.push(c);
+  }
+  return true;
+}
+// Mots suivis d'une petite image dans le texte des panneaux.
+const INLINE_ICONS=[
+  { re:/bridge/i, ready:()=>true,
+    draw:(x,y,fs)=>{ const h=fs*0.95, w=h*0.7; drawMiniDiamondCard(x,y+fs*0.02,w,h); return w; } },
+  { re:/pilates|pilâtes|stretching/i, ready:gymLogoReady,
+    draw:(x,y,fs)=>{
+      const h=fs*1.15, w=h*GYM_LOGO.naturalWidth/GYM_LOGO.naturalHeight;
+      let spr=gymLogoLevels[0]; for(const l of gymLogoLevels){ if(l.width>=w) spr=l; else break; }
+      ctx.imageSmoothingEnabled=true; ctx.imageSmoothingQuality='high';
+      ctx.drawImage(spr, x, y-fs*0.08, w, h);
+      return w;
+    } }
+];
 function drawEventSign(it,alpha){
   const evs=it.evs;
   const lat=it.side*(RW+3.0);
@@ -2237,15 +2266,17 @@ function drawEventSign(it,alpha){
         while(ctx.measureText(t).width>textW && t.length>1) t=t.slice(0,-1);
         if(t!==ln) t=t.slice(0,-1)+'…';
         const tx=pTL.x+w*0.09, ty=y0+i2*lh;
-        // Mot « bridge » : petite carte à carreau rouge juste après le mot.
-        const m=/bridge/i.exec(t);
+        // Petite image juste après certains mots (voir INLINE_ICONS) :
+        // carte à carreau pour « bridge », logo Gym Active pour pilates/stretching.
+        let m=null, icon=null;
+        for(const ic of INLINE_ICONS){ const r=ic.re.exec(t); if(r && ic.ready()){ m=r; icon=ic; break; } }
         if(m){
           const head=t.slice(0,m.index+m[0].length), tail=t.slice(m.index+m[0].length);
           ctx.fillText(head, tx, ty);
-          const ch=efs*0.95, cw=ch*0.7, gap=efs*0.25;
-          const cx0=tx+ctx.measureText(head).width+gap, cy0=ty+efs*0.02;
-          drawMiniDiamondCard(cx0, cy0, cw, ch);
-          if(tail) ctx.fillText(tail, cx0+cw+gap*0.6, ty);
+          const gap=efs*0.25;
+          const ix=tx+ctx.measureText(head).width+gap;
+          const iw=icon.draw(ix, ty, efs);
+          if(tail) ctx.fillText(tail, ix+iw+gap*0.6, ty);
         }else ctx.fillText(t, tx, ty);
       });
     }

@@ -419,7 +419,7 @@ canvas#c{position:absolute;inset:0;width:100%;height:100%;touch-action:none;poin
     <div class="leg" id="legWeekend"><div class="legline"></div>Week-end</div>
     <div class="leg" id="legVac"><div class="legline" style="background:#ffd600;"></div><span id="legVacTxt">Vacances scolaires</span></div>
     <button id="legSync" class="leg" type="button" style="display:none;cursor:pointer;border:none;font-family:inherit;color:inherit;text-align:left;" title="Relancer la synchro Google Agenda"><i class="ti ti-refresh" style="font-size:12px;"></i><span id="legSyncTxt"></span></button>
-    <div id="appVersion" style="font-size:10px;color:#fff;text-shadow:0 1px 2px rgba(0,0,0,0.6);text-align:right;padding-right:4px;">Version 2026-10-17 19:16 · <a href="confidentialite.html" style="color:#fff">Confidentialité</a> · <a href="conditions.html" style="color:#fff">Conditions</a></div>
+    <div id="appVersion" style="font-size:10px;color:#fff;text-shadow:0 1px 2px rgba(0,0,0,0.6);text-align:right;padding-right:4px;">Version 2026-10-17 20:15 · <a href="confidentialite.html" style="color:#fff">Confidentialité</a> · <a href="conditions.html" style="color:#fff">Conditions</a></div>
   </div>
   <div id="zbx">
     <button class="zb" id="zi">+</button>
@@ -2585,6 +2585,58 @@ function drawRouteObjects(){
   });
 }
 
+// === Nuit : phares, feux arrière, frontale ===
+// Faisceau posé sur la chaussée devant le véhicule, de d0 à d1 mètres devant
+// la caméra (demi-largeur w0 → w1), en lumière additive : il éclaire aussi ce
+// qu'il traverse (route, marquages, pied des panneaux).
+function drawBeam(lat, d0, d1, w0, w1, a){
+  const pn=proj(d0,lat,0), pf=proj(d1,lat,0);
+  if(!isFinite(pn.y) || !isFinite(pf.y)) return;
+  ctx.save(); ctx.globalCompositeOperation='lighter';
+  // Couches de plus en plus étroites : bords doux, centre plus vif (un flou
+  // de canvas serait trop coûteux sur téléphone).
+  [[1,0.17],[0.86,0.17],[0.73,0.18],[0.61,0.18],[0.5,0.19],[0.4,0.2]].forEach(([kw,ka])=>{
+    const N=14, L=[], R=[];
+    for(let i=0;i<=N;i++){
+      const t=i/N, d=d0+(d1-d0)*t, hw=(w0+(w1-w0)*Math.pow(t,0.75))*kw;
+      L.push(proj(d,lat-hw,0)); R.push(proj(d,lat+hw,0));
+    }
+    const A=a*ka/0.35;
+    const g=ctx.createLinearGradient(pn.x,pn.y,pf.x,pf.y);
+    g.addColorStop(0,'rgba(255,236,180,0)');
+    g.addColorStop(0.07,'rgba(255,236,180,'+(A*0.35)+')');
+    g.addColorStop(0.5,'rgba(255,232,170,'+(A*0.2)+')');
+    g.addColorStop(1,'rgba(255,230,160,0)');
+    ctx.fillStyle=g;
+    ctx.beginPath();
+    L.forEach((p,i)=>i?ctx.lineTo(p.x,p.y):ctx.moveTo(p.x,p.y));
+    for(let i=R.length-1;i>=0;i--) ctx.lineTo(R[i].x,R[i].y);
+    ctx.closePath(); ctx.fill();
+  });
+  ctx.restore();
+}
+// Point lumineux : halo coloré + cœur presque blanc.
+function drawGlow(x, y, r, rgb, a){
+  ctx.save(); ctx.globalCompositeOperation='lighter';
+  const g=ctx.createRadialGradient(x,y,0,x,y,r);
+  g.addColorStop(0,'rgba('+rgb+','+a+')'); g.addColorStop(0.25,'rgba('+rgb+','+(a*0.55)+')'); g.addColorStop(1,'rgba('+rgb+',0)');
+  ctx.fillStyle=g; ctx.beginPath(); ctx.arc(x,y,r,0,Math.PI*2); ctx.fill();
+  ctx.fillStyle='rgba(255,235,225,'+a+')'; ctx.beginPath(); ctx.arc(x,y,Math.max(0.8,r*0.16),0,Math.PI*2); ctx.fill();
+  ctx.restore();
+}
+// Reflet rouge des feux arrière sur la chaussée, sous le véhicule.
+function drawTailReflection(x, y, rx, a){
+  ctx.save(); ctx.globalCompositeOperation='lighter';
+  ctx.translate(x,y); ctx.scale(1,0.22);
+  const g=ctx.createRadialGradient(0,0,0,0,0,rx);
+  g.addColorStop(0,'rgba(255,40,30,'+a+')'); g.addColorStop(1,'rgba(255,40,30,0)');
+  ctx.fillStyle=g; ctx.beginPath(); ctx.arc(0,0,rx,0,Math.PI*2); ctx.fill();
+  ctx.restore();
+}
+// Position des feux arrière dans les images de la Méhari (fractions de
+// l'image) : vue arrière, trois quarts gauche, trois quarts droite.
+const MEHARI_TAIL={ rear:[0.308,0.688], left:[0.308,0.677], right:[0.315,0.685], y:0.595 };
+
 // === Méhari décapotable vue de l'arrière, conducteur au volant ===
 // Photo réaliste (Canva) à la place du dessin vectoriel ; seule la plaque
 // « JF 1968 » reste peinte par le code par-dessus (texte fiable).
@@ -2645,11 +2697,18 @@ function drawMehari(){
   const target=drawW;
   let spr=levels[0];
   for(const lv of levels){ if(lv.width>=target) spr=lv; else break; }
+  if(night) drawBeam(CL, CD+3.2, CD+60, 0.8, 3.6, 0.5);
+  const x0=cxc-drawW/2, y0=yGround-drawH*0.832;
   ctx.save();
   if(night) ctx.filter='brightness(0.4) saturate(0.75)';
   ctx.imageSmoothingEnabled=true; ctx.imageSmoothingQuality='high';
-  ctx.drawImage(spr, cxc-drawW/2, yGround-drawH*0.832, drawW, drawH);
+  ctx.drawImage(spr, x0, y0, drawW, drawH);
   ctx.restore();
+  if(night){
+    const tl=MEHARI_TAIL[carImg===turnImg ? (mehariTurnState<0?'left':'right') : 'rear'];
+    drawTailReflection(cxc, yGround+w*0.02, w*0.75, 0.32);
+    tl.forEach(fx=>drawGlow(x0+fx*drawW, y0+MEHARI_TAIL.y*drawH, drawW*0.06, '255,30,20', 0.95));
+  }
 }
 
 // Voiture + plaque peintes une fois par image source, puis réduites de
@@ -2710,19 +2769,49 @@ function drawWalker(){
     if(!img.complete||!img.naturalWidth) return;
     // Taille réelle : ~1,8 m de haut (silhouette = 87 % de la hauteur d'image).
     const ppm=Math.abs(w)/0.48, drawH=1.8*ppm/0.874, drawW=drawH*img.naturalWidth/img.naturalHeight;
+    const x0=pGround.x-drawW/2, y0=pGround.y-drawH*(186/199);
+    // Nuit : frontale du randonneur (rond de lumière quelques mètres devant,
+    // halo autour de la tête, petit feu rouge clignotant sur le boîtier
+    // arrière) ; phare et feu arrière rouge (sous la sacoche) pour le vélo.
+    if(night){
+      if(vehicle==='hiker') drawBeam(0, CD+2.2, CD+18, 0.5, 2.0, 0.42);
+      else drawBeam(0, CD+1.8, CD+40, 0.4, 2.6, 0.48);
+    }
     if(night) ctx.filter='brightness(0.55)';
     ctx.imageSmoothingEnabled=true; ctx.imageSmoothingQuality='high';
-    ctx.drawImage(img, pGround.x-drawW/2, pGround.y-drawH*(186/199), drawW, drawH);
+    ctx.drawImage(img, x0, y0, drawW, drawH);
     if(night) ctx.filter='none';
+    if(night){
+      if(vehicle==='hiker'){
+        // Bandeau de la frontale autour de la tête, boîtier à l'arrière avec
+        // sa petite lumière rouge qui clignote doucement.
+        const hx=x0+0.493*drawW, hy=y0+0.097*drawH, hw=drawW*0.052;
+        ctx.save(); ctx.strokeStyle='#15171a'; ctx.lineWidth=Math.max(1,drawH*0.011); ctx.lineCap='round';
+        ctx.beginPath(); ctx.moveTo(hx-hw,hy-drawH*0.004); ctx.quadraticCurveTo(hx,hy+drawH*0.008,hx+hw,hy-drawH*0.004); ctx.stroke();
+        ctx.fillStyle='#202327'; const bw=drawW*0.032, bh=drawH*0.018; ctx.fillRect(hx-bw/2,hy-bh/2+drawH*0.002,bw,bh);
+        ctx.restore();
+        const blink=0.55+0.45*Math.sin(performance.now()/260);
+        drawGlow(hx, hy+drawH*0.002, drawW*0.05, '255,30,20', 0.9*blink);
+      }else{
+        drawTailReflection(pGround.x, pGround.y, drawW*0.35, 0.28);
+        drawGlow(x0+0.5*drawW, y0+0.6*drawH, drawW*0.07, '255,30,20', 0.95);
+      }
+    }
     return;
   }
   if(!walkerImgLoaded) return;
   const scooterImg=charImg('scooter');
   const aspect=scooterImg.naturalHeight/scooterImg.naturalWidth;
   const drawW=Math.abs(w)*3.3, drawH=drawW*aspect;
+  if(night) drawBeam(0, CD+1.5, CD+32, 0.35, 2.2, 0.45);
   if(night) ctx.filter='brightness(0.55)';
   ctx.drawImage(scooterImg, pGround.x-drawW/2, pGround.y-drawH, drawW, drawH);
   if(night) ctx.filter='none';
+  if(night){
+    // Feu arrière sur le garde-boue de la roue arrière.
+    drawTailReflection(pGround.x, pGround.y, drawW*0.3, 0.28);
+    drawGlow(pGround.x-drawW/2+(scooterImg===WALKER_IMG?0.48:0.5)*drawW, pGround.y-drawH*(1-0.885), drawW*0.06, '255,30,20', 0.95);
+  }
 }
 
 // Vue conducteur (POV) : un bout du volant + du capot (ou du guidon + du
@@ -2747,6 +2836,7 @@ function drawFirstPersonOverlay(){
   // pas cacher les panneaux au-dessus.
   const shiftDown=walkMode?drawH*0.08:0;
   const x0=(W-drawW)/2, y0=H-drawH+shiftDown;
+  if(night) drawBeam(0, 2, walkMode?22:36, walkMode?0.5:1.2, walkMode?2.2:3.6, 0.45);
   if(night) ctx.filter='brightness(0.55)';
   if(x0>0){
     // Bandes prises un peu à l'intérieur : les coins de l'image sont arrondis

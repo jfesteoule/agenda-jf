@@ -391,7 +391,7 @@ canvas#c{position:absolute;inset:0;width:100%;height:100%;touch-action:none;poin
     <div class="leg" id="legWeekend"><div class="legline"></div>Week-end</div>
     <div class="leg" id="legVac"><div class="legline" style="background:#ffd600;"></div><span id="legVacTxt">Vacances scolaires</span></div>
     <button id="legSync" class="leg" type="button" style="display:none;cursor:pointer;border:none;font-family:inherit;color:inherit;text-align:left;" title="Relancer la synchro Google Agenda"><i class="ti ti-refresh" style="font-size:12px;"></i><span id="legSyncTxt"></span></button>
-    <div id="appVersion" style="font-size:10px;color:#fff;text-shadow:0 1px 2px rgba(0,0,0,0.6);text-align:right;padding-right:4px;">Version 2026-10-17 12:44 · <a href="confidentialite.html" style="color:#fff">Confidentialité</a> · <a href="conditions.html" style="color:#fff">Conditions</a></div>
+    <div id="appVersion" style="font-size:10px;color:#fff;text-shadow:0 1px 2px rgba(0,0,0,0.6);text-align:right;padding-right:4px;">Version 2026-10-17 12:56 · <a href="confidentialite.html" style="color:#fff">Confidentialité</a> · <a href="conditions.html" style="color:#fff">Conditions</a></div>
   </div>
   <div id="zbx">
     <button class="zb" id="zi">+</button>
@@ -3051,8 +3051,9 @@ document.getElementById('musicHide').addEventListener('click',()=>{
 });
 document.getElementById('musicWithPlay').addEventListener('change',e=>{ try{ localStorage.setItem(MUSIC_WITHPLAY_KEY, e.target.checked?'1':'0'); }catch(_){} });
 loadYouTubeApi().catch(()=>{});
+try{ if(/[?&]list=(LM|LL)\b/.test(localStorage.getItem(MUSIC_URL_KEY)||'')) localStorage.removeItem(MUSIC_URL_KEY); }catch(e){}
 try{
-  document.getElementById('musicUrl').value=localStorage.getItem(MUSIC_URL_KEY)||'https://music.youtube.com/playlist?list=LM';
+  document.getElementById('musicUrl').value=localStorage.getItem(MUSIC_URL_KEY)||'https://music.youtube.com/playlist?list=PL4ZG02_3Dv4cTK5rYj5K-lt7Tj-1iKMvq';
   document.getElementById('musicWithPlay').checked=localStorage.getItem(MUSIC_WITHPLAY_KEY)!=='0';
 }catch(e){}
 document.getElementById('revbtn').addEventListener('click',()=>{

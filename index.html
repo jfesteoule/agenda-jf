@@ -394,7 +394,7 @@ canvas#c{position:absolute;inset:0;width:100%;height:100%;touch-action:none;poin
     <div class="leg" id="legWeekend"><div class="legline"></div>Week-end</div>
     <div class="leg" id="legVac"><div class="legline" style="background:#ffd600;"></div><span id="legVacTxt">Vacances scolaires</span></div>
     <button id="legSync" class="leg" type="button" style="display:none;cursor:pointer;border:none;font-family:inherit;color:inherit;text-align:left;" title="Relancer la synchro Google Agenda"><i class="ti ti-refresh" style="font-size:12px;"></i><span id="legSyncTxt"></span></button>
-    <div id="appVersion" style="font-size:10px;color:#fff;text-shadow:0 1px 2px rgba(0,0,0,0.6);text-align:right;padding-right:4px;">Version 2026-10-17 16:32 · <a href="confidentialite.html" style="color:#fff">Confidentialité</a> · <a href="conditions.html" style="color:#fff">Conditions</a></div>
+    <div id="appVersion" style="font-size:10px;color:#fff;text-shadow:0 1px 2px rgba(0,0,0,0.6);text-align:right;padding-right:4px;">Version 2026-10-17 16:58 · <a href="confidentialite.html" style="color:#fff">Confidentialité</a> · <a href="conditions.html" style="color:#fff">Conditions</a></div>
   </div>
   <div id="zbx">
     <button class="zb" id="zi">+</button>
@@ -2159,11 +2159,11 @@ const INLINE_ICONS=[
 // poteau en bois, plaque du jour en haut, marque GR rouge et blanche).
 function drawHikeSign(it,alpha){
   const evs=it.evs;
-  const side=it.side, lat=side*(RW+4.5);
-  const pL=proj(it.dist,lat-3.3,0.5), pR=proj(it.dist,lat+3.3,0.5);
+  const side=it.side, lat=side*(RW+3.3);
+  const pL=proj(it.dist,lat-2.1,0.5), pR=proj(it.dist,lat+2.1,0.5);
   const w=pR.x-pL.x; if(w<3||pR.s<=0) return;
-  const k=w/6.6; // pixels par mètre à cette distance
-  const bladeH=0.72, gapH=0.12, plateH=0.95, plateW=1.8;
+  const k=w/4.2; // pixels par mètre à cette distance
+  const bladeH=1.15, gapH=0.12, plateH=0.95, plateW=1.8;
   const n=evs.length;
   const topY=0.5+n*(bladeH+gapH)+plateH+0.15; // hauteur du haut du poteau (m)
   const pTop=proj(it.dist,lat,topY), pG=proj(it.dist,lat,0);
@@ -2199,61 +2199,65 @@ function drawHikeSign(it,alpha){
   // Lames en flèche, une par événement
   evs.forEach((e,i)=>{
     const yTop=topY-plateH-0.15-gapH-i*(bladeH+gapH);
-    const a=proj(it.dist,lat-3.3,yTop), b=proj(it.dist,lat+3.3,yTop-bladeH);
+    const a=proj(it.dist,lat-2.1,yTop), b=proj(it.dist,lat+2.1,yTop-bladeH);
     const x0=a.x, y0=a.y, bw=b.x-a.x, bh=b.y-a.y, tip=0;
     ctx.fillStyle=yellow;
-    ctx.beginPath(); ctx.roundRect ? ctx.roundRect(x0,y0,bw,bh,Math.min(bh*0.12,4)) : ctx.rect(x0,y0,bw,bh); ctx.fill();
+    ctx.beginPath(); ctx.roundRect ? ctx.roundRect(x0,y0,bw,bh,Math.min(bh*0.08,4)) : ctx.rect(x0,y0,bw,bh); ctx.fill();
     ctx.strokeStyle='rgba(0,0,0,0.25)'; ctx.lineWidth=Math.max(0.5,0.02*k); ctx.stroke();
     // Liseré de la couleur de l'agenda au bord de la lame côté poteau
     ctx.fillStyle=signAccent(e);
     ctx.fillRect(side>0?x0:x0+bw-Math.max(1,0.05*k), y0, Math.max(1,0.05*k), bh);
-    const fs=bh*0.42;
+    // Lame haute : titre en gros sur deux lignes à gauche, heure + flèche et
+    // miniature photo dans une colonne à droite.
+    const fs=bh*0.27;
     if(fs>=3){
-      ctx.fillStyle=ink; ctx.textBaseline='middle';
+      ctx.textBaseline='middle';
       const when=e.time ? e.time.replace(':','h') : '';
       const arrow=side>0?'→':'←';
-      const right=(when?when+'  ':'')+arrow;
-      ctx.font=`700 ${(fs*0.9).toFixed(1)}px Archivo, Arial, sans-serif`;
+      const right=(when?when+' ':'')+arrow;
+      ctx.font=`700 ${(fs*0.85).toFixed(1)}px Archivo, Arial, sans-serif`;
       const rw=ctx.measureText(right).width;
-      // Marque GR rouge et blanche avant le titre
-      const gx=side>0 ? x0+bw*0.05 : x0+bw*0.05+rw+bw*0.04, gy=y0+bh*0.3, gw=fs*0.9, gh=fs*0.5;
-      ctx.fillStyle='#fff'; ctx.fillRect(gx,gy,gw,gh/2); ctx.fillStyle='#d62828'; ctx.fillRect(gx,gy+gh/2,gw,gh/2);
-      ctx.fillStyle=ink;
-      // Miniature de la photo (ouvrable au toucher), juste avant l'heure.
       const ph=resolveSignPhoto(e);
-      const thS=ph.img ? bh*0.82 : 0, thGap=ph.img ? bw*0.025 : 0;
-      ctx.font=`500 ${fs.toFixed(1)}px Archivo, Arial, sans-serif`;
-      // Symbole éventuel après un mot (carte à carreau, logo Gym Active).
+      const thS=ph.img ? bh*0.48 : 0;
+      const colW=Math.max(rw, thS);
+      const colX=x0+bw*0.96-colW;
+      ctx.fillStyle=ink; ctx.textAlign='right';
+      ctx.fillText(right, x0+bw*0.96, ph.img ? y0+bh*0.25 : y0+bh/2);
+      // Marque GR rouge et blanche en haut à gauche
+      const gx=x0+bw*0.05, gw=fs*0.8, gh=fs*0.45, gy=y0+bh*0.28-gh/2;
+      ctx.fillStyle='#fff'; ctx.fillRect(gx,gy,gw,gh/2); ctx.fillStyle='#d62828'; ctx.fillRect(gx,gy+gh/2,gw,gh/2);
+      // Titre coupé en deux lignes au plus (symbole compté dans la largeur)
       let icon=null, im=null;
-      for(const ic of INLINE_ICONS){ const r=ic.re.exec(e.title||''); if(r && ic.ready()){ icon=ic; im=r; break; } }
-      const iconW=icon ? fs*1.4 : 0;
-      let t=e.title||''; const maxT=bw*0.86-rw-gw-bw*0.06-thS-thGap-iconW;
-      while(t.length>1 && ctx.measureText(t).width>maxT) t=t.slice(0,-1);
-      if(t!==(e.title||'')) t=t.slice(0,-1)+'…';
-      const tx=gx+gw+bw*0.03, ty=y0+bh/2;
-      // Heure + flèche, côté pointe ; miniature entre le titre et l'heure.
-      ctx.font=`700 ${(fs*0.9).toFixed(1)}px Archivo, Arial, sans-serif`;
-      let thX;
-      if(side>0){
-        ctx.textAlign='right'; ctx.fillText(right, x0+bw*0.97, ty);
-        thX=x0+bw*0.97-rw-thGap-thS;
-      }else{
-        ctx.textAlign='left'; ctx.fillText(right, x0+bw*0.03, ty);
-        thX=x0+bw*0.97-thS; // côté poteau, après le titre
-      }
-      ctx.font=`500 ${fs.toFixed(1)}px Archivo, Arial, sans-serif`; ctx.textAlign='left';
-      const tStart=tx;
-      if(icon && im && im.index+im[0].length<=t.length){
-        const head=t.slice(0,im.index+im[0].length), tail=t.slice(im.index+im[0].length);
-        ctx.fillText(head, tStart, ty);
-        const ix=tStart+ctx.measureText(head).width+fs*0.2;
-        const iw=icon.draw(ix, ty-fs*0.55, fs);
-        ctx.fillStyle=ink; ctx.textBaseline='middle';
-        if(tail) ctx.fillText(tail, ix+iw+fs*0.15, ty);
-      }else ctx.fillText(t, tStart, ty);
+      for(const ic of INLINE_ICONS){ const rr=ic.re.exec(e.title||''); if(rr && ic.ready()){ icon=ic; im=rr; break; } }
+      const iconW=icon ? fs*1.5 : 0;
+      ctx.font=`600 ${fs.toFixed(1)}px Archivo, Arial, sans-serif`; ctx.textAlign='left';
+      const tx=gx+gw+bw*0.03, maxW=colX-bw*0.03-tx;
+      const lw=t=>ctx.measureText(t).width+(icon && icon.re.test(t) ? iconW : 0);
+      const words=(e.title||'').split(' '); const lines=[]; let cur='';
+      for(const wd of words){ const test=cur?cur+' '+wd:wd; if(lw(test)>maxW && cur){ lines.push(cur); cur=wd; if(lines.length===2) break; } else cur=test; }
+      if(lines.length<2 && cur) lines.push(cur);
+      else if(cur && lines.length===2 && !lines.includes(cur)) lines[1]=lines[1];
+      const fullLen=lines.join(' ').length;
+      if(fullLen<(e.title||'').length){ let l=lines[lines.length-1]; while(l.length>1 && lw(l+'…')>maxW) l=l.slice(0,-1); lines[lines.length-1]=l+'…'; }
+      lines.forEach((ln,li)=>{
+        let t=ln; while(t.length>1 && lw(t)>maxW) t=t.slice(0,-1);
+        const ty=lines.length===1 ? y0+bh/2 : y0+bh*(li===0?0.33:0.7);
+        const sx=li===0 ? tx : gx;
+        ctx.fillStyle=ink;
+        const m=icon ? icon.re.exec(t) : null;
+        if(m){
+          const head=t.slice(0,m.index+m[0].length), tail=t.slice(m.index+m[0].length);
+          ctx.fillText(head, sx, ty);
+          const ix=sx+ctx.measureText(head).width+fs*0.2;
+          const iw=icon.draw(ix, ty-fs*0.55, fs);
+          ctx.fillStyle=ink; ctx.textBaseline='middle';
+          ctx.font=`600 ${fs.toFixed(1)}px Archivo, Arial, sans-serif`;
+          if(tail) ctx.fillText(tail, ix+iw+fs*0.15, ty);
+        }else ctx.fillText(t, sx, ty);
+      });
       if(ph.img){
-        const thY=y0+(bh-thS)/2;
-        ctx.save(); ctx.beginPath(); ctx.roundRect ? ctx.roundRect(thX,thY,thS,thS,thS*0.15) : ctx.rect(thX,thY,thS,thS); ctx.clip();
+        const thX=x0+bw*0.96-thS, thY=y0+bh*0.44;
+        ctx.save(); ctx.beginPath(); ctx.roundRect ? ctx.roundRect(thX,thY,thS,thS,thS*0.12) : ctx.rect(thX,thY,thS,thS); ctx.clip();
         ctx.drawImage(ph.img, thX, thY, thS, thS); ctx.restore();
         ctx.strokeStyle='rgba(0,0,0,0.3)'; ctx.lineWidth=Math.max(0.5,0.015*k); ctx.strokeRect(thX,thY,thS,thS);
         EVENT_PHOTO_HITS.push({x:thX,y:thY,w:thS,h:thS,img:ph.img,legende:ph.legende,loaded:true,urls:ph.urls,urlIdx:ph.idx});

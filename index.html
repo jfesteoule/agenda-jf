@@ -394,7 +394,7 @@ canvas#c{position:absolute;inset:0;width:100%;height:100%;touch-action:none;poin
     <div class="leg" id="legWeekend"><div class="legline"></div>Week-end</div>
     <div class="leg" id="legVac"><div class="legline" style="background:#ffd600;"></div><span id="legVacTxt">Vacances scolaires</span></div>
     <button id="legSync" class="leg" type="button" style="display:none;cursor:pointer;border:none;font-family:inherit;color:inherit;text-align:left;" title="Relancer la synchro Google Agenda"><i class="ti ti-refresh" style="font-size:12px;"></i><span id="legSyncTxt"></span></button>
-    <div id="appVersion" style="font-size:10px;color:#fff;text-shadow:0 1px 2px rgba(0,0,0,0.6);text-align:right;padding-right:4px;">Version 2026-10-17 13:07 · <a href="confidentialite.html" style="color:#fff">Confidentialité</a> · <a href="conditions.html" style="color:#fff">Conditions</a></div>
+    <div id="appVersion" style="font-size:10px;color:#fff;text-shadow:0 1px 2px rgba(0,0,0,0.6);text-align:right;padding-right:4px;">Version 2026-10-17 13:17 · <a href="confidentialite.html" style="color:#fff">Confidentialité</a> · <a href="conditions.html" style="color:#fff">Conditions</a></div>
   </div>
   <div id="zbx">
     <button class="zb" id="zi">+</button>
@@ -3024,7 +3024,17 @@ function loadSpotifyApi(){
   });
   return spApiPromise;
 }
+// Android : Spotify refuse la lecture dans le navigateur et exige son appli.
+// On ouvre donc la playlist dans l'appli Spotify (la musique continue en
+// arrière-plan quand on revient sur l'agenda).
+const IS_ANDROID=/Android/i.test(navigator.userAgent);
 function spotifyLoadAndPlay(sp){
+  if(IS_ANDROID){
+    musicStatus('Ouverture dans l\'appli Spotify… Lancez la lecture puis revenez sur l\'agenda : la musique continue en arrière-plan.');
+    const web='https://open.spotify.com/'+sp.type+'/'+sp.id;
+    location.href='intent://'+sp.type+'/'+sp.id+'#Intent;scheme=spotify;package=com.spotify.music;S.browser_fallback_url='+encodeURIComponent(web)+';end';
+    return;
+  }
   const wrap=document.getElementById('musicPlayerWrap');
   wrap.classList.add('show','spotify');
   wrap.innerHTML='<div id="musicPlayer"></div>';
@@ -3093,6 +3103,7 @@ function musicLoadAndPlay(){
 }
 function musicFollowPlay(on){
   if(!document.getElementById('musicWithPlay').checked) return;
+  if(IS_ANDROID && parseSpotifyUrl(document.getElementById('musicUrl').value)) return;
   if(spController){ try{ on ? spController.resume() : spController.pause(); }catch(_){} if(on) document.getElementById('musicPlayerWrap').classList.add('show'); return; }
   if(on){
     if(ytPlayer && ytPlayer.playVideo){ ytPlayer.playVideo(); document.getElementById('musicPlayerWrap').classList.add('show'); }

@@ -411,7 +411,7 @@ canvas#c{position:absolute;inset:0;width:100%;height:100%;touch-action:none;poin
     <div class="leg" id="legWeekend"><div class="legline"></div>Week-end</div>
     <div class="leg" id="legVac"><div class="legline" style="background:#ffd600;"></div><span id="legVacTxt">Vacances scolaires</span></div>
     <button id="legSync" class="leg" type="button" style="display:none;cursor:pointer;border:none;font-family:inherit;color:inherit;text-align:left;" title="Relancer la synchro Google Agenda"><i class="ti ti-refresh" style="font-size:12px;"></i><span id="legSyncTxt"></span></button>
-    <div id="appVersion" style="font-size:10px;color:#fff;text-shadow:0 1px 2px rgba(0,0,0,0.6);text-align:right;padding-right:4px;">Version 2026-10-17 18:06 · <a href="confidentialite.html" style="color:#fff">Confidentialité</a> · <a href="conditions.html" style="color:#fff">Conditions</a></div>
+    <div id="appVersion" style="font-size:10px;color:#fff;text-shadow:0 1px 2px rgba(0,0,0,0.6);text-align:right;padding-right:4px;">Version 2026-10-17 18:49 · <a href="confidentialite.html" style="color:#fff">Confidentialité</a> · <a href="conditions.html" style="color:#fff">Conditions</a></div>
   </div>
   <div id="zbx">
     <button class="zb" id="zi">+</button>
@@ -3078,7 +3078,9 @@ const SP_CLIENT_KEY='spotifyClientId_v1', SP_TOKEN_KEY='spotifyToken_v1', SP_PKC
 const SP_REDIRECT=location.origin+location.pathname.replace(/index\.html$/,'');
 const SP_SCOPES='user-read-playback-state user-modify-playback-state';
 let spRemoteLoaded=false;
-function spClientId(){ try{ return (localStorage.getItem(SP_CLIENT_KEY)||'').trim(); }catch(e){ return ''; } }
+// Client ID de l'appli « Route du temps » créée sur developer.spotify.com (public, sans secret).
+const SP_DEFAULT_CLIENT_ID='fa124a63136d4400a2839e244e2ab7c2';
+function spClientId(){ try{ return (localStorage.getItem(SP_CLIENT_KEY)||'').trim() || SP_DEFAULT_CLIENT_ID; }catch(e){ return SP_DEFAULT_CLIENT_ID; } }
 function spToken(){ try{ return JSON.parse(localStorage.getItem(SP_TOKEN_KEY)||'null'); }catch(e){ return null; } }
 function spSaveToken(t){ try{ t ? localStorage.setItem(SP_TOKEN_KEY, JSON.stringify(t)) : localStorage.removeItem(SP_TOKEN_KEY); }catch(e){} }
 const spRemoteOn=()=>!!(spClientId() && spToken());

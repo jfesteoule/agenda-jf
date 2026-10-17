@@ -355,10 +355,10 @@ canvas#c{position:absolute;inset:0;width:100%;height:100%;touch-action:none;poin
   <button id="monthPrevBtn" class="monthnavbtn" title="Mois précédent"><i class="ti ti-chevron-left"></i></button>
   <button id="monthNextBtn" class="monthnavbtn" title="Mois suivant"><i class="ti ti-chevron-right"></i></button>
   <div id="speeds">
+    <button class="sp" data-s="0.1">×⅒</button>
     <button class="sp" data-s="0.2">×⅕</button>
     <button class="sp" data-s="0.5">×½</button>
     <button class="sp on" data-s="1">×1</button>
-    <button class="sp" data-s="3">×3</button>
   </div>
   <div id="legend">
     <button id="legToggle" type="button" title="Masquer la légende"><i class="ti ti-chevron-up"></i></button>
@@ -367,7 +367,7 @@ canvas#c{position:absolute;inset:0;width:100%;height:100%;touch-action:none;poin
     <div class="leg" id="legWeekend"><div class="legline"></div>Week-end</div>
     <div class="leg" id="legVac"><div class="legline" style="background:#ffd600;"></div><span id="legVacTxt">Vacances scolaires</span></div>
     <button id="legSync" class="leg" type="button" style="display:none;cursor:pointer;border:none;font-family:inherit;color:inherit;text-align:left;" title="Relancer la synchro Google Agenda"><i class="ti ti-refresh" style="font-size:12px;"></i><span id="legSyncTxt"></span></button>
-    <div id="appVersion" style="font-size:10px;color:#fff;text-shadow:0 1px 2px rgba(0,0,0,0.6);text-align:right;padding-right:4px;">Version 2026-10-17 11:31 · <a href="confidentialite.html" style="color:#fff">Confidentialité</a> · <a href="conditions.html" style="color:#fff">Conditions</a></div>
+    <div id="appVersion" style="font-size:10px;color:#fff;text-shadow:0 1px 2px rgba(0,0,0,0.6);text-align:right;padding-right:4px;">Version 2026-10-17 11:40 · <a href="confidentialite.html" style="color:#fff">Confidentialité</a> · <a href="conditions.html" style="color:#fff">Conditions</a></div>
   </div>
   <div id="zbx">
     <button class="zb" id="zi">+</button>
@@ -680,7 +680,7 @@ function draw(ts){
     camDay=Math.max(0,Math.min(TOTAL_DAYS,camDay+speed*dtMove));
   }
   if(playingReverse){
-    // Recul à la vitesse choisie (×⅕, ×½, ×1, ×3), comme la marche avant.
+    // Recul à la vitesse choisie (×⅒, ×⅕, ×½, ×1), comme la marche avant.
     camDay=Math.max(0,camDay-dtMove*speed);
     if(camDay<=0){playingReverse=false;document.getElementById("revbtn").style.background="";document.getElementById("revbtn").style.color="";}
   }

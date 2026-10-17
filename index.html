@@ -343,6 +343,17 @@ canvas#c{position:absolute;inset:0;width:100%;height:100%;touch-action:none;poin
       <button class="jchip" id="musicHide" type="button">Masquer le lecteur</button>
     </div>
     <div id="musicStatus" style="font-size:11px;color:#8a7a5c;min-height:14px;"></div>
+    <details id="spRemoteBox" style="font-size:12px;color:#2b241c;border-top:1px solid #eee;padding-top:6px;">
+      <summary style="cursor:pointer;font-weight:600;">Spotify sur téléphone : commande par ▶ <span id="spRemoteState" style="font-weight:400;color:#8a7a5c;"></span></summary>
+      <div style="display:flex;flex-direction:column;gap:6px;margin-top:6px;">
+        <div style="font-size:11px;color:#5f6368;line-height:1.4;">Spotify Premium requis. Une seule fois : créez une appli sur <a href="https://developer.spotify.com/dashboard" target="_blank" rel="noopener">developer.spotify.com/dashboard</a> (« Create app », cochez « Web API »), avec comme Redirect URI :<br><code id="spRedirect" style="user-select:all;background:#f4f1ea;padding:1px 4px;border-radius:4px;word-break:break-all;"></code><br>puis collez ici son « Client ID ».</div>
+        <input type="text" id="spClientId" placeholder="Client ID Spotify" autocomplete="off" spellcheck="false" style="font-size:13px;padding:7px 9px;border:1px solid #ddd;border-radius:8px;">
+        <div style="display:flex;gap:6px;">
+          <button class="jchip" id="spConnect" type="button">Connecter Spotify</button>
+          <button class="jchip" id="spDisconnect" type="button" style="display:none;">Déconnecter</button>
+        </div>
+      </div>
+    </details>
   </div>
   <div id="musicPlayerWrap"><div id="musicPlayer"></div></div>
   <div id="datejumpPanel">
@@ -400,7 +411,7 @@ canvas#c{position:absolute;inset:0;width:100%;height:100%;touch-action:none;poin
     <div class="leg" id="legWeekend"><div class="legline"></div>Week-end</div>
     <div class="leg" id="legVac"><div class="legline" style="background:#ffd600;"></div><span id="legVacTxt">Vacances scolaires</span></div>
     <button id="legSync" class="leg" type="button" style="display:none;cursor:pointer;border:none;font-family:inherit;color:inherit;text-align:left;" title="Relancer la synchro Google Agenda"><i class="ti ti-refresh" style="font-size:12px;"></i><span id="legSyncTxt"></span></button>
-    <div id="appVersion" style="font-size:10px;color:#fff;text-shadow:0 1px 2px rgba(0,0,0,0.6);text-align:right;padding-right:4px;">Version 2026-10-17 17:24 · <a href="confidentialite.html" style="color:#fff">Confidentialité</a> · <a href="conditions.html" style="color:#fff">Conditions</a></div>
+    <div id="appVersion" style="font-size:10px;color:#fff;text-shadow:0 1px 2px rgba(0,0,0,0.6);text-align:right;padding-right:4px;">Version 2026-10-17 18:06 · <a href="confidentialite.html" style="color:#fff">Confidentialité</a> · <a href="conditions.html" style="color:#fff">Conditions</a></div>
   </div>
   <div id="zbx">
     <button class="zb" id="zi">+</button>
@@ -3059,7 +3070,108 @@ function loadSpotifyApi(){
 // On ouvre donc la playlist dans l'appli Spotify (la musique continue en
 // arrière-plan quand on revient sur l'agenda).
 const IS_ANDROID=/Android/i.test(navigator.userAgent);
+// ----- Spotify télécommandé (Android) : l'appli Spotify du téléphone joue la
+// musique et la page la pilote par l'API Web Spotify (Premium requis). Le
+// Client ID vient d'une appli créée par l'utilisateur sur developer.spotify.com ;
+// connexion PKCE (sans secret), jetons gardés dans le navigateur. -----
+const SP_CLIENT_KEY='spotifyClientId_v1', SP_TOKEN_KEY='spotifyToken_v1', SP_PKCE_KEY='spotifyPkce_v1';
+const SP_REDIRECT=location.origin+location.pathname.replace(/index\.html$/,'');
+const SP_SCOPES='user-read-playback-state user-modify-playback-state';
+let spRemoteLoaded=false;
+function spClientId(){ try{ return (localStorage.getItem(SP_CLIENT_KEY)||'').trim(); }catch(e){ return ''; } }
+function spToken(){ try{ return JSON.parse(localStorage.getItem(SP_TOKEN_KEY)||'null'); }catch(e){ return null; } }
+function spSaveToken(t){ try{ t ? localStorage.setItem(SP_TOKEN_KEY, JSON.stringify(t)) : localStorage.removeItem(SP_TOKEN_KEY); }catch(e){} }
+const spRemoteOn=()=>!!(spClientId() && spToken());
+const b64url=buf=>btoa(String.fromCharCode(...new Uint8Array(buf))).replace(/\+/g,'-').replace(/\//g,'_').replace(/=+$/,'');
+function spUpdateUi(){
+  const on=spRemoteOn();
+  document.getElementById('spRemoteState').textContent=on?'· connecté':'';
+  document.getElementById('spConnect').textContent=on?'Reconnecter':'Connecter Spotify';
+  document.getElementById('spDisconnect').style.display=on?'':'none';
+}
+async function spConnect(){
+  const id=document.getElementById('spClientId').value.trim();
+  if(!/^[0-9a-f]{32}$/i.test(id)){ musicStatus('Collez d\'abord le Client ID de votre appli Spotify (32 caractères).'); return; }
+  try{ localStorage.setItem(SP_CLIENT_KEY, id); }catch(e){}
+  const verifier=b64url(crypto.getRandomValues(new Uint8Array(48)));
+  const state=b64url(crypto.getRandomValues(new Uint8Array(12)));
+  const challenge=b64url(await crypto.subtle.digest('SHA-256', new TextEncoder().encode(verifier)));
+  try{ localStorage.setItem(SP_PKCE_KEY, JSON.stringify({ verifier, state })); }catch(e){}
+  location.href='https://accounts.spotify.com/authorize?'+new URLSearchParams({ client_id:id, response_type:'code', redirect_uri:SP_REDIRECT, code_challenge_method:'S256', code_challenge:challenge, scope:SP_SCOPES, state });
+}
+async function spTokenRequest(params){
+  const r=await fetch('https://accounts.spotify.com/api/token',{ method:'POST', headers:{ 'Content-Type':'application/x-www-form-urlencoded' }, body:new URLSearchParams({ client_id:spClientId(), ...params }) });
+  const d=await r.json().catch(()=>({}));
+  if(!r.ok){ if(params.grant_type==='refresh_token'){ spSaveToken(null); spUpdateUi(); } throw new Error(d.error_description||d.error||('HTTP '+r.status)); }
+  const t={ access:d.access_token, refresh:d.refresh_token||(spToken()||{}).refresh, exp:Date.now()+((d.expires_in||3600)-60)*1000 };
+  spSaveToken(t); return t;
+}
+// Retour de la page de connexion Spotify (?code=…&state=…).
+async function spHandleRedirect(){
+  const q=new URLSearchParams(location.search);
+  if(!q.has('state') || !(q.has('code') || q.has('error'))) return;
+  let saved=null; try{ saved=JSON.parse(localStorage.getItem(SP_PKCE_KEY)||'null'); localStorage.removeItem(SP_PKCE_KEY); }catch(e){}
+  history.replaceState(null, '', SP_REDIRECT+location.hash);
+  if(!saved || saved.state!==q.get('state')) return;
+  musicPanel.classList.add('open'); document.getElementById('spRemoteBox').open=true;
+  if(q.has('error')){ musicStatus('Connexion Spotify annulée ('+q.get('error')+').'); return; }
+  try{
+    await spTokenRequest({ grant_type:'authorization_code', code:q.get('code'), redirect_uri:SP_REDIRECT, code_verifier:saved.verifier });
+    musicStatus('Spotify connecté : ▶ de la route commande maintenant l\'appli Spotify du téléphone.');
+  }catch(err){ musicStatus('Connexion Spotify impossible : '+err.message); }
+  spUpdateUi();
+}
+async function spApi(path, method, body, retried){
+  let t=spToken(); if(!t) throw new Error('Spotify non connecté');
+  if(Date.now()>t.exp) t=await spTokenRequest({ grant_type:'refresh_token', refresh_token:t.refresh });
+  const r=await fetch('https://api.spotify.com/v1'+path,{ method:method||'GET', headers:{ 'Authorization':'Bearer '+t.access, ...(body?{ 'Content-Type':'application/json' }:{}) }, body:body?JSON.stringify(body):undefined });
+  if(r.status===401 && !retried){ spSaveToken({ ...t, exp:0 }); return spApi(path, method, body, true); }
+  const d=await r.json().catch(()=>null);
+  if(!r.ok){ const e=new Error((d && d.error && d.error.message)||('HTTP '+r.status)); e.status=r.status; e.reason=d && d.error && d.error.reason; throw e; }
+  return d;
+}
+// Appareil à piloter : celui qui joue déjà, sinon un smartphone, sinon le premier.
+async function spDevice(){
+  const list=((await spApi('/me/player/devices'))||{}).devices||[];
+  return list.find(d=>d.is_active) || list.find(d=>d.type==='Smartphone') || list[0] || null;
+}
+function spOpenApp(sp){
+  const web='https://open.spotify.com/'+sp.type+'/'+sp.id;
+  location.href='intent://'+sp.type+'/'+sp.id+'#Intent;scheme=spotify;package=com.spotify.music;S.browser_fallback_url='+encodeURIComponent(web)+';end';
+}
+function spRemoteError(err){
+  if(err.status===403 || err.reason==='PREMIUM_REQUIRED') musicStatus('Spotify refuse la commande à distance : un abonnement Premium est nécessaire.');
+  else musicStatus('Spotify : '+err.message);
+}
+// fromStart : relance la playlist depuis le début ; sinon reprend là où elle était.
+async function spRemotePlay(sp, fromStart){
+  try{
+    musicStatus('Spotify…');
+    const dev=await spDevice();
+    if(!dev){
+      musicStatus('Appli Spotify endormie : elle s\'ouvre, revenez ensuite sur l\'agenda et touchez ▶.');
+      spOpenApp(sp); return;
+    }
+    const q='?device_id='+encodeURIComponent(dev.id);
+    const ctx=sp.type==='track' ? { uris:['spotify:track:'+sp.id] } : { context_uri:'spotify:'+sp.type+':'+sp.id };
+    await spApi('/me/player/play'+q, 'PUT', (fromStart || !spRemoteLoaded) ? ctx : undefined);
+    spRemoteLoaded=true;
+    musicStatus('♪ Lecture sur « '+dev.name+' »');
+  }catch(err){ spRemoteError(err); }
+}
+async function spRemoteCmd(path, method, label){
+  try{ await spApi(path, method); musicStatus(label); }
+  catch(err){ if(err.status!==404) spRemoteError(err); else musicStatus(label); }
+}
+document.getElementById('spRedirect').textContent=SP_REDIRECT;
+document.getElementById('spConnect').addEventListener('click', spConnect);
+document.getElementById('spDisconnect').addEventListener('click',()=>{ spSaveToken(null); spRemoteLoaded=false; spUpdateUi(); musicStatus('Spotify déconnecté.'); });
+document.getElementById('spClientId').addEventListener('change',e=>{
+  try{ localStorage.setItem(SP_CLIENT_KEY, e.target.value.trim()); }catch(_){}
+  markSettingsChanged();
+});
 function spotifyLoadAndPlay(sp){
+  if(IS_ANDROID && spRemoteOn()) return spRemotePlay(sp, true);
   if(IS_ANDROID){
     musicStatus('Ouverture dans l\'appli Spotify… Lancez la lecture puis revenez sur l\'agenda : la musique continue en arrière-plan.');
     const web='https://open.spotify.com/'+sp.type+'/'+sp.id;
@@ -3134,7 +3246,11 @@ function musicLoadAndPlay(){
 }
 function musicFollowPlay(on){
   if(!document.getElementById('musicWithPlay').checked) return;
-  if(IS_ANDROID && parseSpotifyUrl(document.getElementById('musicUrl').value)) return;
+  const spu=parseSpotifyUrl(document.getElementById('musicUrl').value);
+  if(IS_ANDROID && spu){
+    if(spRemoteOn()){ if(on) spRemotePlay(spu, false); else spRemoteCmd('/me/player/pause', 'PUT', 'En pause'); }
+    return;
+  }
   if(spController){ try{ on ? spController.resume() : spController.pause(); }catch(_){} if(on) document.getElementById('musicPlayerWrap').classList.add('show'); return; }
   if(on){
     if(ytPlayer && ytPlayer.playVideo){ ytPlayer.playVideo(); document.getElementById('musicPlayerWrap').classList.add('show'); }
@@ -3145,8 +3261,8 @@ document.getElementById('musicbtn').addEventListener('click',e=>{ e.stopPropagat
 document.getElementById('menu-music').addEventListener('click',e=>{ e.stopPropagation(); menuPanel.classList.remove('open'); musicPanel.classList.add('open'); });
 document.addEventListener('click',e=>{ if(!musicPanel.contains(e.target) && e.target.id!=='musicbtn' && !document.getElementById('musicbtn').contains(e.target)) musicPanel.classList.remove('open'); });
 document.getElementById('musicLoad').addEventListener('click',musicLoadAndPlay);
-document.getElementById('musicNext').addEventListener('click',()=>{ if(spController){ musicStatus('Pour passer au titre suivant, utilisez ⏭ dans le lecteur Spotify.'); return; } if(ytPlayer && ytPlayer.nextVideo){ musicSkips=0; ytPlayer.nextVideo(); } });
-document.getElementById('musicStop').addEventListener('click',()=>{ if(spController){ try{ spController.pause(); }catch(_){} } if(ytPlayer && ytPlayer.pauseVideo) ytPlayer.pauseVideo(); musicStatus('En pause'); });
+document.getElementById('musicNext').addEventListener('click',()=>{ if(IS_ANDROID && spRemoteOn()){ spRemoteCmd('/me/player/next', 'POST', '⏭ Titre suivant'); return; } if(spController){ musicStatus('Pour passer au titre suivant, utilisez ⏭ dans le lecteur Spotify.'); return; } if(ytPlayer && ytPlayer.nextVideo){ musicSkips=0; ytPlayer.nextVideo(); } });
+document.getElementById('musicStop').addEventListener('click',()=>{ if(IS_ANDROID && spRemoteOn()){ spRemoteCmd('/me/player/pause', 'PUT', 'En pause'); return; } if(spController){ try{ spController.pause(); }catch(_){} } if(ytPlayer && ytPlayer.pauseVideo) ytPlayer.pauseVideo(); musicStatus('En pause'); });
 document.getElementById('musicHide').addEventListener('click',()=>{
   const w=document.getElementById('musicPlayerWrap'); w.classList.toggle('show');
   document.getElementById('musicHide').textContent=w.classList.contains('show')?'Masquer le lecteur':'Afficher le lecteur';
@@ -3158,7 +3274,10 @@ try{ if(/[?&]list=(LM|LL|PL4ZG02_3Dv4cTK5rYj5K-lt7Tj-1iKMvq)\b/.test(localStorag
 try{
   document.getElementById('musicUrl').value=localStorage.getItem(MUSIC_URL_KEY)||'https://open.spotify.com/playlist/4XoGnSKbuQ1OEDOn4rloc9';
   document.getElementById('musicWithPlay').checked=localStorage.getItem(MUSIC_WITHPLAY_KEY)!=='0';
+  document.getElementById('spClientId').value=spClientId();
 }catch(e){}
+spUpdateUi();
+spHandleRedirect();
 document.getElementById('revbtn').addEventListener('click',()=>{
   if(playing){playing=false;updatePlay();}
   playingReverse=!playingReverse;
@@ -4501,7 +4620,7 @@ document.getElementById('legSync').addEventListener('click', ()=>liveSyncFromGoo
 const SETTINGS_FILE_NAME='reglages.json', SETTINGS_TS_KEY='settingsUpdated_v1';
 function localSettingsTs(){ try{ return +localStorage.getItem(SETTINGS_TS_KEY)||0; }catch(e){ return 0; } }
 function settingsSnapshot(){
-  return { v:1, updated:localSettingsTs(), calendar:loadCalendarConfig(), showWeekend:showWeekend(), schoolZone:schoolZone() };
+  return { v:1, updated:localSettingsTs(), calendar:loadCalendarConfig(), showWeekend:showWeekend(), schoolZone:schoolZone(), spotifyClientId:spClientId() };
 }
 function applySettingsSnapshot(snap){
   if(!snap || typeof snap!=='object') return;
@@ -4510,6 +4629,10 @@ function applySettingsSnapshot(snap){
     if(typeof snap.showWeekend==='boolean'){ localStorage.setItem(SHOW_WEEKEND_KEY, snap.showWeekend?'1':'0'); showWeekendCache=null; }
     localStorage.setItem(SETTINGS_TS_KEY, String(snap.updated||Date.now()));
   }catch(e){}
+  if(typeof snap.spotifyClientId==='string' && snap.spotifyClientId && snap.spotifyClientId!==spClientId()){
+    try{ localStorage.setItem(SP_CLIENT_KEY, snap.spotifyClientId); }catch(e){}
+    document.getElementById('spClientId').value=snap.spotifyClientId; spUpdateUi();
+  }
   applyWeekendLegend();
   if(snap.schoolZone && snap.schoolZone!==schoolZone()){
     try{ localStorage.setItem(SCHOOL_ZONE_KEY, snap.schoolZone); }catch(e){}

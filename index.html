@@ -15,6 +15,10 @@
 <link rel="icon" type="image/svg+xml" href="logo/logo.svg">
 <link rel="icon" type="image/png" sizes="32x32" href="logo/logo-32.png">
 <link rel="apple-touch-icon" href="logo/logo-192.png">
+<link rel="manifest" href="manifest.webmanifest">
+<meta name="theme-color" content="#c1502f">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-capable" content="yes">
 <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@tabler/icons-webfont@3.48.0/dist/tabler-icons.min.css">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Oswald:wght@500;600;700&family=Archivo:wght@400;500;600&display=swap">
@@ -249,6 +253,8 @@ canvas#c{position:absolute;inset:0;width:100%;height:100%;touch-action:none;poin
     <button id="menu-week" class="menuitem"><i class="ti ti-calendar-week"></i>Volet hebdomadaire</button>
     <button id="menu-night" class="menuitem"><i class="ti ti-sun"></i>Nuit / jour</button>
     <button id="menu-music" class="menuitem"><i class="ti ti-music"></i>Musique</button>
+    <button id="menu-fullscreen" class="menuitem"><i class="ti ti-maximize"></i>Plein écran</button>
+    <button id="menu-install" class="menuitem" style="display:none;"><i class="ti ti-download"></i>Installer l'application</button>
     <button id="menu-right" class="menuitem"><i class="ti ti-user"></i>Masquer mon agenda</button>
     <button id="menu-legend" class="menuitem"><i class="ti ti-list"></i>Masquer la légende</button>
     <button id="menu-calendars" class="menuitem"><i class="ti ti-users"></i>Agendas et vacances…</button>
@@ -394,7 +400,7 @@ canvas#c{position:absolute;inset:0;width:100%;height:100%;touch-action:none;poin
     <div class="leg" id="legWeekend"><div class="legline"></div>Week-end</div>
     <div class="leg" id="legVac"><div class="legline" style="background:#ffd600;"></div><span id="legVacTxt">Vacances scolaires</span></div>
     <button id="legSync" class="leg" type="button" style="display:none;cursor:pointer;border:none;font-family:inherit;color:inherit;text-align:left;" title="Relancer la synchro Google Agenda"><i class="ti ti-refresh" style="font-size:12px;"></i><span id="legSyncTxt"></span></button>
-    <div id="appVersion" style="font-size:10px;color:#fff;text-shadow:0 1px 2px rgba(0,0,0,0.6);text-align:right;padding-right:4px;">Version 2026-10-17 16:58 · <a href="confidentialite.html" style="color:#fff">Confidentialité</a> · <a href="conditions.html" style="color:#fff">Conditions</a></div>
+    <div id="appVersion" style="font-size:10px;color:#fff;text-shadow:0 1px 2px rgba(0,0,0,0.6);text-align:right;padding-right:4px;">Version 2026-10-17 17:24 · <a href="confidentialite.html" style="color:#fff">Confidentialité</a> · <a href="conditions.html" style="color:#fff">Conditions</a></div>
   </div>
   <div id="zbx">
     <button class="zb" id="zi">+</button>
@@ -2977,6 +2983,30 @@ document.getElementById('playbtn').addEventListener('click',()=>{
   playing=!playing;updatePlay();
   musicFollowPlay(playing);
 });
+
+// ===== Plein écran et installation comme application =====
+function toggleFullscreen(){
+  const d=document, el=d.documentElement;
+  if(!(d.fullscreenElement||d.webkitFullscreenElement)){
+    (el.requestFullscreen||el.webkitRequestFullscreen||function(){}).call(el, {navigationUI:'hide'});
+  }else (d.exitFullscreen||d.webkitExitFullscreen||function(){}).call(d);
+}
+document.getElementById('menu-fullscreen').addEventListener('click',()=>{ menuPanel.classList.remove('open'); toggleFullscreen(); });
+document.addEventListener('fullscreenchange',()=>{
+  document.getElementById('menu-fullscreen').lastChild.textContent=document.fullscreenElement?'Quitter le plein écran':'Plein écran';
+  setTimeout(resize,150);
+});
+if('serviceWorker' in navigator) navigator.serviceWorker.register('sw.js').catch(()=>{});
+// Chrome Android : bouton « Installer l'application » quand c'est possible.
+let installPrompt=null;
+window.addEventListener('beforeinstallprompt',e=>{ e.preventDefault(); installPrompt=e; document.getElementById('menu-install').style.display=''; });
+document.getElementById('menu-install').addEventListener('click',async()=>{
+  menuPanel.classList.remove('open');
+  if(!installPrompt) return;
+  installPrompt.prompt(); try{ await installPrompt.userChoice; }catch(e){}
+  installPrompt=null; document.getElementById('menu-install').style.display='none';
+});
+window.addEventListener('appinstalled',()=>{ document.getElementById('menu-install').style.display='none'; });
 
 // ===== Musique : lecteur YouTube (playlist YouTube ou YouTube Music) =====
 // Pas d'accès direct au compte YouTube Music (aucune API publique) : on lit la

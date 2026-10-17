@@ -336,6 +336,11 @@ canvas#c{position:absolute;inset:0;width:100%;height:100%;touch-action:none;poin
       <button class="jchip" id="vp-hiker" type="button">Randonneur</button>
       <button class="jchip" id="vp-bike" type="button">Cycliste</button>
     </div>
+    <div style="font-family:'Oswald',Arial,sans-serif;font-size:12px;font-weight:600;color:#2b241c;margin-top:4px;">Personnage</div>
+    <div class="jchips">
+      <button class="jchip" id="vp-boy" type="button">Garçon</button>
+      <button class="jchip" id="vp-girl" type="button">Fille</button>
+    </div>
     <div style="font-family:'Oswald',Arial,sans-serif;font-size:12px;font-weight:600;color:#2b241c;margin-top:4px;">Panneaux</div>
     <div class="jchips">
       <button class="jchip" id="vp-sign-classic" type="button">Classiques</button>
@@ -362,7 +367,7 @@ canvas#c{position:absolute;inset:0;width:100%;height:100%;touch-action:none;poin
     <div class="leg" id="legWeekend"><div class="legline"></div>Week-end</div>
     <div class="leg" id="legVac"><div class="legline" style="background:#ffd600;"></div><span id="legVacTxt">Vacances scolaires</span></div>
     <button id="legSync" class="leg" type="button" style="display:none;cursor:pointer;border:none;font-family:inherit;color:inherit;text-align:left;" title="Relancer la synchro Google Agenda"><i class="ti ti-refresh" style="font-size:12px;"></i><span id="legSyncTxt"></span></button>
-    <div id="appVersion" style="font-size:10px;color:#fff;text-shadow:0 1px 2px rgba(0,0,0,0.6);text-align:right;padding-right:4px;">Version 2026-10-17 11:15 · <a href="confidentialite.html" style="color:#fff">Confidentialité</a> · <a href="conditions.html" style="color:#fff">Conditions</a></div>
+    <div id="appVersion" style="font-size:10px;color:#fff;text-shadow:0 1px 2px rgba(0,0,0,0.6);text-align:right;padding-right:4px;">Version 2026-10-17 11:20 · <a href="confidentialite.html" style="color:#fff">Confidentialité</a> · <a href="conditions.html" style="color:#fff">Conditions</a></div>
   </div>
   <div id="zbx">
     <button class="zb" id="zi">+</button>
@@ -1196,6 +1201,24 @@ MEHARI_IMG.src='mehari-arriere-hd.png';
 const MEHARI_TURN_IMGS={left:new Image(), right:new Image()};
 MEHARI_TURN_IMGS.left.src='mehari-virage-gauche-doux.png';   // virage à gauche : flanc gauche visible
 MEHARI_TURN_IMGS.right.src='mehari-virage-droite-doux.png'; // virage à droite : flanc droit visible
+// Version « fille » de chaque personnage (même cadrage que la version garçon).
+// Tant qu'une image fille n'est pas chargée, on garde celle du garçon.
+const GENDER_KEY='gender_v1';
+let gender=(()=>{ try{ return localStorage.getItem(GENDER_KEY)||'garcon'; }catch(e){ return 'garcon'; } })();
+const imgOf=src=>{ const i=new Image(); i.src=src; return i; };
+const GIRL_IMGS={
+  rear:imgOf('mehari-arriere-fille-apercu.png'),
+  left:imgOf('mehari-virage-gauche-fille-apercu.png'),
+  right:imgOf('mehari-virage-droite-fille-apercu.png'),
+  scooter:imgOf('trottinette-fille-apercu.png'),
+  hiker:imgOf('randonneuse-apercu.png'),
+  bike:imgOf('cycliste-fille-apercu.png')
+};
+function charImg(kind){
+  const boy={rear:MEHARI_IMG,left:MEHARI_TURN_IMGS.left,right:MEHARI_TURN_IMGS.right,scooter:WALKER_IMG,hiker:HIKER_IMG,bike:BIKE_IMG}[kind];
+  if(gender==='fille'){ const g=GIRL_IMGS[kind]; if(g && g.complete && g.naturalWidth) return g; }
+  return boy;
+}
 // Flanc comprimé à 40 % dans les images « doux » : pivot plus discret.
 let mehariTurnState=0; // -1 virage à gauche, 0 tout droit, 1 virage à droite
 
@@ -2532,8 +2555,8 @@ function drawMehari(){
   if(turn<-0.17) mehariTurnState=-1;
   else if(turn>0.17) mehariTurnState=1;
   else if(Math.abs(turn)<0.14) mehariTurnState=0;
-  const turnImg=mehariTurnState<0 ? MEHARI_TURN_IMGS.left : mehariTurnState>0 ? MEHARI_TURN_IMGS.right : null;
-  const carImg=(turnImg && turnImg.complete && turnImg.naturalWidth) ? turnImg : MEHARI_IMG;
+  const turnImg=mehariTurnState<0 ? charImg('left') : mehariTurnState>0 ? charImg('right') : null;
+  const carImg=(turnImg && turnImg.complete && turnImg.naturalWidth) ? turnImg : charImg('rear');
   // 0.832 = ligne de contact pneu/sol mesurée dans le PNG (fond supprimé),
   // pour que les roues touchent bien yGround au lieu de flotter au-dessus.
   // Image de la voiture avec sa plaque « JF 1968 » déjà peinte dessus, en
@@ -2605,7 +2628,7 @@ function drawWalker(){
   ctx.beginPath(); ctx.ellipse(pGround.x,pGround.y,Math.abs(w)*2.1,px(0.2),0,0,Math.PI*2); ctx.fill();
 
   if(vehicle==='hiker'||vehicle==='bike'){
-    const img=vehicle==='hiker'?HIKER_IMG:BIKE_IMG;
+    const img=charImg(vehicle==='hiker'?'hiker':'bike');
     if(!img.complete||!img.naturalWidth) return;
     // Taille réelle : ~1,8 m de haut (silhouette = 87 % de la hauteur d'image).
     const ppm=Math.abs(w)/0.48, drawH=1.8*ppm/0.874, drawW=drawH*img.naturalWidth/img.naturalHeight;
@@ -2616,10 +2639,11 @@ function drawWalker(){
     return;
   }
   if(!walkerImgLoaded) return;
-  const aspect=WALKER_IMG.naturalHeight/WALKER_IMG.naturalWidth;
+  const scooterImg=charImg('scooter');
+  const aspect=scooterImg.naturalHeight/scooterImg.naturalWidth;
   const drawW=Math.abs(w)*3.3, drawH=drawW*aspect;
   if(night) ctx.filter='brightness(0.55)';
-  ctx.drawImage(WALKER_IMG, pGround.x-drawW/2, pGround.y-drawH, drawW, drawH);
+  ctx.drawImage(scooterImg, pGround.x-drawW/2, pGround.y-drawH, drawW, drawH);
   if(night) ctx.filter='none';
 }
 
@@ -2848,6 +2872,17 @@ function setVehicle(v){
   EVENTS_VERSION++;
 }
 document.getElementById('walkbtn').addEventListener('click',()=>setVehicle(vehicle==='scooter'?'car':'scooter'));
+// Personnage garçon ou fille (toutes les vues), gardé dans le navigateur.
+function setGender(g){
+  gender=g;
+  try{ localStorage.setItem(GENDER_KEY,g); }catch(e){}
+  document.getElementById('vp-boy').classList.toggle('jchip-on',g!=='fille');
+  document.getElementById('vp-girl').classList.toggle('jchip-on',g==='fille');
+  EVENTS_VERSION++;
+}
+document.getElementById('vp-boy').addEventListener('click',()=>setGender('garcon'));
+document.getElementById('vp-girl').addEventListener('click',()=>setGender('fille'));
+setGender(gender);
 document.getElementById('fpvbtn').addEventListener('click',()=>{
   firstPerson=!firstPerson;
   const btn=document.getElementById('fpvbtn');

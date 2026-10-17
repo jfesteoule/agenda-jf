@@ -130,6 +130,14 @@ canvas#c{position:absolute;inset:0;width:100%;height:100%;touch-action:none;poin
 #musicPlayerWrap.show{display:block;}
 #musicPlayerWrap.spotify{width:320px;height:152px;background:transparent;box-shadow:none;}
 @media (max-width:480px){ #musicPlayerWrap.spotify{width:calc(100vw - 24px);height:80px;} }
+#musicPlayerWrap.spmini{width:min(340px, calc(100vw - 84px));height:58px;bottom:78px;background:#fff;border-radius:12px;}
+.spMini{display:flex;align-items:center;gap:8px;height:100%;padding:0 6px;font-family:'Archivo',Arial,sans-serif;}
+.spMini img{width:46px;height:46px;border-radius:6px;object-fit:cover;background:#eee;flex:none;}
+.spMini .spmTxt{flex:1;min-width:0;display:flex;flex-direction:column;line-height:1.2;}
+.spMini .spmTxt b{font-size:13px;color:#2b241c;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+.spMini .spmTxt span{font-size:11px;color:#6b6157;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+.spMini button{flex:none;width:34px;height:34px;border:none;border-radius:50%;background:#f1ece3;color:#2b241c;font-size:17px;display:flex;align-items:center;justify-content:center;cursor:pointer;padding:0;}
+.spMini button.main{background:#1db954;color:#fff;}
 #musicPlayerWrap iframe{width:100%;height:100%;border:0;}
 @media (max-width:480px){ #musicPlayerWrap{width:150px;height:84px;} }
 #datejumpPanel{display:none;position:absolute;top:56px;right:12px;z-index:1001;background:#fff;border-radius:12px;box-shadow:0 6px 18px rgba(0,0,0,0.22);padding:14px;width:230px;flex-direction:column;gap:10px;}
@@ -411,7 +419,7 @@ canvas#c{position:absolute;inset:0;width:100%;height:100%;touch-action:none;poin
     <div class="leg" id="legWeekend"><div class="legline"></div>Week-end</div>
     <div class="leg" id="legVac"><div class="legline" style="background:#ffd600;"></div><span id="legVacTxt">Vacances scolaires</span></div>
     <button id="legSync" class="leg" type="button" style="display:none;cursor:pointer;border:none;font-family:inherit;color:inherit;text-align:left;" title="Relancer la synchro Google Agenda"><i class="ti ti-refresh" style="font-size:12px;"></i><span id="legSyncTxt"></span></button>
-    <div id="appVersion" style="font-size:10px;color:#fff;text-shadow:0 1px 2px rgba(0,0,0,0.6);text-align:right;padding-right:4px;">Version 2026-10-17 18:49 · <a href="confidentialite.html" style="color:#fff">Confidentialité</a> · <a href="conditions.html" style="color:#fff">Conditions</a></div>
+    <div id="appVersion" style="font-size:10px;color:#fff;text-shadow:0 1px 2px rgba(0,0,0,0.6);text-align:right;padding-right:4px;">Version 2026-10-17 19:16 · <a href="confidentialite.html" style="color:#fff">Confidentialité</a> · <a href="conditions.html" style="color:#fff">Conditions</a></div>
   </div>
   <div id="zbx">
     <button class="zb" id="zi">+</button>
@@ -3172,16 +3180,52 @@ document.getElementById('spClientId').addEventListener('change',e=>{
   try{ localStorage.setItem(SP_CLIENT_KEY, e.target.value.trim()); }catch(_){}
   markSettingsChanged();
 });
+// Mini-lecteur affiché dans la page quand l'appli Spotify est pilotée à
+// distance : pochette, titre, artiste et ⏮ ⏯ ⏭ (état relu toutes les 5 s).
+let spMiniTimer=null, spIsPlaying=false;
+function spShowMini(){
+  const wrap=document.getElementById('musicPlayerWrap');
+  if(!wrap.classList.contains('spmini')){
+    wrap.classList.remove('spotify'); wrap.classList.add('spmini');
+    wrap.innerHTML='<div class="spMini"><img id="spmArt" alt=""><div class="spmTxt"><b id="spmTitle">Spotify</b><span id="spmArtist"></span></div>'
+      +'<button id="spmPrev" type="button" aria-label="Précédent"><i class="ti ti-player-skip-back"></i></button>'
+      +'<button id="spmPlay" type="button" class="main" aria-label="Lecture / pause"><i class="ti ti-player-play"></i></button>'
+      +'<button id="spmNext" type="button" aria-label="Suivant"><i class="ti ti-player-skip-forward"></i></button></div>';
+    const after=()=>setTimeout(spRefreshMini, 700);
+    document.getElementById('spmPrev').addEventListener('click',e=>{ e.stopPropagation(); spRemoteCmd('/me/player/previous','POST','⏮ Titre précédent').then(after); });
+    document.getElementById('spmNext').addEventListener('click',e=>{ e.stopPropagation(); spRemoteCmd('/me/player/next','POST','⏭ Titre suivant').then(after); });
+    document.getElementById('spmPlay').addEventListener('click',e=>{
+      e.stopPropagation();
+      const sp=parseSpotifyUrl(document.getElementById('musicUrl').value);
+      (spIsPlaying ? spRemoteCmd('/me/player/pause','PUT','En pause') : (sp ? spRemotePlay(sp, false) : spRemoteCmd('/me/player/play','PUT','♪ Lecture'))).then(after);
+    });
+  }
+  wrap.classList.add('show');
+  document.getElementById('musicHide').textContent='Masquer le lecteur';
+  if(!spMiniTimer) spMiniTimer=setInterval(()=>{ if(!document.hidden && wrap.classList.contains('show')) spRefreshMini(); }, 5000);
+  spRefreshMini();
+}
+async function spRefreshMini(){
+  if(!document.getElementById('spmTitle')) return;
+  let st=null; try{ st=await spApi('/me/player'); }catch(e){ return; }
+  const it=st && st.item;
+  spIsPlaying=!!(st && st.is_playing);
+  document.querySelector('#spmPlay i').className=spIsPlaying?'ti ti-player-pause':'ti ti-player-play';
+  document.getElementById('spmTitle').textContent=it ? it.name : 'Spotify en attente';
+  document.getElementById('spmArtist').textContent=it ? ((it.artists||[]).map(a=>a.name).join(', ') || (it.show && it.show.name) || '') : 'Touchez ▶ pour lancer la playlist';
+  const imgs=it && ((it.album && it.album.images) || it.images || []);
+  const src=imgs && imgs.length ? imgs[imgs.length>1 ? imgs.length-2 : 0].url : '';
+  const art=document.getElementById('spmArt'); if(art.getAttribute('src')!==src){ if(src) art.src=src; else art.removeAttribute('src'); }
+}
 function spotifyLoadAndPlay(sp){
-  if(IS_ANDROID && spRemoteOn()) return spRemotePlay(sp, true);
-  if(IS_ANDROID){
-    musicStatus('Ouverture dans l\'appli Spotify… Lancez la lecture puis revenez sur l\'agenda : la musique continue en arrière-plan.');
-    const web='https://open.spotify.com/'+sp.type+'/'+sp.id;
-    location.href='intent://'+sp.type+'/'+sp.id+'#Intent;scheme=spotify;package=com.spotify.music;S.browser_fallback_url='+encodeURIComponent(web)+';end';
+  if(IS_ANDROID && spRemoteOn()){ spShowMini(); return spRemotePlay(sp, true).then(()=>setTimeout(spRefreshMini, 900)); }
+  if(IS_ANDROID && !spRemoteOn()){
+    musicPanel.classList.add('open'); document.getElementById('spRemoteBox').open=true;
+    musicStatus('Sur Android, touchez d\'abord « Connecter Spotify » ci-dessous : l\'agenda affichera alors un lecteur et pilotera l\'appli Spotify.');
     return;
   }
   const wrap=document.getElementById('musicPlayerWrap');
-  wrap.classList.add('show','spotify');
+  wrap.classList.remove('spmini'); wrap.classList.add('show','spotify');
   wrap.innerHTML='<div id="musicPlayer"></div>';
   ytPlayer=null; musicLoaded=true;
   const compact=window.innerWidth<=480;
@@ -3208,7 +3252,7 @@ function musicLoadAndPlay(){
   const raw=document.getElementById('musicUrl').value;
   const sp=parseSpotifyUrl(raw);
   if(sp){ try{ localStorage.setItem(MUSIC_URL_KEY, raw.trim()); }catch(e){} return spotifyLoadAndPlay(sp); }
-  document.getElementById('musicPlayerWrap').classList.remove('spotify'); spController=null;
+  document.getElementById('musicPlayerWrap').classList.remove('spotify','spmini'); spController=null;
   const {list,v}=parseYouTubeUrl(raw);
   if(!list && !v){ musicStatus('Lien non reconnu : collez le lien d\'une playlist (avec « list= »).'); return; }
   try{ localStorage.setItem(MUSIC_URL_KEY, raw.trim()); }catch(e){}
@@ -3250,7 +3294,7 @@ function musicFollowPlay(on){
   if(!document.getElementById('musicWithPlay').checked) return;
   const spu=parseSpotifyUrl(document.getElementById('musicUrl').value);
   if(IS_ANDROID && spu){
-    if(spRemoteOn()){ if(on) spRemotePlay(spu, false); else spRemoteCmd('/me/player/pause', 'PUT', 'En pause'); }
+    if(spRemoteOn()){ spShowMini(); (on ? spRemotePlay(spu, false) : spRemoteCmd('/me/player/pause', 'PUT', 'En pause')).then(()=>setTimeout(spRefreshMini, 900)); }
     return;
   }
   if(spController){ try{ on ? spController.resume() : spController.pause(); }catch(_){} if(on) document.getElementById('musicPlayerWrap').classList.add('show'); return; }
@@ -3279,7 +3323,7 @@ try{
   document.getElementById('spClientId').value=spClientId();
 }catch(e){}
 spUpdateUi();
-spHandleRedirect();
+spHandleRedirect().then(()=>{ if(IS_ANDROID && spRemoteOn() && parseSpotifyUrl(document.getElementById('musicUrl').value)) spShowMini(); });
 document.getElementById('revbtn').addEventListener('click',()=>{
   if(playing){playing=false;updatePlay();}
   playingReverse=!playingReverse;

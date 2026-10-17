@@ -333,11 +333,14 @@ canvas#c{position:absolute;inset:0;width:100%;height:100%;touch-action:none;poin
     <div class="jchips">
       <button class="jchip jchip-on" id="vp-car" type="button">Voiture</button>
       <button class="jchip" id="vp-walk" type="button">Trottinette</button>
+      <button class="jchip" id="vp-hiker" type="button">Randonneur</button>
+      <button class="jchip" id="vp-bike" type="button">Cycliste</button>
     </div>
     <div style="font-family:'Oswald',Arial,sans-serif;font-size:12px;font-weight:600;color:#2b241c;margin-top:4px;">Panneaux</div>
     <div class="jchips">
       <button class="jchip" id="vp-sign-classic" type="button">Classiques</button>
       <button class="jchip" id="vp-sign-hwy" type="button">Autoroute</button>
+      <button class="jchip" id="vp-sign-rando" type="button">Randonnée</button>
     </div>
     <div style="font-family:'Oswald',Arial,sans-serif;font-size:12px;font-weight:600;color:#2b241c;margin-top:4px;">Options</div>
     <div class="jchips">
@@ -359,7 +362,7 @@ canvas#c{position:absolute;inset:0;width:100%;height:100%;touch-action:none;poin
     <div class="leg" id="legWeekend"><div class="legline"></div>Week-end</div>
     <div class="leg" id="legVac"><div class="legline" style="background:#ffd600;"></div><span id="legVacTxt">Vacances scolaires</span></div>
     <button id="legSync" class="leg" type="button" style="display:none;cursor:pointer;border:none;font-family:inherit;color:inherit;text-align:left;" title="Relancer la synchro Google Agenda"><i class="ti ti-refresh" style="font-size:12px;"></i><span id="legSyncTxt"></span></button>
-    <div id="appVersion" style="font-size:10px;color:#fff;text-shadow:0 1px 2px rgba(0,0,0,0.6);text-align:right;padding-right:4px;">Version 2026-10-16 23:27 · <a href="confidentialite.html" style="color:#fff">Confidentialité</a> · <a href="conditions.html" style="color:#fff">Conditions</a></div>
+    <div id="appVersion" style="font-size:10px;color:#fff;text-shadow:0 1px 2px rgba(0,0,0,0.6);text-align:right;padding-right:4px;">Version 2026-10-17 10:53 · <a href="confidentialite.html" style="color:#fff">Confidentialité</a> · <a href="conditions.html" style="color:#fff">Conditions</a></div>
   </div>
   <div id="zbx">
     <button class="zb" id="zi">+</button>
@@ -453,7 +456,8 @@ function carDay(){ return Math.floor(camDay+carOffsetDays()+1e-6); }
 let camDay=TODAY_DAY+0.05-9.2/SP, playing=false, playingReverse=false, speed=1, lastTs=null;
 let night=false;
 let viewAngle=0, tilt=0;   // viewAngle cible en degrés (0, 30 ou 45) ; tilt s'anime vers viewAngle/45
-let walkMode=false;   // remplace la voiture par un marcheur et la route par un chemin
+let walkMode=false;
+let vehicle='car';   // 'car' | 'scooter' | 'hiker' | 'bike' (voir setVehicle)   // remplace la voiture par un marcheur et la route par un chemin
 // Vue conducteur : remplace la voiture/le marcheur vus de l'extérieur par un
 // bout de volant + capot (ou guidon + plateau) collé en bas de l'écran,
 // comme si on était assis dans la Méhari ou debout sur la trottinette.
@@ -697,7 +701,8 @@ function draw(ts){
   drawMultiDayEvents();
   drawVacancesBLine();
   drawRouteObjects();
-  if(firstPerson) drawFirstPersonOverlay(); else { if(walkMode) drawWalker(); else drawMehari(); }
+  if(firstPerson){ if(vehicle==='car'||vehicle==='scooter') drawFirstPersonOverlay(); }
+  else { if(vehicle==='car') drawMehari(); else drawWalker(); }
   drawHaze();
   drawZoomedPhoto();
   requestAnimationFrame(draw);
@@ -1172,6 +1177,10 @@ const WALKER_IMG=new Image();
 let walkerImgLoaded=false;
 WALKER_IMG.onload=()=>{ walkerImgLoaded=true; };
 WALKER_IMG.src='walker-realistic.png';
+// Randonneur et cycliste vus de dos : silhouette sur 12→186 px d'une image de
+// 199 px de haut (pieds / roue au sol à la ligne 186).
+const HIKER_IMG=new Image(); HIKER_IMG.src='randonneur-apercu.png';
+const BIKE_IMG=new Image(); BIKE_IMG.src='cycliste-apercu.png';
 
 // Photo de la Méhari décapotable avec son conducteur (mode conduite), générée
 // avec Canva (fond supprimé) : rendu photo-réaliste plutôt qu'un dessin
@@ -2096,7 +2105,97 @@ const INLINE_ICONS=[
       return w;
     } }
 ];
+// Style « Randonnée » : balisage des sentiers (lames jaunes en flèche sur un
+// poteau en bois, plaque du jour en haut, marque GR rouge et blanche).
+function drawHikeSign(it,alpha){
+  const evs=it.evs;
+  const side=it.side, lat=side*(RW+3.0);
+  const pL=proj(it.dist,lat-1.5,0.5), pR=proj(it.dist,lat+1.5,0.5);
+  const w=pR.x-pL.x; if(w<3||pR.s<=0) return;
+  const k=w/3; // pixels par mètre à cette distance
+  const bladeH=0.5, gapH=0.1, plateH=0.75, plateW=1.3;
+  const n=evs.length;
+  const topY=0.5+n*(bladeH+gapH)+plateH+0.15; // hauteur du haut du poteau (m)
+  const pTop=proj(it.dist,lat,topY), pG=proj(it.dist,lat,0);
+  if(pG.x+w<0||pG.x-w>W||pG.y<signClipTop()) return;
+  ctx.save();
+  ctx.beginPath(); ctx.rect(0,signClipTop(),W,H-12-signClipTop()); ctx.clip();
+  ctx.globalAlpha=alpha;
+  const yellow=night?'#b8932a':'#f2c230', ink=night?'#1f1a12':'#2b241c';
+  // Ombre au sol et poteau en bois
+  ctx.fillStyle='rgba(0,0,0,0.22)';
+  ctx.beginPath(); ctx.ellipse(pG.x,pG.y,Math.max(2,0.5*k),Math.max(1,0.12*k),0,0,Math.PI*2); ctx.fill();
+  const postW=Math.max(2,0.22*k);
+  const gP=ctx.createLinearGradient(pG.x-postW/2,0,pG.x+postW/2,0);
+  gP.addColorStop(0,night?'#5a4630':'#a07a4c'); gP.addColorStop(1,night?'#3a2c1d':'#6e4f2c');
+  ctx.fillStyle=gP; ctx.fillRect(pG.x-postW/2,pTop.y,postW,pG.y-pTop.y);
+  const hits=[];
+  // Plaque du jour en haut (comme « Fort du St Eynard, alt. 1310 m »)
+  {
+    const dt=new Date(MONTH_ORIGIN_MS+evs[0].day*86400000);
+    const x0=pTop.x-plateW/2*k, y0=pTop.y+0.08*k, pw=plateW*k, ph=plateH*k;
+    ctx.fillStyle=yellow; ctx.fillRect(x0,y0,pw,ph);
+    ctx.strokeStyle='rgba(0,0,0,0.25)'; ctx.lineWidth=Math.max(0.5,0.02*k); ctx.strokeRect(x0,y0,pw,ph);
+    if(k>8){
+      ctx.fillStyle=ink; ctx.textAlign='center'; ctx.textBaseline='middle';
+      ctx.font=`500 ${(0.2*k).toFixed(1)}px Archivo, Arial, sans-serif`;
+      ctx.fillText(['Dimanche','Lundi','Mardi','Mercredi','Jeudi','Vendredi','Samedi'][dt.getUTCDay()], x0+pw/2, y0+ph*0.3, pw*0.9);
+      ctx.font=`600 ${(0.24*k).toFixed(1)}px Archivo, Arial, sans-serif`;
+      ctx.fillText(dt.getUTCDate()+' '+['janv.','févr.','mars','avr.','mai','juin','juil.','août','sept.','oct.','nov.','déc.'][dt.getUTCMonth()], x0+pw/2, y0+ph*0.62, pw*0.9);
+      ctx.font=`400 ${(0.13*k).toFixed(1)}px Archivo, Arial, sans-serif`;
+      ctx.fillText(it.side>0?'mon agenda':'agenda partagé', x0+pw/2, y0+ph*0.86, pw*0.9);
+    }
+  }
+  // Lames en flèche, une par événement
+  evs.forEach((e,i)=>{
+    const yTop=topY-plateH-0.15-gapH-i*(bladeH+gapH);
+    const a=proj(it.dist,lat-1.8,yTop), b=proj(it.dist,lat+1.8,yTop-bladeH);
+    const x0=a.x, y0=a.y, bw=b.x-a.x, bh=b.y-a.y, tip=0.28*k;
+    ctx.fillStyle=yellow;
+    ctx.beginPath();
+    if(side>0){ ctx.moveTo(x0,y0); ctx.lineTo(x0+bw,y0); ctx.lineTo(x0+bw+tip,y0+bh/2); ctx.lineTo(x0+bw,y0+bh); ctx.lineTo(x0,y0+bh); }
+    else{ ctx.moveTo(x0+bw,y0); ctx.lineTo(x0,y0); ctx.lineTo(x0-tip,y0+bh/2); ctx.lineTo(x0,y0+bh); ctx.lineTo(x0+bw,y0+bh); }
+    ctx.closePath(); ctx.fill();
+    ctx.strokeStyle='rgba(0,0,0,0.25)'; ctx.lineWidth=Math.max(0.5,0.02*k); ctx.stroke();
+    // Liseré de la couleur de l'agenda au bord de la lame côté poteau
+    ctx.fillStyle=signAccent(e);
+    ctx.fillRect(side>0?x0:x0+bw-Math.max(1,0.05*k), y0, Math.max(1,0.05*k), bh);
+    const fs=bh*0.38;
+    if(fs>=3){
+      ctx.fillStyle=ink; ctx.textBaseline='middle';
+      const when=e.time ? e.time.replace(':','h') : '';
+      const arrow=side>0?'→':'←';
+      const right=(when?when+'  ':'')+arrow;
+      ctx.font=`700 ${(fs*0.9).toFixed(1)}px Archivo, Arial, sans-serif`;
+      const rw=ctx.measureText(right).width;
+      // Marque GR rouge et blanche avant le titre
+      const gx=side>0 ? x0+bw*0.05 : x0+bw*0.05+rw+bw*0.04, gy=y0+bh*0.3, gw=fs*0.9, gh=fs*0.5;
+      ctx.fillStyle='#fff'; ctx.fillRect(gx,gy,gw,gh/2); ctx.fillStyle='#d62828'; ctx.fillRect(gx,gy+gh/2,gw,gh/2);
+      ctx.fillStyle=ink;
+      ctx.font=`500 ${fs.toFixed(1)}px Archivo, Arial, sans-serif`;
+      let t=e.title||''; const maxT=bw*0.9-rw-gw-bw*0.06;
+      while(t.length>1 && ctx.measureText(t).width>maxT) t=t.slice(0,-1);
+      if(t!==(e.title||'')) t=t.slice(0,-1)+'…';
+      ctx.font=`700 ${(fs*0.9).toFixed(1)}px Archivo, Arial, sans-serif`;
+      if(side>0){
+        ctx.textAlign='right'; ctx.fillText(right, x0+bw*0.97, y0+bh/2);
+        ctx.font=`500 ${fs.toFixed(1)}px Archivo, Arial, sans-serif`;
+        ctx.textAlign='left'; ctx.fillText(t, gx+gw+bw*0.03, y0+bh/2);
+      }else{
+        ctx.textAlign='left'; ctx.fillText(right, x0+bw*0.03, y0+bh/2);
+        ctx.font=`500 ${fs.toFixed(1)}px Archivo, Arial, sans-serif`;
+        ctx.textAlign='left'; ctx.fillText(t, gx+gw+bw*0.03, y0+bh/2);
+      }
+    }
+    hits.push({ev:e,x0:Math.min(x0,x0-tip),x1:x0+bw+tip,y0:y0,y1:y0+bh});
+  });
+  ctx.textAlign='left'; ctx.textBaseline='top';
+  ctx.restore();
+  ctx.globalAlpha=1;
+  EVENT_HITBOXES.push(...hits);
+}
 function drawEventSign(it,alpha){
+  if(signStyle==='rando') return drawHikeSign(it,alpha);
   const evs=it.evs;
   const lat=it.side*(RW+3.0);
   const hTop=0.5;
@@ -2505,6 +2604,17 @@ function drawWalker(){
   ctx.fillStyle=shg;
   ctx.beginPath(); ctx.ellipse(pGround.x,pGround.y,Math.abs(w)*2.1,px(0.2),0,0,Math.PI*2); ctx.fill();
 
+  if(vehicle==='hiker'||vehicle==='bike'){
+    const img=vehicle==='hiker'?HIKER_IMG:BIKE_IMG;
+    if(!img.complete||!img.naturalWidth) return;
+    // Taille réelle : ~1,8 m de haut (silhouette = 87 % de la hauteur d'image).
+    const ppm=Math.abs(w)/0.48, drawH=1.8*ppm/0.874, drawW=drawH*img.naturalWidth/img.naturalHeight;
+    if(night) ctx.filter='brightness(0.55)';
+    ctx.imageSmoothingEnabled=true; ctx.imageSmoothingQuality='high';
+    ctx.drawImage(img, pGround.x-drawW/2, pGround.y-drawH*(186/199), drawW, drawH);
+    if(night) ctx.filter='none';
+    return;
+  }
   if(!walkerImgLoaded) return;
   const aspect=WALKER_IMG.naturalHeight/WALKER_IMG.naturalWidth;
   const drawW=Math.abs(w)*3.3, drawH=drawW*aspect;
@@ -2708,28 +2818,36 @@ document.getElementById('vp-fpv').addEventListener('click',()=>document.getEleme
 function setSignStyle(st){
   signStyle=st;
   try{ localStorage.setItem(SIGN_STYLE_KEY,st); }catch(e){}
-  document.getElementById('vp-sign-classic').classList.toggle('jchip-on',st!=='autoroute');
+  document.getElementById('vp-sign-classic').classList.toggle('jchip-on',st!=='autoroute'&&st!=='rando');
   document.getElementById('vp-sign-hwy').classList.toggle('jchip-on',st==='autoroute');
+  document.getElementById('vp-sign-rando').classList.toggle('jchip-on',st==='rando');
   EVENTS_VERSION++; // force un nouveau dessin même à l'arrêt
 }
 document.getElementById('vp-sign-classic').addEventListener('click',()=>setSignStyle('classic'));
 document.getElementById('vp-sign-hwy').addEventListener('click',()=>setSignStyle('autoroute'));
+document.getElementById('vp-sign-rando').addEventListener('click',()=>setSignStyle('rando'));
 setSignStyle(signStyle);
 // Choix exclusif voiture / trottinette.
-document.getElementById('vp-car').addEventListener('click',()=>{ if(walkMode) document.getElementById('walkbtn').click(); });
-document.getElementById('vp-walk').addEventListener('click',()=>{ if(!walkMode) document.getElementById('walkbtn').click(); });
+document.getElementById('vp-car').addEventListener('click',()=>setVehicle('car'));
+document.getElementById('vp-walk').addEventListener('click',()=>setVehicle('scooter'));
+document.getElementById('vp-hiker').addEventListener('click',()=>setVehicle('hiker'));
+document.getElementById('vp-bike').addEventListener('click',()=>setVehicle('bike'));
 document.addEventListener('click',e=>{
   if(!viewAnglePanel.contains(e.target) && !aerialbtn.contains(e.target)) viewAnglePanel.classList.remove('open');
 });
-document.getElementById('walkbtn').addEventListener('click',()=>{
-  walkMode=!walkMode;
+// Véhicule : voiture, trottinette, randonneur (chemin de terre) ou cycliste
+// (sur la route). walkMode = chemin de terre au lieu de la route.
+function setVehicle(v){
+  vehicle=v;
+  walkMode=(v==='scooter'||v==='hiker');
   const btn=document.getElementById('walkbtn');
-  btn.style.background=walkMode?'#c1502f':'#fff';
-  btn.style.color=walkMode?'#fff':'#c1502f';
-  btn.title=walkMode?'Reprendre la voiture':'Rouler en trottinette électrique au lieu de conduire';
-  document.getElementById('vp-walk').classList.toggle('jchip-on',walkMode);
-  document.getElementById('vp-car').classList.toggle('jchip-on',!walkMode);
-});
+  btn.style.background=v==='scooter'?'#c1502f':'#fff';
+  btn.style.color=v==='scooter'?'#fff':'#c1502f';
+  btn.title=v==='scooter'?'Reprendre la voiture':'Rouler en trottinette électrique au lieu de conduire';
+  [['vp-car','car'],['vp-walk','scooter'],['vp-hiker','hiker'],['vp-bike','bike']].forEach(([id,k])=>document.getElementById(id).classList.toggle('jchip-on',v===k));
+  EVENTS_VERSION++;
+}
+document.getElementById('walkbtn').addEventListener('click',()=>setVehicle(vehicle==='scooter'?'car':'scooter'));
 document.getElementById('fpvbtn').addEventListener('click',()=>{
   firstPerson=!firstPerson;
   const btn=document.getElementById('fpvbtn');

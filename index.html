@@ -331,6 +331,7 @@ canvas#c{position:absolute;inset:0;width:100%;height:100%;touch-action:none;poin
     <div style="display:flex;gap:6px;">
       <button class="jchip" id="musicLoad" type="button">Charger et jouer</button>
       <button class="jchip" id="musicStop" type="button">Pause</button>
+      <button class="jchip" id="musicNext" type="button">Suivant</button>
       <button class="jchip" id="musicHide" type="button">Masquer le lecteur</button>
     </div>
     <div id="musicStatus" style="font-size:11px;color:#8a7a5c;min-height:14px;"></div>
@@ -391,7 +392,7 @@ canvas#c{position:absolute;inset:0;width:100%;height:100%;touch-action:none;poin
     <div class="leg" id="legWeekend"><div class="legline"></div>Week-end</div>
     <div class="leg" id="legVac"><div class="legline" style="background:#ffd600;"></div><span id="legVacTxt">Vacances scolaires</span></div>
     <button id="legSync" class="leg" type="button" style="display:none;cursor:pointer;border:none;font-family:inherit;color:inherit;text-align:left;" title="Relancer la synchro Google Agenda"><i class="ti ti-refresh" style="font-size:12px;"></i><span id="legSyncTxt"></span></button>
-    <div id="appVersion" style="font-size:10px;color:#fff;text-shadow:0 1px 2px rgba(0,0,0,0.6);text-align:right;padding-right:4px;">Version 2026-10-17 12:56 · <a href="confidentialite.html" style="color:#fff">Confidentialité</a> · <a href="conditions.html" style="color:#fff">Conditions</a></div>
+    <div id="appVersion" style="font-size:10px;color:#fff;text-shadow:0 1px 2px rgba(0,0,0,0.6);text-align:right;padding-right:4px;">Version 2026-10-17 13:00 · <a href="confidentialite.html" style="color:#fff">Confidentialité</a> · <a href="conditions.html" style="color:#fff">Conditions</a></div>
   </div>
   <div id="zbx">
     <button class="zb" id="zi">+</button>
@@ -2981,7 +2982,7 @@ document.getElementById('playbtn').addEventListener('click',()=>{
 const MUSIC_URL_KEY='musicUrl_v1', MUSIC_WITHPLAY_KEY='musicWithPlay_v1';
 const musicPanel=document.getElementById('musicPanel');
 const musicStatus=t=>{ document.getElementById('musicStatus').textContent=t||''; };
-let ytPlayer=null, ytApiPromise=null, musicLoaded=false;
+let ytPlayer=null, ytApiPromise=null, musicLoaded=false, musicSkips=0;
 function parseYouTubeUrl(u){
   try{
     const url=new URL(u.trim());
@@ -3014,24 +3015,33 @@ function musicLoadAndPlay(){
   }
   const wrap=document.getElementById('musicPlayerWrap');
   wrap.classList.add('show');
-  wrap.innerHTML='';
-  const ifr=document.createElement('iframe');
-  ifr.id='musicPlayer';
-  ifr.allow='autoplay; encrypted-media';
-  ifr.setAttribute('allowfullscreen','');
-  const q='autoplay=1&playsinline=1&rel=0&enablejsapi=1&origin='+encodeURIComponent(location.origin);
-  ifr.src=list ? 'https://www.youtube.com/embed/videoseries?list='+encodeURIComponent(list)+'&'+q
-               : 'https://www.youtube.com/embed/'+encodeURIComponent(v)+'?'+q;
-  wrap.appendChild(ifr);
-  musicLoaded=true;
-  musicStatus('Chargement… (si rien ne démarre, touchez le petit lecteur en bas à gauche)');
-  ytPlayer=null;
-  loadYouTubeApi().then(()=>{
-    ytPlayer=new YT.Player(ifr,{ events:{
-      onStateChange:e=>{ if(e.data===YT.PlayerState.PLAYING) musicStatus('♪ Lecture en cours'); },
-      onError:e=>{ musicStatus(e.data===101||e.data===150 ? 'Ce morceau ne peut pas être lu hors de YouTube : passage au suivant.' : 'Lecture impossible (playlist privée ou introuvable ?).'); try{ e.target.nextVideo(); }catch(_){} }
-    }});
-  }).catch(err=>musicStatus('Lecture lancée, mais commandes ▶/Pause indisponibles ('+err.message+').'));
+  wrap.innerHTML='<div id="musicPlayer"></div>';
+  musicLoaded=true; musicSkips=0;
+  const events={
+    onReady:e=>{ try{ if(list) e.target.setShuffle(false); e.target.playVideo(); }catch(_){} },
+    onStateChange:e=>{ if(e.data===YT.PlayerState.PLAYING){ musicSkips=0; musicStatus('♪ Lecture en cours'); } },
+    // Morceau refusé hors de YouTube (fréquent pour les titres d'albums YouTube
+    // Music) : on passe automatiquement au suivant, jusqu'à 40 fois de suite.
+    onError:e=>{
+      musicSkips++;
+      if(list && musicSkips<=40){ musicStatus('Morceau non disponible hors de YouTube, passage au suivant ('+musicSkips+')…'); setTimeout(()=>{ try{ e.target.nextVideo(); }catch(_){} },300); }
+      else musicStatus('Aucun morceau lisible ici : beaucoup de titres d\'albums YouTube Music sont réservés à l\'appli YouTube Music. Essayez une playlist de clips / vidéos YouTube.');
+    }
+  };
+  const vars={ autoplay:1, playsinline:1, rel:0 };
+  if(list){ vars.listType='playlist'; vars.list=list; }
+  if(window.YT && YT.Player){
+    // Script déjà préchargé : lecteur créé tout de suite, dans le geste.
+    ytPlayer=new YT.Player('musicPlayer',{ width:'100%', height:'100%', videoId: list?undefined:v, playerVars:vars, events });
+    musicStatus('Chargement…');
+  }else{
+    // Script pas encore prêt : iframe directe (lecture possible, sans saut automatique).
+    const ifr=document.createElement('iframe'); ifr.allow='autoplay; encrypted-media'; ifr.setAttribute('allowfullscreen','');
+    const q='autoplay=1&playsinline=1&rel=0';
+    ifr.src=list ? 'https://www.youtube.com/embed/videoseries?list='+encodeURIComponent(list)+'&'+q : 'https://www.youtube.com/embed/'+encodeURIComponent(v)+'?'+q;
+    wrap.innerHTML=''; wrap.appendChild(ifr); ytPlayer=null;
+    musicStatus('Chargement… (si rien ne démarre, touchez le petit lecteur)');
+  }
 }
 function musicFollowPlay(on){
   if(!document.getElementById('musicWithPlay').checked) return;
@@ -3044,6 +3054,7 @@ document.getElementById('musicbtn').addEventListener('click',e=>{ e.stopPropagat
 document.getElementById('menu-music').addEventListener('click',e=>{ e.stopPropagation(); menuPanel.classList.remove('open'); musicPanel.classList.add('open'); });
 document.addEventListener('click',e=>{ if(!musicPanel.contains(e.target) && e.target.id!=='musicbtn' && !document.getElementById('musicbtn').contains(e.target)) musicPanel.classList.remove('open'); });
 document.getElementById('musicLoad').addEventListener('click',musicLoadAndPlay);
+document.getElementById('musicNext').addEventListener('click',()=>{ if(ytPlayer && ytPlayer.nextVideo){ musicSkips=0; ytPlayer.nextVideo(); } });
 document.getElementById('musicStop').addEventListener('click',()=>{ if(ytPlayer && ytPlayer.pauseVideo) ytPlayer.pauseVideo(); musicStatus('En pause'); });
 document.getElementById('musicHide').addEventListener('click',()=>{
   const w=document.getElementById('musicPlayerWrap'); w.classList.toggle('show');

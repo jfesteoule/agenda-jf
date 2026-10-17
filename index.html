@@ -119,6 +119,13 @@ canvas#c{position:absolute;inset:0;width:100%;height:100%;touch-action:none;poin
 .searchdot{width:9px;height:9px;border-radius:50%;flex:none;}
 #searchEmpty{display:none;padding:14px 16px;font-family:'Archivo',Arial,sans-serif;font-size:13px;color:#8a7a5c;}
 
+#musicPanel{display:none;position:absolute;top:56px;right:12px;z-index:1001;background:#fff;border-radius:12px;box-shadow:0 6px 18px rgba(0,0,0,0.22);padding:14px;width:min(300px,calc(100vw - 32px));flex-direction:column;gap:10px;box-sizing:border-box;}
+#musicPanel.open{display:flex;}
+/* Petit lecteur YouTube en bas à gauche (masquable). */
+#musicPlayerWrap{display:none;position:absolute;left:12px;bottom:16px;z-index:25;width:200px;height:112px;border-radius:10px;overflow:hidden;box-shadow:0 2px 8px rgba(0,0,0,0.3);background:#000;}
+#musicPlayerWrap.show{display:block;}
+#musicPlayerWrap iframe{width:100%;height:100%;border:0;}
+@media (max-width:480px){ #musicPlayerWrap{width:150px;height:84px;} }
 #datejumpPanel{display:none;position:absolute;top:56px;right:12px;z-index:1001;background:#fff;border-radius:12px;box-shadow:0 6px 18px rgba(0,0,0,0.22);padding:14px;width:230px;flex-direction:column;gap:10px;}
 
 .monthnavbtn{display:none;position:absolute;top:10px;z-index:1000;width:36px;height:36px;border-radius:50%;border:none;background:#fff;box-shadow:0 2px 6px rgba(0,0,0,0.2);color:#5f6368;cursor:pointer;align-items:center;justify-content:center;font-size:16px;}
@@ -224,6 +231,7 @@ canvas#c{position:absolute;inset:0;width:100%;height:100%;touch-action:none;poin
     <button id="fpvbtn" class="hudbtn-top hudhide" style="position:relative;z-index:1000;pointer-events:auto;width:40px;height:40px;min-width:40px;background:#fff;border-radius:50%;border:none;cursor:pointer;display:flex;align-items:center;justify-content:center;box-shadow:0 2px 6px rgba(0,0,0,0.2);color:#c1502f;font-size:18px;margin-left:6px;" title="Vue conducteur (ce que voit le conducteur ou le marcheur)"><i class="ti ti-eye"></i></button>
     <button id="walkbtn" class="hudbtn-top hudhide" style="position:relative;z-index:1000;pointer-events:auto;width:40px;height:40px;min-width:40px;background:#fff;border-radius:50%;border:none;cursor:pointer;display:flex;align-items:center;justify-content:center;box-shadow:0 2px 6px rgba(0,0,0,0.2);color:#c1502f;font-size:18px;margin-left:6px;" title="Rouler en trottinette électrique au lieu de conduire"><i class="ti ti-scooter-electric"></i></button>
     <button id="weekbtn" class="hudbtn-top" style="position:relative;z-index:1000;pointer-events:auto;width:40px;height:40px;min-width:40px;background:#fff;border-radius:50%;border:none;cursor:pointer;display:flex;align-items:center;justify-content:center;box-shadow:0 2px 6px rgba(0,0,0,0.2);color:#c1502f;font-size:18px;margin-left:6px;" title="Volet hebdomadaire"><i class="ti ti-calendar-week"></i></button>
+    <button id="musicbtn" class="hudbtn-top" style="position:relative;z-index:1000;pointer-events:auto;width:40px;height:40px;min-width:40px;background:#fff;border-radius:50%;border:none;cursor:pointer;display:flex;align-items:center;justify-content:center;box-shadow:0 2px 6px rgba(0,0,0,0.2);color:#c1502f;font-size:18px;margin-left:6px;" title="Musique (YouTube)"><i class="ti ti-music"></i></button>
     <button id="nightbtn" class="hudbtn-top" style="position:relative;z-index:1000;pointer-events:auto;width:40px;height:40px;min-width:40px;background:#fff;border-radius:50%;border:none;cursor:pointer;display:flex;align-items:center;justify-content:center;box-shadow:0 2px 6px rgba(0,0,0,0.2);color:#c1502f;font-size:18px;margin-left:6px;" title="Nuit / jour"><i class="ti ti-sun" id="nightIcon"></i></button>
     <button id="rightonlybtn" class="hudbtn-top" style="position:relative;z-index:1000;pointer-events:auto;width:40px;height:40px;min-width:40px;background:#fff;border-radius:50%;border:none;cursor:pointer;display:none;align-items:center;justify-content:center;box-shadow:0 2px 6px rgba(0,0,0,0.2);color:#c1502f;font-size:16px;font-weight:bold;margin-left:6px;" title="Masquer mon agenda">Moi</button>
   </div>
@@ -238,6 +246,7 @@ canvas#c{position:absolute;inset:0;width:100%;height:100%;touch-action:none;poin
     <button id="menu-walk" class="menuitem"><i class="ti ti-scooter-electric"></i>Trottinette électrique</button>
     <button id="menu-week" class="menuitem"><i class="ti ti-calendar-week"></i>Volet hebdomadaire</button>
     <button id="menu-night" class="menuitem"><i class="ti ti-sun"></i>Nuit / jour</button>
+    <button id="menu-music" class="menuitem"><i class="ti ti-music"></i>Musique</button>
     <button id="menu-right" class="menuitem"><i class="ti ti-user"></i>Masquer mon agenda</button>
     <button id="menu-legend" class="menuitem"><i class="ti ti-list"></i>Masquer la légende</button>
     <button id="menu-calendars" class="menuitem"><i class="ti ti-users"></i>Agendas et vacances…</button>
@@ -313,6 +322,20 @@ canvas#c{position:absolute;inset:0;width:100%;height:100%;touch-action:none;poin
       </div>
     </div>
   </div>
+  <div id="musicPanel">
+    <div style="font-family:'Oswald',Arial,sans-serif;font-size:13px;font-weight:600;color:#2b241c;">Musique (YouTube)</div>
+    <label style="display:flex;flex-direction:column;gap:4px;font-size:12px;color:#5f6368;">Lien d'une playlist YouTube ou YouTube Music
+      <input type="url" id="musicUrl" placeholder="https://music.youtube.com/playlist?list=…" style="font-size:13px;padding:7px 9px;border:1px solid #ddd;border-radius:8px;">
+    </label>
+    <label style="display:flex;align-items:center;gap:8px;font-size:12px;color:#2b241c;"><input type="checkbox" id="musicWithPlay" checked style="margin:0;">Démarrer / arrêter avec ▶ de la route</label>
+    <div style="display:flex;gap:6px;">
+      <button class="jchip" id="musicLoad" type="button">Charger et jouer</button>
+      <button class="jchip" id="musicStop" type="button">Pause</button>
+      <button class="jchip" id="musicHide" type="button">Masquer le lecteur</button>
+    </div>
+    <div id="musicStatus" style="font-size:11px;color:#8a7a5c;min-height:14px;"></div>
+  </div>
+  <div id="musicPlayerWrap"><div id="musicPlayer"></div></div>
   <div id="datejumpPanel">
     <div style="font-family:'Oswald',Arial,sans-serif;font-size:12px;font-weight:600;color:#2b241c;">Aller à une date</div>
     <div class="jchips">
@@ -368,7 +391,7 @@ canvas#c{position:absolute;inset:0;width:100%;height:100%;touch-action:none;poin
     <div class="leg" id="legWeekend"><div class="legline"></div>Week-end</div>
     <div class="leg" id="legVac"><div class="legline" style="background:#ffd600;"></div><span id="legVacTxt">Vacances scolaires</span></div>
     <button id="legSync" class="leg" type="button" style="display:none;cursor:pointer;border:none;font-family:inherit;color:inherit;text-align:left;" title="Relancer la synchro Google Agenda"><i class="ti ti-refresh" style="font-size:12px;"></i><span id="legSyncTxt"></span></button>
-    <div id="appVersion" style="font-size:10px;color:#fff;text-shadow:0 1px 2px rgba(0,0,0,0.6);text-align:right;padding-right:4px;">Version 2026-10-17 11:59 · <a href="confidentialite.html" style="color:#fff">Confidentialité</a> · <a href="conditions.html" style="color:#fff">Conditions</a></div>
+    <div id="appVersion" style="font-size:10px;color:#fff;text-shadow:0 1px 2px rgba(0,0,0,0.6);text-align:right;padding-right:4px;">Version 2026-10-17 12:36 · <a href="confidentialite.html" style="color:#fff">Confidentialité</a> · <a href="conditions.html" style="color:#fff">Conditions</a></div>
   </div>
   <div id="zbx">
     <button class="zb" id="zi">+</button>
@@ -2948,7 +2971,81 @@ document.addEventListener('visibilitychange',()=>{
 document.getElementById('playbtn').addEventListener('click',()=>{
   if(playingReverse){playingReverse=false;}
   playing=!playing;updatePlay();
+  musicFollowPlay(playing);
 });
+
+// ===== Musique : lecteur YouTube (playlist YouTube ou YouTube Music) =====
+// Pas d'accès direct au compte YouTube Music (aucune API publique) : on lit la
+// playlist dans le lecteur YouTube intégré. Le lien et l'option « avec ▶ »
+// sont gardés dans le navigateur.
+const MUSIC_URL_KEY='musicUrl_v1', MUSIC_WITHPLAY_KEY='musicWithPlay_v1';
+const musicPanel=document.getElementById('musicPanel');
+const musicStatus=t=>{ document.getElementById('musicStatus').textContent=t||''; };
+let ytPlayer=null, ytApiPromise=null, musicLoaded=false;
+function parseYouTubeUrl(u){
+  try{
+    const url=new URL(u.trim());
+    const list=url.searchParams.get('list'), v=url.searchParams.get('v') || (url.hostname.includes('youtu.be') ? url.pathname.slice(1) : null);
+    return { list, v };
+  }catch(e){ return { list:null, v:null }; }
+}
+function loadYouTubeApi(){
+  if(window.YT && YT.Player) return Promise.resolve();
+  if(ytApiPromise) return ytApiPromise;
+  ytApiPromise=new Promise((resolve,reject)=>{
+    window.onYouTubeIframeAPIReady=()=>resolve();
+    const sc=document.createElement('script'); sc.src='https://www.youtube.com/iframe_api';
+    sc.onerror=()=>{ ytApiPromise=null; reject(new Error('Lecteur YouTube indisponible')); };
+    document.head.appendChild(sc);
+  });
+  return ytApiPromise;
+}
+async function musicLoadAndPlay(){
+  const raw=document.getElementById('musicUrl').value;
+  const {list,v}=parseYouTubeUrl(raw);
+  if(!list && !v){ musicStatus('Lien non reconnu : collez le lien d\'une playlist (avec « list= »).'); return; }
+  try{ localStorage.setItem(MUSIC_URL_KEY, raw.trim()); }catch(e){}
+  if(list==='LM' || list==='LL'){
+    musicStatus('« Titres likés » est une playlist privée que YouTube ne laisse pas lire hors de son site : créez une playlist publique ou non répertoriée et collez son lien.');
+    return;
+  }
+  musicStatus('Chargement…');
+  try{ await loadYouTubeApi(); }catch(e){ musicStatus(e.message); return; }
+  document.getElementById('musicPlayerWrap').classList.add('show');
+  const vars={ autoplay:1, playsinline:1, rel:0, loop:1 };
+  if(list){ vars.listType='playlist'; vars.list=list; }
+  if(ytPlayer){
+    if(list) ytPlayer.loadPlaylist({list, listType:'playlist'}); else ytPlayer.loadVideoById(v);
+  }else{
+    ytPlayer=new YT.Player('musicPlayer',{ width:'100%', height:'100%', videoId: list ? undefined : v, playerVars:vars,
+      events:{
+        onReady:e=>{ e.target.playVideo(); },
+        onStateChange:e=>{ if(e.data===YT.PlayerState.PLAYING){ musicStatus('♪ Lecture en cours'); musicLoaded=true; } },
+        onError:e=>{ musicStatus(e.data===101||e.data===150 ? 'Ce morceau ne peut pas être lu hors de YouTube : passage au suivant.' : 'Lecture impossible (playlist privée ou introuvable ?).'); try{ e.target.nextVideo(); }catch(_){} }
+      } });
+  }
+}
+function musicFollowPlay(on){
+  if(!document.getElementById('musicWithPlay').checked) return;
+  if(on){
+    if(ytPlayer && ytPlayer.playVideo){ ytPlayer.playVideo(); document.getElementById('musicPlayerWrap').classList.add('show'); }
+    else if(document.getElementById('musicUrl').value.trim()) musicLoadAndPlay();
+  }else if(ytPlayer && ytPlayer.pauseVideo) ytPlayer.pauseVideo();
+}
+document.getElementById('musicbtn').addEventListener('click',e=>{ e.stopPropagation(); musicPanel.classList.toggle('open'); });
+document.getElementById('menu-music').addEventListener('click',e=>{ e.stopPropagation(); menuPanel.classList.remove('open'); musicPanel.classList.add('open'); });
+document.addEventListener('click',e=>{ if(!musicPanel.contains(e.target) && e.target.id!=='musicbtn' && !document.getElementById('musicbtn').contains(e.target)) musicPanel.classList.remove('open'); });
+document.getElementById('musicLoad').addEventListener('click',musicLoadAndPlay);
+document.getElementById('musicStop').addEventListener('click',()=>{ if(ytPlayer && ytPlayer.pauseVideo) ytPlayer.pauseVideo(); musicStatus('En pause'); });
+document.getElementById('musicHide').addEventListener('click',()=>{
+  const w=document.getElementById('musicPlayerWrap'); w.classList.toggle('show');
+  document.getElementById('musicHide').textContent=w.classList.contains('show')?'Masquer le lecteur':'Afficher le lecteur';
+});
+document.getElementById('musicWithPlay').addEventListener('change',e=>{ try{ localStorage.setItem(MUSIC_WITHPLAY_KEY, e.target.checked?'1':'0'); }catch(_){} });
+try{
+  document.getElementById('musicUrl').value=localStorage.getItem(MUSIC_URL_KEY)||'https://music.youtube.com/playlist?list=LM';
+  document.getElementById('musicWithPlay').checked=localStorage.getItem(MUSIC_WITHPLAY_KEY)!=='0';
+}catch(e){}
 document.getElementById('revbtn').addEventListener('click',()=>{
   if(playing){playing=false;updatePlay();}
   playingReverse=!playingReverse;

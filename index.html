@@ -124,6 +124,8 @@ canvas#c{position:absolute;inset:0;width:100%;height:100%;touch-action:none;poin
 /* Petit lecteur YouTube en bas à gauche (masquable). */
 #musicPlayerWrap{display:none;position:absolute;left:12px;bottom:16px;z-index:25;width:200px;height:112px;border-radius:10px;overflow:hidden;box-shadow:0 2px 8px rgba(0,0,0,0.3);background:#000;}
 #musicPlayerWrap.show{display:block;}
+#musicPlayerWrap.spotify{width:320px;height:152px;background:transparent;box-shadow:none;}
+@media (max-width:480px){ #musicPlayerWrap.spotify{width:calc(100vw - 24px);height:80px;} }
 #musicPlayerWrap iframe{width:100%;height:100%;border:0;}
 @media (max-width:480px){ #musicPlayerWrap{width:150px;height:84px;} }
 #datejumpPanel{display:none;position:absolute;top:56px;right:12px;z-index:1001;background:#fff;border-radius:12px;box-shadow:0 6px 18px rgba(0,0,0,0.22);padding:14px;width:230px;flex-direction:column;gap:10px;}
@@ -323,9 +325,9 @@ canvas#c{position:absolute;inset:0;width:100%;height:100%;touch-action:none;poin
     </div>
   </div>
   <div id="musicPanel">
-    <div style="font-family:'Oswald',Arial,sans-serif;font-size:13px;font-weight:600;color:#2b241c;">Musique (YouTube)</div>
-    <label style="display:flex;flex-direction:column;gap:4px;font-size:12px;color:#5f6368;">Lien d'une playlist YouTube ou YouTube Music
-      <input type="url" id="musicUrl" placeholder="https://music.youtube.com/playlist?list=…" style="font-size:13px;padding:7px 9px;border:1px solid #ddd;border-radius:8px;">
+    <div style="font-family:'Oswald',Arial,sans-serif;font-size:13px;font-weight:600;color:#2b241c;">Musique (Spotify ou YouTube)</div>
+    <label style="display:flex;flex-direction:column;gap:4px;font-size:12px;color:#5f6368;">Lien d'une playlist Spotify (recommandé) ou YouTube
+      <input type="url" id="musicUrl" placeholder="https://open.spotify.com/playlist/…" style="font-size:13px;padding:7px 9px;border:1px solid #ddd;border-radius:8px;">
     </label>
     <label style="display:flex;align-items:center;gap:8px;font-size:12px;color:#2b241c;"><input type="checkbox" id="musicWithPlay" checked style="margin:0;">Démarrer / arrêter avec ▶ de la route</label>
     <div style="display:flex;gap:6px;">
@@ -392,7 +394,7 @@ canvas#c{position:absolute;inset:0;width:100%;height:100%;touch-action:none;poin
     <div class="leg" id="legWeekend"><div class="legline"></div>Week-end</div>
     <div class="leg" id="legVac"><div class="legline" style="background:#ffd600;"></div><span id="legVacTxt">Vacances scolaires</span></div>
     <button id="legSync" class="leg" type="button" style="display:none;cursor:pointer;border:none;font-family:inherit;color:inherit;text-align:left;" title="Relancer la synchro Google Agenda"><i class="ti ti-refresh" style="font-size:12px;"></i><span id="legSyncTxt"></span></button>
-    <div id="appVersion" style="font-size:10px;color:#fff;text-shadow:0 1px 2px rgba(0,0,0,0.6);text-align:right;padding-right:4px;">Version 2026-10-17 13:00 · <a href="confidentialite.html" style="color:#fff">Confidentialité</a> · <a href="conditions.html" style="color:#fff">Conditions</a></div>
+    <div id="appVersion" style="font-size:10px;color:#fff;text-shadow:0 1px 2px rgba(0,0,0,0.6);text-align:right;padding-right:4px;">Version 2026-10-17 13:04 · <a href="confidentialite.html" style="color:#fff">Confidentialité</a> · <a href="conditions.html" style="color:#fff">Conditions</a></div>
   </div>
   <div id="zbx">
     <button class="zb" id="zi">+</button>
@@ -3004,8 +3006,54 @@ function loadYouTubeApi(){
 // Le lecteur est créé immédiatement au toucher (iframe avec autoplay autorisé) :
 // sur Android, un démarrage différé (après téléchargement du script YouTube)
 // n'est plus rattaché au geste de l'utilisateur et le son est refusé.
+// ----- Spotify : lecteur officiel intégré (titres complets si connecté à
+// Spotify dans ce navigateur, extraits de 30 s sinon) -----
+let spController=null, spApiPromise=null, spIFrameAPI=null;
+function parseSpotifyUrl(u){
+  const m=/open\.spotify\.com\/(?:intl-[a-z]+\/)?(playlist|album|track|artist)\/([A-Za-z0-9]+)/.exec(u||'') || /spotify:(playlist|album|track|artist):([A-Za-z0-9]+)/.exec(u||'');
+  return m ? { type:m[1], id:m[2] } : null;
+}
+function loadSpotifyApi(){
+  if(spIFrameAPI) return Promise.resolve(spIFrameAPI);
+  if(spApiPromise) return spApiPromise;
+  spApiPromise=new Promise((resolve,reject)=>{
+    window.onSpotifyIframeApiReady=api=>{ spIFrameAPI=api; resolve(api); };
+    const sc=document.createElement('script'); sc.src='https://open.spotify.com/embed/iframe-api/v1'; sc.async=true;
+    sc.onerror=()=>{ spApiPromise=null; reject(new Error('Lecteur Spotify indisponible')); };
+    document.head.appendChild(sc);
+  });
+  return spApiPromise;
+}
+function spotifyLoadAndPlay(sp){
+  const wrap=document.getElementById('musicPlayerWrap');
+  wrap.classList.add('show','spotify');
+  wrap.innerHTML='<div id="musicPlayer"></div>';
+  ytPlayer=null; musicLoaded=true;
+  const compact=window.innerWidth<=480;
+  const make=api=>{
+    api.createController(document.getElementById('musicPlayer'),
+      { uri:'spotify:'+sp.type+':'+sp.id, width:'100%', height: compact?80:152 },
+      ctrl=>{
+        spController=ctrl;
+        ctrl.addListener('ready',()=>{ try{ ctrl.play(); }catch(_){} });
+        ctrl.addListener('playback_update',e=>{ if(e && e.data) musicStatus(e.data.isPaused ? 'En pause' : '♪ Lecture en cours (si seulement 30 s : connectez-vous à Spotify dans ce navigateur)'); });
+      });
+  };
+  if(spIFrameAPI){ make(spIFrameAPI); musicStatus('Chargement… (si rien ne démarre, touchez ▶ dans le lecteur Spotify)'); }
+  else{
+    // Repli immédiat : lecteur Spotify intégré simple (sans commandes ▶/Pause de la route).
+    const ifr=document.createElement('iframe');
+    ifr.src='https://open.spotify.com/embed/'+sp.type+'/'+sp.id; ifr.allow='autoplay; clipboard-write; encrypted-media; fullscreen; picture-in-picture';
+    ifr.style.cssText='width:100%;height:100%;border:0;border-radius:12px;';
+    wrap.innerHTML=''; wrap.appendChild(ifr); spController=null;
+    musicStatus('Touchez ▶ dans le lecteur Spotify pour démarrer.');
+  }
+}
 function musicLoadAndPlay(){
   const raw=document.getElementById('musicUrl').value;
+  const sp=parseSpotifyUrl(raw);
+  if(sp){ try{ localStorage.setItem(MUSIC_URL_KEY, raw.trim()); }catch(e){} return spotifyLoadAndPlay(sp); }
+  document.getElementById('musicPlayerWrap').classList.remove('spotify'); spController=null;
   const {list,v}=parseYouTubeUrl(raw);
   if(!list && !v){ musicStatus('Lien non reconnu : collez le lien d\'une playlist (avec « list= »).'); return; }
   try{ localStorage.setItem(MUSIC_URL_KEY, raw.trim()); }catch(e){}
@@ -3045,6 +3093,7 @@ function musicLoadAndPlay(){
 }
 function musicFollowPlay(on){
   if(!document.getElementById('musicWithPlay').checked) return;
+  if(spController){ try{ on ? spController.resume() : spController.pause(); }catch(_){} if(on) document.getElementById('musicPlayerWrap').classList.add('show'); return; }
   if(on){
     if(ytPlayer && ytPlayer.playVideo){ ytPlayer.playVideo(); document.getElementById('musicPlayerWrap').classList.add('show'); }
     else if(!musicLoaded && document.getElementById('musicUrl').value.trim()) musicLoadAndPlay();
@@ -3054,14 +3103,15 @@ document.getElementById('musicbtn').addEventListener('click',e=>{ e.stopPropagat
 document.getElementById('menu-music').addEventListener('click',e=>{ e.stopPropagation(); menuPanel.classList.remove('open'); musicPanel.classList.add('open'); });
 document.addEventListener('click',e=>{ if(!musicPanel.contains(e.target) && e.target.id!=='musicbtn' && !document.getElementById('musicbtn').contains(e.target)) musicPanel.classList.remove('open'); });
 document.getElementById('musicLoad').addEventListener('click',musicLoadAndPlay);
-document.getElementById('musicNext').addEventListener('click',()=>{ if(ytPlayer && ytPlayer.nextVideo){ musicSkips=0; ytPlayer.nextVideo(); } });
-document.getElementById('musicStop').addEventListener('click',()=>{ if(ytPlayer && ytPlayer.pauseVideo) ytPlayer.pauseVideo(); musicStatus('En pause'); });
+document.getElementById('musicNext').addEventListener('click',()=>{ if(spController){ musicStatus('Pour passer au titre suivant, utilisez ⏭ dans le lecteur Spotify.'); return; } if(ytPlayer && ytPlayer.nextVideo){ musicSkips=0; ytPlayer.nextVideo(); } });
+document.getElementById('musicStop').addEventListener('click',()=>{ if(spController){ try{ spController.pause(); }catch(_){} } if(ytPlayer && ytPlayer.pauseVideo) ytPlayer.pauseVideo(); musicStatus('En pause'); });
 document.getElementById('musicHide').addEventListener('click',()=>{
   const w=document.getElementById('musicPlayerWrap'); w.classList.toggle('show');
   document.getElementById('musicHide').textContent=w.classList.contains('show')?'Masquer le lecteur':'Afficher le lecteur';
 });
 document.getElementById('musicWithPlay').addEventListener('change',e=>{ try{ localStorage.setItem(MUSIC_WITHPLAY_KEY, e.target.checked?'1':'0'); }catch(_){} });
 loadYouTubeApi().catch(()=>{});
+loadSpotifyApi().catch(()=>{});
 try{ if(/[?&]list=(LM|LL)\b/.test(localStorage.getItem(MUSIC_URL_KEY)||'')) localStorage.removeItem(MUSIC_URL_KEY); }catch(e){}
 try{
   document.getElementById('musicUrl').value=localStorage.getItem(MUSIC_URL_KEY)||'https://music.youtube.com/playlist?list=PL4ZG02_3Dv4cTK5rYj5K-lt7Tj-1iKMvq';

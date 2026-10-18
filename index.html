@@ -339,7 +339,11 @@ canvas#c{position:absolute;inset:0;width:100%;height:100%;touch-action:none;poin
     </div>
   </div>
   <div id="musicPanel">
-    <div style="font-family:'Oswald',Arial,sans-serif;font-size:13px;font-weight:600;color:#2b241c;">Musique (Spotify ou YouTube)</div>
+    <div style="font-family:'Oswald',Arial,sans-serif;font-size:13px;font-weight:600;color:#2b241c;">Musique (Spotify, YouTube ou radio)</div>
+    <div style="display:flex;gap:6px;align-items:center;">
+      <select id="radioSel" aria-label="Station de radio" style="flex:1;min-width:0;font-size:13px;padding:7px 8px;border:1px solid #ddd;border-radius:8px;background:#fff;color:#2b241c;"></select>
+      <button class="jchip" id="radioPlay" type="button" style="flex:none;"><i class="ti ti-radio"></i> Radio</button>
+    </div>
     <label style="display:flex;flex-direction:column;gap:4px;font-size:12px;color:#5f6368;">Lien d'une playlist Spotify (recommandé) ou YouTube
       <input type="url" id="musicUrl" placeholder="https://open.spotify.com/playlist/…" style="font-size:13px;padding:7px 9px;border:1px solid #ddd;border-radius:8px;">
     </label>
@@ -419,7 +423,7 @@ canvas#c{position:absolute;inset:0;width:100%;height:100%;touch-action:none;poin
     <div class="leg" id="legWeekend"><div class="legline"></div>Week-end</div>
     <div class="leg" id="legVac"><div class="legline" style="background:#ffd600;"></div><span id="legVacTxt">Vacances scolaires</span></div>
     <button id="legSync" class="leg" type="button" style="display:none;cursor:pointer;border:none;font-family:inherit;color:inherit;text-align:left;" title="Relancer la synchro Google Agenda"><i class="ti ti-refresh" style="font-size:12px;"></i><span id="legSyncTxt"></span></button>
-    <div id="appVersion" style="font-size:10px;color:#fff;text-shadow:0 1px 2px rgba(0,0,0,0.6);text-align:right;padding-right:4px;">Version 2026-10-17 20:15 · <a href="confidentialite.html" style="color:#fff">Confidentialité</a> · <a href="conditions.html" style="color:#fff">Conditions</a></div>
+    <div id="appVersion" style="font-size:10px;color:#fff;text-shadow:0 1px 2px rgba(0,0,0,0.6);text-align:right;padding-right:4px;">Version 2026-10-18 04:38 · <a href="confidentialite.html" style="color:#fff">Confidentialité</a> · <a href="conditions.html" style="color:#fff">Conditions</a></div>
   </div>
   <div id="zbx">
     <button class="zb" id="zi">+</button>
@@ -3275,7 +3279,7 @@ document.getElementById('spClientId').addEventListener('change',e=>{
 let spMiniTimer=null, spIsPlaying=false;
 function spShowMini(){
   const wrap=document.getElementById('musicPlayerWrap');
-  if(!wrap.classList.contains('spmini')){
+  if(!document.getElementById('spmTitle')){
     wrap.classList.remove('spotify'); wrap.classList.add('spmini');
     wrap.innerHTML='<div class="spMini"><img id="spmArt" alt=""><div class="spmTxt"><b id="spmTitle">Spotify</b><span id="spmArtist"></span></div>'
       +'<button id="spmPrev" type="button" aria-label="Précédent"><i class="ti ti-player-skip-back"></i></button>'
@@ -3339,6 +3343,7 @@ function spotifyLoadAndPlay(sp){
   }
 }
 function musicLoadAndPlay(){
+  setMusicMode('playlist'); if(radioWanted || !radioAudio.paused){ radioWanted=false; radioAudio.pause(); }
   const raw=document.getElementById('musicUrl').value;
   const sp=parseSpotifyUrl(raw);
   if(sp){ try{ localStorage.setItem(MUSIC_URL_KEY, raw.trim()); }catch(e){} return spotifyLoadAndPlay(sp); }
@@ -3380,8 +3385,111 @@ function musicLoadAndPlay(){
     musicStatus('Chargement… (si rien ne démarre, touchez le petit lecteur)');
   }
 }
+// ----- Radio en direct : flux audio publics des stations, lus par un simple
+// élément <audio> (fonctionne aussi sur Android, en arrière-plan). Pour
+// chaque station, plusieurs adresses essayées dans l'ordre. -----
+const RADIO_KEY='radioStation_v1', MUSIC_MODE_KEY='musicMode_v1';
+const RF=id=>['https://icecast.radiofrance.fr/'+id+'-midfi.mp3','https://stream.radiofrance.fr/'+id+'/'+id+'.m3u8?id=radiofrance'];
+const NRJ=n=>['https://scdn.nrjaudio.fm/adwz2/fr/'+n+'/mp3_128.mp3?origine=fluxradios'];
+const RADIOS=[
+  { id:'franceinter', name:'France Inter', urls:RF('franceinter') },
+  { id:'franceinfo', name:'franceinfo', urls:RF('franceinfo') },
+  { id:'franceculture', name:'France Culture', urls:RF('franceculture') },
+  { id:'francemusique', name:'France Musique', urls:RF('francemusique') },
+  { id:'fip', name:'FIP', urls:RF('fip') },
+  { id:'mouv', name:'Mouv\'', urls:RF('mouv') },
+  { id:'fbloireocean', name:'ici Loire Océan (Nantes)', urls:RF('fbloireocean') },
+  { id:'rtl', name:'RTL', urls:['https://streaming.radio.rtl.fr/rtl-1-44-128'] },
+  { id:'rtl2', name:'RTL2', urls:['https://streaming.radio.rtl2.fr/rtl2-1-44-128'] },
+  { id:'europe1', name:'Europe 1', urls:['https://europe1.lmn.fm/europe1.mp3','https://stream.europe1.fr/europe1.mp3'] },
+  { id:'rfm', name:'RFM', urls:['https://rfm.lmn.fm/rfm.mp3','https://stream.rfm.fr/rfm.mp3'] },
+  { id:'nostalgie', name:'Nostalgie', urls:NRJ(30601) },
+  { id:'cherie', name:'Chérie FM', urls:NRJ(30201) },
+  { id:'nrj', name:'NRJ', urls:NRJ(30001) },
+  { id:'radioclassique', name:'Radio Classique', urls:['https://radioclassique.ice.infomaniak.ch/radioclassique-high.mp3'] }
+];
+const radioAudio=new Audio(); radioAudio.preload='none';
+let radioIdx=0, radioUrlIdx=0, radioWanted=false;
+const radioSel=document.getElementById('radioSel');
+RADIOS.forEach((r,i)=>{ const o=document.createElement('option'); o.value=r.id; o.textContent=r.name; radioSel.appendChild(o); });
+try{ const k=RADIOS.findIndex(r=>r.id===localStorage.getItem(RADIO_KEY)); if(k>=0){ radioIdx=k; radioSel.value=RADIOS[k].id; } }catch(e){}
+const musicMode=()=>{ try{ return localStorage.getItem(MUSIC_MODE_KEY)||'playlist'; }catch(e){ return 'playlist'; } };
+function setMusicMode(m){ try{ localStorage.setItem(MUSIC_MODE_KEY, m); }catch(e){} }
+// Coupe la playlist (Spotify / YouTube) quand la radio démarre.
+function pausePlaylist(){
+  if(spController){ try{ spController.pause(); }catch(_){} }
+  if(ytPlayer && ytPlayer.pauseVideo){ try{ ytPlayer.pauseVideo(); }catch(_){} }
+  if(IS_ANDROID && spRemoteOn() && spRemoteLoaded) spRemoteCmd('/me/player/pause','PUT','');
+}
+function radioShowMini(){
+  const wrap=document.getElementById('musicPlayerWrap');
+  if(spMiniTimer){ clearInterval(spMiniTimer); spMiniTimer=null; }
+  wrap.classList.remove('spotify'); wrap.classList.add('spmini','show');
+  wrap.innerHTML='<div class="spMini"><div style="width:46px;height:46px;border-radius:6px;background:#c1502f;color:#fff;display:flex;align-items:center;justify-content:center;font-size:24px;flex:none;"><i class="ti ti-radio"></i></div>'
+    +'<div class="spmTxt"><b id="radioName"></b><span id="radioState"></span></div>'
+    +'<button id="radioPrev" type="button" aria-label="Station précédente"><i class="ti ti-player-skip-back"></i></button>'
+    +'<button id="radioToggle" type="button" class="main" aria-label="Lecture / pause"><i class="ti ti-player-pause"></i></button>'
+    +'<button id="radioNextBtn" type="button" aria-label="Station suivante"><i class="ti ti-player-skip-forward"></i></button></div>';
+  document.getElementById('radioPrev').addEventListener('click',e=>{ e.stopPropagation(); radioStep(-1); });
+  document.getElementById('radioNextBtn').addEventListener('click',e=>{ e.stopPropagation(); radioStep(1); });
+  document.getElementById('radioToggle').addEventListener('click',e=>{ e.stopPropagation(); radioWanted && !radioAudio.paused ? radioPause() : radioPlay(); });
+  document.getElementById('musicHide').textContent='Masquer le lecteur';
+  radioUi();
+}
+function radioUi(state){
+  const r=RADIOS[radioIdx], playing=radioWanted && !radioAudio.paused;
+  const n=document.getElementById('radioName'); if(!n) return;
+  n.textContent=r.name;
+  document.getElementById('radioState').textContent=state || (playing ? '● En direct' : 'En pause');
+  document.querySelector('#radioToggle i').className=playing?'ti ti-player-pause':'ti ti-player-play';
+}
+function radioPlay(){
+  const r=RADIOS[radioIdx];
+  setMusicMode('radio'); radioWanted=true; pausePlaylist();
+  if(!document.getElementById('radioName')) radioShowMini();
+  const url=r.urls[radioUrlIdx];
+  if(radioAudio.src!==url) radioAudio.src=url;
+  radioUi('Connexion…'); musicStatus('Radio : '+r.name+'…');
+  if('mediaSession' in navigator){
+    try{
+      navigator.mediaSession.metadata=new MediaMetadata({ title:r.name, artist:'Radio en direct', album:'Route du temps' });
+      navigator.mediaSession.setActionHandler('play', radioPlay);
+      navigator.mediaSession.setActionHandler('pause', radioPause);
+      navigator.mediaSession.setActionHandler('nexttrack', ()=>radioStep(1));
+      navigator.mediaSession.setActionHandler('previoustrack', ()=>radioStep(-1));
+    }catch(e){}
+  }
+  radioAudio.play().catch(err=>{ if(err && err.name==='NotAllowedError'){ radioWanted=false; radioUi('Touchez ▶ pour écouter'); } });
+}
+function radioPause(){ radioWanted=false; radioAudio.pause(); radioUi(); musicStatus('Radio en pause'); }
+function radioStep(d){
+  radioIdx=(radioIdx+d+RADIOS.length)%RADIOS.length; radioUrlIdx=0;
+  radioSel.value=RADIOS[radioIdx].id;
+  try{ localStorage.setItem(RADIO_KEY, RADIOS[radioIdx].id); }catch(e){}
+  radioPlay();
+}
+radioAudio.addEventListener('playing',()=>{ radioUi(); musicStatus('♪ '+RADIOS[radioIdx].name+' en direct'); });
+radioAudio.addEventListener('pause',()=>radioUi());
+radioAudio.addEventListener('waiting',()=>radioUi('Chargement…'));
+// Adresse en panne : on essaie la suivante de la même station.
+radioAudio.addEventListener('error',()=>{
+  if(!radioWanted) return;
+  const r=RADIOS[radioIdx];
+  if(radioUrlIdx<r.urls.length-1){ radioUrlIdx++; radioPlay(); return; }
+  radioWanted=false; radioUrlIdx=0;
+  radioUi('Station indisponible'); musicStatus(r.name+' ne répond pas pour l\'instant : essayez une autre station.');
+});
+document.getElementById('radioPlay').addEventListener('click',()=>{
+  const k=RADIOS.findIndex(r=>r.id===radioSel.value);
+  if(k!==radioIdx){ radioIdx=k<0?0:k; radioUrlIdx=0; }
+  try{ localStorage.setItem(RADIO_KEY, RADIOS[radioIdx].id); }catch(e){}
+  radioPlay();
+});
+radioSel.addEventListener('change',()=>{ if(radioWanted) document.getElementById('radioPlay').click(); });
+
 function musicFollowPlay(on){
   if(!document.getElementById('musicWithPlay').checked) return;
+  if(musicMode()==='radio'){ on ? radioPlay() : (radioWanted && radioPause()); return; }
   const spu=parseSpotifyUrl(document.getElementById('musicUrl').value);
   if(IS_ANDROID && spu){
     if(spRemoteOn()){ spShowMini(); (on ? spRemotePlay(spu, false) : spRemoteCmd('/me/player/pause', 'PUT', 'En pause')).then(()=>setTimeout(spRefreshMini, 900)); }
@@ -3397,8 +3505,8 @@ document.getElementById('musicbtn').addEventListener('click',e=>{ e.stopPropagat
 document.getElementById('menu-music').addEventListener('click',e=>{ e.stopPropagation(); menuPanel.classList.remove('open'); musicPanel.classList.add('open'); });
 document.addEventListener('click',e=>{ if(!musicPanel.contains(e.target) && e.target.id!=='musicbtn' && !document.getElementById('musicbtn').contains(e.target)) musicPanel.classList.remove('open'); });
 document.getElementById('musicLoad').addEventListener('click',musicLoadAndPlay);
-document.getElementById('musicNext').addEventListener('click',()=>{ if(IS_ANDROID && spRemoteOn()){ spRemoteCmd('/me/player/next', 'POST', '⏭ Titre suivant'); return; } if(spController){ musicStatus('Pour passer au titre suivant, utilisez ⏭ dans le lecteur Spotify.'); return; } if(ytPlayer && ytPlayer.nextVideo){ musicSkips=0; ytPlayer.nextVideo(); } });
-document.getElementById('musicStop').addEventListener('click',()=>{ if(IS_ANDROID && spRemoteOn()){ spRemoteCmd('/me/player/pause', 'PUT', 'En pause'); return; } if(spController){ try{ spController.pause(); }catch(_){} } if(ytPlayer && ytPlayer.pauseVideo) ytPlayer.pauseVideo(); musicStatus('En pause'); });
+document.getElementById('musicNext').addEventListener('click',()=>{ if(musicMode()==='radio'){ radioStep(1); return; } if(IS_ANDROID && spRemoteOn()){ spRemoteCmd('/me/player/next', 'POST', '⏭ Titre suivant'); return; } if(spController){ musicStatus('Pour passer au titre suivant, utilisez ⏭ dans le lecteur Spotify.'); return; } if(ytPlayer && ytPlayer.nextVideo){ musicSkips=0; ytPlayer.nextVideo(); } });
+document.getElementById('musicStop').addEventListener('click',()=>{ if(musicMode()==='radio'){ radioPause(); return; } if(IS_ANDROID && spRemoteOn()){ spRemoteCmd('/me/player/pause', 'PUT', 'En pause'); return; } if(spController){ try{ spController.pause(); }catch(_){} } if(ytPlayer && ytPlayer.pauseVideo) ytPlayer.pauseVideo(); musicStatus('En pause'); });
 document.getElementById('musicHide').addEventListener('click',()=>{
   const w=document.getElementById('musicPlayerWrap'); w.classList.toggle('show');
   document.getElementById('musicHide').textContent=w.classList.contains('show')?'Masquer le lecteur':'Afficher le lecteur';
@@ -3413,7 +3521,7 @@ try{
   document.getElementById('spClientId').value=spClientId();
 }catch(e){}
 spUpdateUi();
-spHandleRedirect().then(()=>{ if(IS_ANDROID && spRemoteOn() && parseSpotifyUrl(document.getElementById('musicUrl').value)) spShowMini(); });
+spHandleRedirect().then(()=>{ if(musicMode()!=='radio' && IS_ANDROID && spRemoteOn() && parseSpotifyUrl(document.getElementById('musicUrl').value)) spShowMini(); });
 document.getElementById('revbtn').addEventListener('click',()=>{
   if(playing){playing=false;updatePlay();}
   playingReverse=!playingReverse;

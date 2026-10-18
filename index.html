@@ -344,6 +344,10 @@ canvas#c{position:absolute;inset:0;width:100%;height:100%;touch-action:none;poin
       <select id="radioSel" aria-label="Station de radio" style="flex:1;min-width:0;font-size:13px;padding:7px 8px;border:1px solid #ddd;border-radius:8px;background:#fff;color:#2b241c;"></select>
       <button class="jchip" id="radioPlay" type="button" style="flex:none;"><i class="ti ti-radio"></i> Radio</button>
     </div>
+    <form id="radioSearchForm" style="display:flex;gap:6px;margin:0;">
+      <input type="search" id="radioSearch" placeholder="Chercher une radio (nom, ville, style…)" enterkeyhint="search" style="flex:1;min-width:0;font-size:13px;padding:7px 9px;border:1px solid #ddd;border-radius:8px;">
+      <button class="jchip" type="submit" style="flex:none;" aria-label="Chercher"><i class="ti ti-search"></i></button>
+    </form>
     <label style="display:flex;flex-direction:column;gap:4px;font-size:12px;color:#5f6368;">Lien d'une playlist Spotify (recommandé) ou YouTube
       <input type="url" id="musicUrl" placeholder="https://open.spotify.com/playlist/…" style="font-size:13px;padding:7px 9px;border:1px solid #ddd;border-radius:8px;">
     </label>
@@ -423,7 +427,7 @@ canvas#c{position:absolute;inset:0;width:100%;height:100%;touch-action:none;poin
     <div class="leg" id="legWeekend"><div class="legline"></div>Week-end</div>
     <div class="leg" id="legVac"><div class="legline" style="background:#ffd600;"></div><span id="legVacTxt">Vacances scolaires</span></div>
     <button id="legSync" class="leg" type="button" style="display:none;cursor:pointer;border:none;font-family:inherit;color:inherit;text-align:left;" title="Relancer la synchro Google Agenda"><i class="ti ti-refresh" style="font-size:12px;"></i><span id="legSyncTxt"></span></button>
-    <div id="appVersion" style="font-size:10px;color:#fff;text-shadow:0 1px 2px rgba(0,0,0,0.6);text-align:right;padding-right:4px;">Version 2026-10-18 04:38 · <a href="confidentialite.html" style="color:#fff">Confidentialité</a> · <a href="conditions.html" style="color:#fff">Conditions</a></div>
+    <div id="appVersion" style="font-size:10px;color:#fff;text-shadow:0 1px 2px rgba(0,0,0,0.6);text-align:right;padding-right:4px;">Version 2026-10-18 04:44 · <a href="confidentialite.html" style="color:#fff">Confidentialité</a> · <a href="conditions.html" style="color:#fff">Conditions</a></div>
   </div>
   <div id="zbx">
     <button class="zb" id="zi">+</button>
@@ -3411,8 +3415,85 @@ const RADIOS=[
 const radioAudio=new Audio(); radioAudio.preload='none';
 let radioIdx=0, radioUrlIdx=0, radioWanted=false;
 const radioSel=document.getElementById('radioSel');
-RADIOS.forEach((r,i)=>{ const o=document.createElement('option'); o.value=r.id; o.textContent=r.name; radioSel.appendChild(o); });
-try{ const k=RADIOS.findIndex(r=>r.id===localStorage.getItem(RADIO_KEY)); if(k>=0){ radioIdx=k; radioSel.value=RADIOS[k].id; } }catch(e){}
+// Au-delà des stations principales : annuaire libre Radio Browser
+// (radio-browser.info, des dizaines de milliers de radios vérifiées
+// régulièrement) pour les plus écoutées en France et la recherche ; les
+// stations écoutées sont gardées dans « Récentes ».
+const RADIO_RECENT_KEY='radioRecent_v1';
+const G_MAIN='Stations principales', G_RECENT='Récemment écoutées', G_TOP='Les plus écoutées en France', G_FOUND='Résultats de la recherche';
+RADIOS.forEach(r=>r.group=G_MAIN);
+const radioNorm=n=>String(n||'').toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g,'').replace(/[^a-z0-9]/g,'');
+function radioAdd(list, group){
+  const have=new Set(RADIOS.map(r=>radioNorm(r.name)));
+  list.forEach(r=>{ if(!have.has(radioNorm(r.name)) && !RADIOS.some(x=>x.id===r.id)){ RADIOS.push({ ...r, group }); have.add(radioNorm(r.name)); } });
+}
+function radioRebuildSel(){
+  const cur=RADIOS[radioIdx] && RADIOS[radioIdx].id;
+  radioSel.innerHTML='';
+  [G_FOUND,G_MAIN,G_RECENT,G_TOP].forEach(g=>{
+    const items=RADIOS.filter(r=>r.group===g); if(!items.length) return;
+    const og=document.createElement('optgroup'); og.label=g;
+    items.forEach(r=>{ const o=document.createElement('option'); o.value=r.id; o.textContent=r.name; og.appendChild(o); });
+    radioSel.appendChild(og);
+  });
+  if(cur) radioSel.value=cur;
+}
+function radioRemember(r){
+  if(r.group===G_MAIN) return;
+  let rec=[]; try{ rec=JSON.parse(localStorage.getItem(RADIO_RECENT_KEY)||'[]'); }catch(e){}
+  rec=[{ id:r.id, name:r.name, urls:r.urls }, ...rec.filter(x=>x.id!==r.id)].slice(0,12);
+  try{ localStorage.setItem(RADIO_RECENT_KEY, JSON.stringify(rec)); }catch(e){}
+  if(r.group!==G_RECENT){ r.group=G_RECENT; radioRebuildSel(); }
+}
+try{ radioAdd(JSON.parse(localStorage.getItem(RADIO_RECENT_KEY)||'[]'), G_RECENT); }catch(e){}
+const RB_SERVERS=['de1','fi1','de2','nl1','at1'];
+async function rbFetch(path){
+  for(const sv of RB_SERVERS){
+    try{
+      const r=await fetch('https://'+sv+'.api.radio-browser.info/json/'+path);
+      if(r.ok) return await r.json();
+    }catch(e){}
+  }
+  throw new Error('annuaire des radios injoignable');
+}
+const rbStation=x=>({ id:'rb:'+x.stationuuid, name:String(x.name||'').trim().replace(/\s+/g,' ').slice(0,60), urls:[x.url_resolved||x.url] });
+const RB_FILTER='hidebroken=true&is_https=true&order=clickcount&reverse=true';
+let radioTopLoaded=false;
+async function radioLoadTop(){
+  if(radioTopLoaded) return; radioTopLoaded=true;
+  try{
+    const list=await rbFetch('stations/search?countrycode=FR&'+RB_FILTER+'&limit=150');
+    radioAdd(list.filter(x=>x.name && (x.url_resolved||x.url)).map(rbStation), G_TOP);
+    radioRebuildSel();
+  }catch(e){ radioTopLoaded=false; }
+}
+async function radioSearch(q){
+  q=q.trim(); if(!q) return;
+  musicStatus('Recherche de « '+q+' »…');
+  try{
+    const enc=encodeURIComponent(q);
+    let list=await rbFetch('stations/search?name='+enc+'&'+RB_FILTER+'&limit=40');
+    if(list.length<8) list=list.concat(await rbFetch('stations/search?tag='+enc+'&'+RB_FILTER+'&limit=30').catch(()=>[]));
+    const cur=RADIOS[radioIdx];
+    for(let i=RADIOS.length-1;i>=0;i--) if(RADIOS[i].group===G_FOUND) RADIOS.splice(i,1);
+    // Les résultats passent en tête : déjà présentes ailleurs, les stations
+    // y sont simplement reprises.
+    const seen=new Set(), found=[];
+    list.filter(x=>x.name && (x.url_resolved||x.url)).map(rbStation).forEach(r=>{ const k=radioNorm(r.name); if(!seen.has(k)){ seen.add(k); found.push(r); } });
+    found.forEach(r=>{ const dup=RADIOS.find(x=>x.id===r.id || radioNorm(x.name)===radioNorm(r.name)); if(!dup) RADIOS.push({ ...r, group:G_FOUND }); });
+    radioIdx=Math.max(0,RADIOS.indexOf(cur));
+    radioRebuildSel();
+    const first=found[0] && RADIOS.find(x=>x.id===found[0].id || radioNorm(x.name)===radioNorm(found[0].name));
+    if(first){ radioSel.value=first.id; musicStatus(found.length+' radio'+(found.length>1?'s':'')+' trouvée'+(found.length>1?'s':'')+' : choisissez dans la liste puis touchez « Radio ».'); }
+    else musicStatus('Aucune radio trouvée pour « '+q+' ».');
+  }catch(e){ musicStatus('Recherche impossible : '+e.message); }
+}
+document.getElementById('radioSearchForm').addEventListener('submit',e=>{ e.preventDefault(); radioSearch(document.getElementById('radioSearch').value); document.getElementById('radioSearch').blur(); });
+radioSel.addEventListener('focus', radioLoadTop);
+document.getElementById('musicbtn').addEventListener('click', radioLoadTop);
+document.getElementById('menu-music').addEventListener('click', radioLoadTop);
+try{ const k=RADIOS.findIndex(r=>r.id===localStorage.getItem(RADIO_KEY)); if(k>=0) radioIdx=k; }catch(e){}
+radioRebuildSel();
 const musicMode=()=>{ try{ return localStorage.getItem(MUSIC_MODE_KEY)||'playlist'; }catch(e){ return 'playlist'; } };
 function setMusicMode(m){ try{ localStorage.setItem(MUSIC_MODE_KEY, m); }catch(e){} }
 // Coupe la playlist (Spotify / YouTube) quand la radio démarre.
@@ -3468,7 +3549,7 @@ function radioStep(d){
   try{ localStorage.setItem(RADIO_KEY, RADIOS[radioIdx].id); }catch(e){}
   radioPlay();
 }
-radioAudio.addEventListener('playing',()=>{ radioUi(); musicStatus('♪ '+RADIOS[radioIdx].name+' en direct'); });
+radioAudio.addEventListener('playing',()=>{ radioRemember(RADIOS[radioIdx]); radioUi(); musicStatus('♪ '+RADIOS[radioIdx].name+' en direct'); });
 radioAudio.addEventListener('pause',()=>radioUi());
 radioAudio.addEventListener('waiting',()=>radioUi('Chargement…'));
 // Adresse en panne : on essaie la suivante de la même station.

@@ -271,6 +271,7 @@ canvas#c{position:absolute;inset:0;width:100%;height:100%;touch-action:none;poin
     <button id="menu-install" class="menuitem" style="display:none;"><i class="ti ti-download"></i>Installer l'application</button>
     <button id="menu-right" class="menuitem"><i class="ti ti-user"></i>Masquer mon agenda</button>
     <button id="menu-legend" class="menuitem"><i class="ti ti-list"></i>Masquer la légende</button>
+    <button id="menu-demo" class="menuitem"><i class="ti ti-player-play"></i>Voir la démo (agenda fictif)</button>
     <button id="menu-calendars" class="menuitem"><i class="ti ti-users"></i>Agendas et vacances…</button>
     <button id="menu-signout" class="menuitem" style="display:none;"><i class="ti ti-logout"></i>Se déconnecter de Google</button>
     <div id="menuVersion" style="font-size:11px;color:#8a7a5c;padding:10px 16px;line-height:1.6;"></div>
@@ -433,7 +434,7 @@ canvas#c{position:absolute;inset:0;width:100%;height:100%;touch-action:none;poin
     <div class="leg" id="legWeekend"><div class="legline"></div>Week-end</div>
     <div class="leg" id="legVac"><div class="legline" style="background:#ffd600;"></div><span id="legVacTxt">Vacances scolaires</span></div>
     <button id="legSync" class="leg" type="button" style="display:none;cursor:pointer;border:none;font-family:inherit;color:inherit;text-align:left;" title="Relancer la synchro Google Agenda"><i class="ti ti-refresh" style="font-size:12px;"></i><span id="legSyncTxt"></span></button>
-    <div id="appVersion" style="font-size:10px;color:#fff;text-shadow:0 1px 2px rgba(0,0,0,0.6);text-align:right;padding-right:4px;">Version 2026-10-19 16:05 · <a href="confidentialite.html" style="color:#fff">Confidentialité</a> · <a href="conditions.html" style="color:#fff">Conditions</a></div>
+    <div id="appVersion" style="font-size:10px;color:#fff;text-shadow:0 1px 2px rgba(0,0,0,0.6);text-align:right;padding-right:4px;">Version 2026-10-19 16:42 · <a href="confidentialite.html" style="color:#fff">Confidentialité</a> · <a href="conditions.html" style="color:#fff">Conditions</a></div>
   </div>
   <div id="zbx">
     <button class="zb" id="zi">+</button>
@@ -5150,11 +5151,20 @@ function startDemo(){
 }
 function endDemo(){ demoMode=false; document.getElementById('demoBadge').classList.remove('show'); }
 document.getElementById('welcomeDemo').addEventListener('click', startDemo);
-document.getElementById('demoConnect').addEventListener('click', ()=>{ endDemo(); applyEventsData([]); setSideNames('Moi',''); liveSyncFromGoogleCalendar(true); });
+// Sortie de la démo : retour à son propre agenda (déjà en mémoire si ce
+// navigateur est connecté), sinon connexion Google.
+document.getElementById('demoConnect').addEventListener('click', ()=>{
+  endDemo();
+  if(/[?&]demo\b/.test(location.search)) history.replaceState(null,'',location.pathname+location.hash);
+  const cached=readLiveSyncCache();
+  if(cached && cached.profile){ applyCachedSync(cached); camDay=camDayForCarAt(TODAY_DAY); lastTs=null; playing=false; updatePlay(); }
+  else{ applyEventsData([]); setSideNames('Moi',''); liveSyncFromGoogleCalendar(true); }
+});
+document.getElementById('menu-demo').addEventListener('click', e=>{ e.stopPropagation(); menuPanel.classList.remove('open'); startDemo(); });
 
 (function initGoogleSession(){
   const cached = readLiveSyncCache();
-  if(/[?&]demo\b/.test(location.search) && !(cached && cached.profile)){
+  if(/[?&]demo\b/.test(location.search)){
     startDemo();
   }else if(cached && cached.profile){
     applyCachedSync(cached);

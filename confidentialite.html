@@ -20,9 +20,11 @@
 <body>
 <main>
 <header><img src="logo/logo-192.png" alt=""><h1>Règles de confidentialité</h1></header>
-<p class="muted">Application « Route du temps » — dernière mise à jour : 14 octobre 2026</p>
+<p class="muted">Application « Route du temps » — dernière mise à jour : 21 octobre 2026</p>
 
-<p>« Route du temps » est une application web personnelle qui affiche votre agenda Google sous la forme d'une route. Elle fonctionne entièrement dans votre navigateur : <strong>il n'existe aucun serveur propre à l'application</strong>, et aucune donnée personnelle n'est envoyée ailleurs que chez Google.</p>
+<p>« Route du temps » est une application web personnelle qui affiche votre agenda Google sous la forme d'une route. Elle fonctionne entièrement dans votre navigateur : <strong>il n'existe aucun serveur propre à l'application</strong>, et <strong>aucune donnée issue de votre compte Google n'est envoyée ailleurs que chez Google</strong>.</p>
+
+<p>Un <strong>mode démo</strong> permet d'essayer l'application sans compte : il affiche un agenda fictif et ne demande, ne lit ni n'enregistre aucune donnée.</p>
 
 <h2>Données Google utilisées</h2>
 <p>Lorsque vous vous connectez avec votre compte Google, l'application demande les autorisations suivantes et les utilise uniquement pour :</p>
@@ -38,7 +40,8 @@
 
 <h2>Stockage</h2>
 <ul>
-  <li>Les événements récupérés, vos réglages (second agenda, zone de vacances scolaires) et un indicateur de connexion sont gardés dans le <strong>stockage local de votre navigateur</strong>, sur votre appareil uniquement.</li>
+  <li>Les événements récupérés, vos réglages et un indicateur de connexion sont gardés dans le <strong>stockage local de votre navigateur</strong>, sur votre appareil.</li>
+  <li>Pour retrouver les mêmes réglages sur vos autres appareils, une copie de vos réglages (agendas affichés et leurs noms, affichage du week-end, zone de vacances scolaires) est enregistrée dans <strong>votre propre Google Drive</strong>, fichier « Route du temps/reglages.json », grâce à l'autorisation <code>drive.file</code>. Ce fichier ne contient aucun événement.</li>
   <li>Le jeton d'accès Google reste en mémoire le temps de la session et n'est jamais enregistré ni transmis à un tiers.</li>
   <li>Aucun cookie publicitaire, aucun outil de mesure d'audience.</li>
 </ul>
@@ -49,6 +52,12 @@
   <li>les API de Google (connexion, Agenda, Drive, profil) ;</li>
   <li>l'API publique du ministère de l'Éducation nationale (<code>data.education.gouv.fr</code>) pour les dates de vacances scolaires — sans aucune donnée personnelle ;</li>
   <li>Google Fonts et des bibliothèques d'icônes pour l'affichage.</li>
+</ul>
+<p>Fonctions musicales facultatives, utilisées seulement si vous les activez, et qui ne reçoivent aucune donnée de votre compte Google :</p>
+<ul>
+  <li><strong>Spotify</strong> : lecteur Spotify intégré ou, si vous connectez vous-même votre compte Spotify, commande de lecture (lecture, pause, titre suivant) de votre appli Spotify. Les jetons Spotify restent dans votre navigateur ;</li>
+  <li><strong>YouTube</strong> : lecteur YouTube intégré pour une playlist dont vous donnez le lien ;</li>
+  <li><strong>radio</strong> : flux audio publics des stations, et annuaire libre <code>radio-browser.info</code> pour la liste et la recherche de stations.</li>
 </ul>
 
 <h2>Utilisation limitée des données Google</h2>

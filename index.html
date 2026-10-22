@@ -417,6 +417,7 @@ canvas#c{position:absolute;inset:0;width:100%;height:100%;touch-action:none;poin
     <div style="font-family:'Oswald',Arial,sans-serif;font-size:12px;font-weight:600;color:#2b241c;margin-top:4px;">Options</div>
     <div class="jchips">
       <button class="jchip" id="vp-fpv" type="button">Vue conducteur</button>
+      <button class="jchip" id="vp-past" type="button">Retour dans le passé</button>
     </div>
   </div>
   <button id="monthPrevBtn" class="monthnavbtn" title="Mois précédent"><i class="ti ti-chevron-left"></i></button>
@@ -435,7 +436,7 @@ canvas#c{position:absolute;inset:0;width:100%;height:100%;touch-action:none;poin
     <div class="leg" id="legWeekend"><div class="legline"></div>Week-end</div>
     <div class="leg" id="legVac"><div class="legline" style="background:#ffd600;"></div><span id="legVacTxt">Vacances scolaires</span></div>
     <button id="legSync" class="leg" type="button" style="display:none;cursor:pointer;border:none;font-family:inherit;color:inherit;text-align:left;" title="Relancer la synchro Google Agenda"><i class="ti ti-refresh" style="font-size:12px;"></i><span id="legSyncTxt"></span></button>
-    <div id="appVersion" style="font-size:10px;color:#fff;text-shadow:0 1px 2px rgba(0,0,0,0.6);text-align:right;padding-right:4px;">Version 2026-10-21 19:25 · <a href="confidentialite.html" style="color:#fff">Confidentialité</a> · <a href="conditions.html" style="color:#fff">Conditions</a></div>
+    <div id="appVersion" style="font-size:10px;color:#fff;text-shadow:0 1px 2px rgba(0,0,0,0.6);text-align:right;padding-right:4px;">Version 2026-10-22 09:03 · <a href="confidentialite.html" style="color:#fff">Confidentialité</a> · <a href="conditions.html" style="color:#fff">Conditions</a></div>
   </div>
   <div id="zbx">
     <button class="zb" id="zi">+</button>
@@ -523,9 +524,20 @@ let W,H;
 // voir devant elle tous les événements de la journée.
 let SP=14;              // mètres de route par jour (remplace l'ancien zoom en pixels)
 function carOffsetDays(){ return firstPerson ? 0 : (9.2+tilt*4.5)/SP; }
-function camDayForCarAt(day){ return day+0.05-carOffsetDays(); }
+// ===== Retour dans le passé =====
+// Même route, mais on la parcourt en remontant le temps : le jour réel r est
+// posé à l'index de route PAST_P-r (symétrie), donc demain devient hier en
+// avançant, et les agendas changent de côté. PAST_P ≡ 1 (mod 7) : les
+// chicanes de la route (début de lundi à l'index k, k%7==1) tombent alors
+// pile sur les vrais changements de semaine (entre lundi et dimanche réels).
+let pastMode=false;
+const PAST_P=(()=>{ let p=2*TODAY_DAY; while(((p%7)+7)%7!==1) p++; return p; })();
+function realDay(k){ return pastMode ? PAST_P-k : k; }      // index de route → jour réel (et inversement)
+function realPos(x){ return pastMode ? PAST_P+1-x : x; }    // position continue (jours) → réelle
+function camDayForCarAt(day){ return realDay(day)+0.05-carOffsetDays(); }
 // Jour où se trouve la voiture (ou la caméra en vue conducteur).
-function carDay(){ return Math.floor(camDay+carOffsetDays()+1e-6); }
+// Jour réel sous la voiture (affichages, calendrier, saut de date…).
+function carDay(){ return realDay(Math.floor(camDay+carOffsetDays()+1e-6)); }
 let camDay=TODAY_DAY+0.05-9.2/SP, playing=false, playingReverse=false, speed=1, lastTs=null;
 let night=false;
 let viewAngle=0, tilt=0;   // viewAngle cible en degrés (0, 30 ou 45) ; tilt s'anime vers viewAngle/45
@@ -983,6 +995,7 @@ function seasonForMonth(m){
   return 'automne';
 }
 function computeSeasonBlend(day){
+  day=realPos(day); // position sur la route → date réelle (retour dans le passé)
   const dt=new Date(MONTH_ORIGIN_MS+Math.round(day)*86400000);
   const m=dt.getUTCMonth(), dom=dt.getUTCDate();
   const TRANS=6;
@@ -1499,15 +1512,19 @@ function drawRoadSurface(){
     }
     // week-end : grand passage piéton qui couvre samedi et dimanche ensemble
     // (bandes resserrées pour rester sur la chaussée, pas sur l'accotement)
-    if(k>=0&&k<=TOTAL_DAYS&&isSat(k)&&showWeekend()){
+    // (en retour dans le passé, le dimanche vient avant le samedi)
+    const rk=realDay(k);
+    if(k>=0&&k<=TOTAL_DAYS&&(pastMode?isSun(rk):isSat(rk))&&showWeekend()){
       for(let s=-3;s<=3;s++) drawBand(d0,d0+SP*2, s*0.8-0.28, s*0.8+0.28, white, 0.85);
     }
     // jour férié : bande jaune
-    else if(k>=0&&k<=TOTAL_DAYS&&isJourFerie(k)) drawBand(d0,d0+SP,-RW+0.42,RW-0.42,'#ffe000',0.5);
-    // premier du mois : passage clouté
-    const dt=new Date(MONTH_ORIGIN_MS+k*86400000);
+    else if(k>=0&&k<=TOTAL_DAYS&&isJourFerie(rk)) drawBand(d0,d0+SP,-RW+0.42,RW-0.42,'#ffe000',0.5);
+    // premier du mois : passage clouté (au début du jour réel, donc à la fin
+    // de la case quand on remonte le temps)
+    const dt=new Date(MONTH_ORIGIN_MS+rk*86400000);
     if(dt.getUTCDate()===1){
-      for(let s=-3;s<=3;s++) drawBand(d0,d0+SP*0.3, s*0.8-0.28, s*0.8+0.28, white, 0.85);
+      const c0=pastMode?d0+SP*0.7:d0;
+      for(let s=-3;s<=3;s++) drawBand(c0,c0+SP*0.3, s*0.8-0.28, s*0.8+0.28, white, 0.85);
     }
   }
 
@@ -1597,7 +1614,8 @@ function drawVacancesBLine(){
   ctx.strokeStyle='#ffd600';
   ctx.lineWidth=2.5;
   VACANCES.forEach(v=>{
-    const d1=Math.max(0,v.start), d2=Math.min(TOTAL_DAYS,v.end);
+    const a=pastMode?realDay(v.end):v.start, b=pastMode?realDay(v.start):v.end;
+    const d1=Math.max(0,a), d2=Math.min(TOTAL_DAYS,b);
     if(d2<d1) return;
     const dist1=dayToDist(d1), dist2=dayToDist(d2);
     const R=viewRange();
@@ -1737,7 +1755,8 @@ function isSchoolVacationTitle(title){ return /vacances?|congés?/i.test(title);
 function drawMultiDayEvents(){
   const multi = MULTI_EVENTS.filter(e=>isVisibleSide(e.side) && !isSchoolVacationTitle(e.title));
   const combined=[...multi,...AUTO_RUNS,...EXPLICIT_RUNS.filter(e=>isVisibleSide(e.side))]
-    .filter(ev=>!isSchoolVacationTitle(ev.title));
+    .filter(ev=>!isSchoolVacationTitle(ev.title))
+    .map(ev=>pastMode ? { ...ev, day1:realDay(ev.day2), day2:realDay(ev.day1) } : ev);
 
   // Quand deux événements multi-jours se chevauchent, celui qui commence le
   // second est tracé en bleu (au centre, comme les autres) et son nom de
@@ -2235,7 +2254,7 @@ function drawHikeSign(it,alpha){
       ctx.font=`700 ${(0.3*k).toFixed(1)}px Archivo, Arial, sans-serif`;
       ctx.fillText(dt.getUTCDate()+' '+['janv.','févr.','mars','avr.','mai','juin','juil.','août','sept.','oct.','nov.','déc.'][dt.getUTCMonth()], x0+pw/2, y0+ph*0.62, pw*0.9);
       ctx.font=`400 ${(0.16*k).toFixed(1)}px Archivo, Arial, sans-serif`;
-      ctx.fillText(it.side>0?'mon agenda':'agenda partagé', x0+pw/2, y0+ph*0.86, pw*0.9);
+      ctx.fillText((it.side>0)!==pastMode?'mon agenda':'agenda partagé', x0+pw/2, y0+ph*0.86, pw*0.9);
     }
   }
   // Lames en flèche, une par événement
@@ -2553,11 +2572,15 @@ function drawRouteObjects(){
     if(k<0||k>TOTAL_DAYS) continue;
     const dist=(k-camDay)*SP;
     if(dist>R) continue;
-    const dt=new Date(MONTH_ORIGIN_MS+k*86400000);
+    // rk : jour réel à cet endroit de la route (différent de k en retour dans
+    // le passé). On entre dans un mois par son 1er jour, ou par son dernier
+    // quand on remonte le temps.
+    const rk=realDay(k);
+    const dt=new Date(MONTH_ORIGIN_MS+(pastMode?rk+1:rk)*86400000);
     const isFirst=dt.getUTCDate()===1;
-    if(isFirst) items.push({kind:'borne',dist,day:k});
-    if(isFirst && dist>24) items.push({kind:'gantry',dist,day:k});
-    const dayEvents=visibleEventsOn(k);
+    if(isFirst) items.push({kind:'borne',dist,day:rk});
+    if(isFirst && dist>24) items.push({kind:'gantry',dist,day:rk});
+    const dayEvents=visibleEventsOn(rk);
     const evs=[];
     dayEvents.forEach(e=>{
       const key=e.side+String.fromCharCode(1)+e.day+String.fromCharCode(1)+e.title;
@@ -2571,7 +2594,8 @@ function drawRouteObjects(){
     // bretelle d'accès) ne suit jamais la voiture, il reste planté à cet
     // endroit de la route comme les autres repères.
     [1,-1].forEach(side=>{
-      const sideEvs=evs.filter(e=>(e.side==='right'?1:-1)===side);
+      // En retour dans le passé, les agendas changent de côté.
+      const sideEvs=evs.filter(e=>(e.side==='right'?1:-1)*(pastMode?-1:1)===side);
       if(!sideEvs.length) return;
       const MAX=4;
       items.push({kind:'sign',dist:dist+SP*0.5,evs:sideEvs.slice(0,MAX),side,more:Math.max(0,sideEvs.length-MAX)});
@@ -2584,7 +2608,7 @@ function drawRouteObjects(){
     // À la hauteur du panneau du jour mais plus près de la chaussée (voir
     // drawDayPost) : en perspective, une borne placée devant ou derrière son
     // panneau finit toujours par le chevaucher.
-    items.push({kind:'daypost',dist:dist+SP*0.5,day:k});
+    items.push({kind:'daypost',dist:dist+SP*0.5,day:rk});
   }
   items.sort((a,b)=>b.dist-a.dist);
 
@@ -3001,8 +3025,9 @@ function closeWeekPanel(){
 }
 document.getElementById('wp-close').addEventListener('click',closeWeekPanel);
 document.getElementById('weekPanelScrim').addEventListener('click',closeWeekPanel);
-document.getElementById('wp-prev').addEventListener('click',()=>{ camDay=Math.max(0,mondayOfDay(carDay())-7); renderWeekPanel(); });
-document.getElementById('wp-next').addEventListener('click',()=>{ camDay=Math.min(TOTAL_DAYS,mondayOfDay(carDay())+7); renderWeekPanel(); });
+const camDayAtWeek=d=>pastMode?camDayForCarAt(d):d;
+document.getElementById('wp-prev').addEventListener('click',()=>{ camDay=Math.max(0,camDayAtWeek(mondayOfDay(carDay())-7)); renderWeekPanel(); });
+document.getElementById('wp-next').addEventListener('click',()=>{ camDay=Math.min(TOTAL_DAYS,camDayAtWeek(mondayOfDay(carDay())+7)); renderWeekPanel(); });
 
 // === Vue drone (30°/45°) / nuit / volet hebdomadaire : boutons du HUD ===
 const aerialbtn=document.getElementById('aerialbtn');
@@ -3023,6 +3048,19 @@ viewAnglePanel.querySelectorAll('.jchip[data-angle]').forEach(c=>{
   c.addEventListener('click',()=>setViewAngle(+c.dataset.angle));
 });
 document.getElementById('vp-fpv').addEventListener('click',()=>document.getElementById('fpvbtn').click());
+// Retour dans le passé : la voiture reste sur le même jour réel, puis chaque
+// pas en avant recule d'un jour (voir realDay()).
+function setPastMode(on){
+  if(on===pastMode) return;
+  const r=carDay();
+  pastMode=on;
+  if(pastMode) TOTAL_DAYS=Math.max(TOTAL_DAYS, PAST_P+1);
+  camDay=camDayForCarAt(r); lastTs=null; fling=0;
+  lastMiniCalDay=null; EVENTS_VERSION++;
+  document.getElementById('vp-past').classList.toggle('jchip-on',pastMode);
+  showToast(pastMode ? 'Retour dans le passé : en avançant, on remonte le temps. Votre agenda passe à gauche.' : 'Retour au présent : la route va de nouveau vers l\'avenir.');
+}
+document.getElementById('vp-past').addEventListener('click',()=>setPastMode(!pastMode));
 // Style des panneaux : classiques ou autoroute.
 function setSignStyle(st){
   signStyle=st;
@@ -3633,7 +3671,8 @@ document.getElementById('monthbtn').addEventListener('click',()=>{
 function shiftMonth(delta){
   const dt=new Date(MONTH_ORIGIN_MS+carDay()*86400000);
   dt.setUTCMonth(dt.getUTCMonth()+delta);
-  camDay=Math.max(0,Math.min(TOTAL_DAYS,Math.round((dt.getTime()-MONTH_ORIGIN_MS)/86400000)));
+  const d=Math.round((dt.getTime()-MONTH_ORIGIN_MS)/86400000);
+  camDay=Math.max(0,Math.min(TOTAL_DAYS,pastMode?camDayForCarAt(d):d));
 }
 document.getElementById('monthPrevBtn').addEventListener('click',()=>shiftMonth(-1));
 document.getElementById('monthNextBtn').addEventListener('click',()=>shiftMonth(1));

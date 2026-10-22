@@ -71,6 +71,10 @@ canvas#c{position:absolute;inset:0;width:100%;height:100%;touch-action:none;poin
 #welcomeDemo{display:block;margin:12px auto 0;padding:8px 16px;border:none;background:none;font-family:'Archivo',Arial,sans-serif;font-size:13px;font-weight:600;color:#c1502f;cursor:pointer;text-decoration:underline;text-underline-offset:3px;}
 #demoBadge{display:none;position:absolute;left:50%;transform:translateX(-50%);top:122px;z-index:800;align-items:center;gap:8px;padding:6px 8px 6px 14px;border-radius:20px;background:rgba(255,255,255,0.95);box-shadow:0 2px 8px rgba(0,0,0,0.25);font-family:'Archivo',Arial,sans-serif;font-size:12px;color:#2b241c;white-space:nowrap;}
 #demoBadge.show{display:flex;}
+#pastBadge{display:none;position:absolute;left:50%;transform:translateX(-50%);top:122px;z-index:800;align-items:center;gap:8px;padding:6px 8px 6px 14px;border-radius:20px;background:rgba(43,36,28,0.92);box-shadow:0 2px 8px rgba(0,0,0,0.25);font-family:'Archivo',Arial,sans-serif;font-size:12px;color:#fff;white-space:nowrap;}
+#pastBadge.show{display:flex;}
+#demoBadge.show ~ #pastBadge{top:166px;}
+#pastBadge button{border:none;border-radius:14px;background:#c1502f;color:#fff;font:600 12px 'Archivo',Arial,sans-serif;padding:6px 10px;cursor:pointer;}
 #demoBadge button{border:none;border-radius:14px;background:#c1502f;color:#fff;font:600 12px 'Archivo',Arial,sans-serif;padding:6px 10px;cursor:pointer;}
 #welcomeSignIn svg{width:18px;height:18px;}
 #videoOverlay{display:none;position:fixed;inset:0;z-index:2000;align-items:center;justify-content:center;flex-direction:column;background:transparent;}
@@ -227,6 +231,7 @@ canvas#c{position:absolute;inset:0;width:100%;height:100%;touch-action:none;poin
     <p style="margin:12px 0 0;font-size:11px;"><a href="confidentialite.html" style="color:#6b6157;">Règles de confidentialité</a> · <a href="conditions.html" style="color:#6b6157;">Conditions d'utilisation</a></p>
   </div>
   <div id="demoBadge"><span>Démo · agenda fictif</span><button id="demoConnect" type="button">Mon agenda</button></div>
+  <div id="pastBadge"><span>⏪ Retour dans le passé</span><button id="pastExit" type="button">Revenir au présent</button></div>
   <div id="hud">
     <button id="mbtn"><i class="ti ti-menu-2" style="font-size:18px"></i></button>
     <div style="position:relative;flex:1;max-width:300px;">
@@ -436,7 +441,7 @@ canvas#c{position:absolute;inset:0;width:100%;height:100%;touch-action:none;poin
     <div class="leg" id="legWeekend"><div class="legline"></div>Week-end</div>
     <div class="leg" id="legVac"><div class="legline" style="background:#ffd600;"></div><span id="legVacTxt">Vacances scolaires</span></div>
     <button id="legSync" class="leg" type="button" style="display:none;cursor:pointer;border:none;font-family:inherit;color:inherit;text-align:left;" title="Relancer la synchro Google Agenda"><i class="ti ti-refresh" style="font-size:12px;"></i><span id="legSyncTxt"></span></button>
-    <div id="appVersion" style="font-size:10px;color:#fff;text-shadow:0 1px 2px rgba(0,0,0,0.6);text-align:right;padding-right:4px;">Version 2026-10-22 09:03 · <a href="confidentialite.html" style="color:#fff">Confidentialité</a> · <a href="conditions.html" style="color:#fff">Conditions</a></div>
+    <div id="appVersion" style="font-size:10px;color:#fff;text-shadow:0 1px 2px rgba(0,0,0,0.6);text-align:right;padding-right:4px;">Version 2026-10-22 09:07 · <a href="confidentialite.html" style="color:#fff">Confidentialité</a> · <a href="conditions.html" style="color:#fff">Conditions</a></div>
   </div>
   <div id="zbx">
     <button class="zb" id="zi">+</button>
@@ -3058,9 +3063,13 @@ function setPastMode(on){
   camDay=camDayForCarAt(r); lastTs=null; fling=0;
   lastMiniCalDay=null; EVENTS_VERSION++;
   document.getElementById('vp-past').classList.toggle('jchip-on',pastMode);
+  document.getElementById('pastBadge').classList.toggle('show',pastMode);
   showToast(pastMode ? 'Retour dans le passé : en avançant, on remonte le temps. Votre agenda passe à gauche.' : 'Retour au présent : la route va de nouveau vers l\'avenir.');
 }
 document.getElementById('vp-past').addEventListener('click',()=>setPastMode(!pastMode));
+// Simple balade : le bandeau rappelle qu'on remonte le temps et ramène au
+// présent (sur aujourd'hui) d'une touche ; rien n'est mémorisé.
+document.getElementById('pastExit').addEventListener('click',()=>{ setPastMode(false); playing=false; updatePlay(); camDay=camDayForCarAt(TODAY_DAY); lastTs=null; });
 // Style des panneaux : classiques ou autoroute.
 function setSignStyle(st){
   signStyle=st;

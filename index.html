@@ -441,7 +441,7 @@ canvas#c{position:absolute;inset:0;width:100%;height:100%;touch-action:none;poin
     <div class="leg" id="legWeekend"><div class="legline"></div>Week-end</div>
     <div class="leg" id="legVac"><div class="legline" style="background:#ffd600;"></div><span id="legVacTxt">Vacances scolaires</span></div>
     <button id="legSync" class="leg" type="button" style="display:none;cursor:pointer;border:none;font-family:inherit;color:inherit;text-align:left;" title="Relancer la synchro Google Agenda"><i class="ti ti-refresh" style="font-size:12px;"></i><span id="legSyncTxt"></span></button>
-    <div id="appVersion" style="font-size:10px;color:#fff;text-shadow:0 1px 2px rgba(0,0,0,0.6);text-align:right;padding-right:4px;">Version 2026-10-22 09:07 · <a href="confidentialite.html" style="color:#fff">Confidentialité</a> · <a href="conditions.html" style="color:#fff">Conditions</a></div>
+    <div id="appVersion" style="font-size:10px;color:#fff;text-shadow:0 1px 2px rgba(0,0,0,0.6);text-align:right;padding-right:4px;">Version 2026-10-28 18:41 · <a href="confidentialite.html" style="color:#fff">Confidentialité</a> · <a href="conditions.html" style="color:#fff">Conditions</a></div>
   </div>
   <div id="zbx">
     <button class="zb" id="zi">+</button>
@@ -505,6 +505,15 @@ const VACANCES_ZONES={
 };
 const VACANCES=[];   // vacances de la zone choisie, {label,start,end}, voir rebuildVacances()
 const MULTI_EVENTS=[];
+// Tâches Google (Google Tasks) avec une date d'échéance : {day,title,done,notes,list}.
+// Affichées sur un panneau jaune « À FAIRE » du côté de mon agenda.
+let TASKS=[], TASKS_BY_DAY=new Map();
+function setTasks(list){
+  TASKS=(list||[]).slice().sort((a,b)=>(a.done-b.done)||a.title.localeCompare(b.title));
+  TASKS_BY_DAY=new Map();
+  TASKS.forEach(t=>{ let a=TASKS_BY_DAY.get(t.day); if(!a) TASKS_BY_DAY.set(t.day,a=[]); a.push(t); });
+  EVENTS_VERSION++;
+}
 
 const ALL_EVENTS=[...EVT_RIGHT,...EVT_LEFT].sort((a,b)=>a.day-b.day);
 
@@ -2564,6 +2573,60 @@ function drawEventSign(it,alpha){
   EVENT_HITBOXES.push(...hits);
 }
 
+// Panneau « À FAIRE » : petit tableau jaune sur deux pieds, au ras de la
+// chaussée du côté de mon agenda, un peu après le panneau des événements du
+// jour (pour ne pas le cacher). Cases à cocher, tâches faites barrées.
+function drawTaskSign(it,alpha){
+  const L=it.side*(RW+1.55), HW=1.3, B=0.5, T=2.3;
+  const pa=proj(it.dist,L-HW,T), pb=proj(it.dist,L+HW,B), pg=proj(it.dist,L,0);
+  const x0=Math.min(pa.x,pb.x), w=Math.abs(pb.x-pa.x), y0=pa.y, h=pb.y-pa.y;
+  if(w<8 || h<=0) return;
+  ctx.save();
+  ctx.globalAlpha=alpha;
+  // pieds
+  ctx.fillStyle=night?'#3a3a3a':'#5b5b5b';
+  const lw=Math.max(1,w*0.05);
+  ctx.fillRect(x0+w*0.15,y0+h,lw,pg.y-(y0+h));
+  ctx.fillRect(x0+w*0.85-lw,y0+h,lw,pg.y-(y0+h));
+  // tableau
+  const r=Math.min(w,h)*0.06;
+  ctx.fillStyle=night?'#8f7d1e':'#ffd43b';
+  ctx.strokeStyle='#1d1d1b'; ctx.lineWidth=Math.max(1,w*0.02);
+  ctx.beginPath(); ctx.roundRect ? ctx.roundRect(x0,y0,w,h,r) : ctx.rect(x0,y0,w,h); ctx.fill(); ctx.stroke();
+  if(w>=26){
+    const hh=h*0.24;
+    ctx.fillStyle='#1d1d1b'; ctx.fillRect(x0+w*0.04,y0+h*0.05,w*0.92,hh);
+    ctx.fillStyle=night?'#d8c45a':'#ffd43b';
+    ctx.font=`700 ${(hh*0.72).toFixed(1)}px Oswald, Arial, sans-serif`;
+    ctx.textAlign='center'; ctx.textBaseline='middle';
+    ctx.fillText('À FAIRE', x0+w/2, y0+h*0.05+hh*0.55);
+    const rows=it.tasks.length>3 ? it.tasks.slice(0,2) : it.tasks;
+    const rh=(h*0.68)/3, fs=rh*0.52, cb=fs*0.85;
+    ctx.font=`500 ${fs.toFixed(1)}px Archivo, Arial, sans-serif`;
+    ctx.textAlign='left';
+    rows.forEach((t,i)=>{
+      const cy=y0+h*0.31+rh*(i+0.5), cx=x0+w*0.07;
+      ctx.strokeStyle='#1d1d1b'; ctx.lineWidth=Math.max(1,fs*0.1);
+      ctx.strokeRect(cx,cy-cb/2,cb,cb);
+      if(t.done){
+        ctx.beginPath(); ctx.moveTo(cx+cb*0.18,cy); ctx.lineTo(cx+cb*0.42,cy+cb*0.28); ctx.lineTo(cx+cb*0.85,cy-cb*0.3); ctx.stroke();
+      }
+      const tx=cx+cb*1.5, maxW=x0+w*0.95-tx;
+      let txt=t.title;
+      if(ctx.measureText(txt).width>maxW){ while(txt.length>1 && ctx.measureText(txt+'…').width>maxW) txt=txt.slice(0,-1); txt+='…'; }
+      ctx.fillStyle=t.done?'rgba(29,29,27,0.55)':'#1d1d1b';
+      ctx.fillText(txt,tx,cy+fs*0.05);
+      if(t.done){ const tw=ctx.measureText(txt).width; ctx.fillRect(tx,cy,tw,Math.max(1,fs*0.08)); }
+    });
+    if(it.tasks.length>3){
+      ctx.fillStyle='#1d1d1b'; ctx.textAlign='center';
+      ctx.fillText('+ '+(it.tasks.length-2)+' autres', x0+w/2, y0+h*0.31+rh*2.5);
+    }
+  }
+  ctx.restore();
+  EVENT_HITBOXES.push({day:it.day,x0,x1:x0+w,y0,y1:y0+h});
+}
+
 function drawRouteObjects(){
   EVENT_HITBOXES.length=0;
   EVENT_PHOTO_HITS.length=0;
@@ -2613,6 +2676,9 @@ function drawRouteObjects(){
     // À la hauteur du panneau du jour mais plus près de la chaussée (voir
     // drawDayPost) : en perspective, une borne placée devant ou derrière son
     // panneau finit toujours par le chevaucher.
+    // Tâches du jour (avec mon agenda : à droite, à gauche en retour dans le passé).
+    const dayTasks=showRight && TASKS_BY_DAY.get(rk);
+    if(dayTasks && dayTasks.length) items.push({kind:'task',dist:dist+SP*0.82,tasks:dayTasks,day:rk,side:pastMode?-1:1});
     items.push({kind:'daypost',dist:dist+SP*0.5,day:rk});
   }
   items.sort((a,b)=>b.dist-a.dist);
@@ -2621,12 +2687,13 @@ function drawRouteObjects(){
     // Bornes : gardées jusqu'à sortir de l'écran (elles disparaissaient à 12 m,
     // juste quand la voiture, dessinée 9 m devant la caméra, arrivait à leur
     // hauteur) ; en vue 30°/45° on voit même derrière la caméra.
-    const nearCut=it.kind==='sign'?5:(it.kind==='gantry'?12:(tilt>0.01?-30:2.5));
+    const nearCut=(it.kind==='sign'||it.kind==='task')?5:(it.kind==='gantry'?12:(tilt>0.01?-30:2.5));
     if(it.dist<nearCut) return;
     const alpha=Math.min(1,Math.max(0,(R-it.dist)/40))*Math.min(1,Math.max(0,(it.dist-nearCut)/3));
     if(it.kind==='borne'){ drawBorne(it,alpha); return; }
     if(it.kind==='gantry'){ drawGantry(it,alpha); return; }
     if(it.kind==='daypost'){ drawDayPost(it,alpha); return; }
+    if(it.kind==='task'){ drawTaskSign(it,alpha); return; }
     drawEventSign(it,alpha);
   });
 }
@@ -3995,6 +4062,18 @@ function openDayPanel(dayIdx){
     row.addEventListener('click',()=>openEventDetail(ev));
     list.appendChild(row);
   });
+  // Tâches Google du jour (lecture seule : on les coche dans Google Agenda / Tasks).
+  (showRight && TASKS_BY_DAY.get(dayIdx) || []).forEach(t=>{
+    const row=document.createElement('div');
+    row.className='dayrow';
+    const box=document.createElement('span'); box.textContent=t.done?'☑':'☐'; box.style.cssText='font-size:16px;width:14px;';
+    const title=document.createElement('span'); title.style.flex='1'; title.textContent=t.title;
+    if(t.done) title.style.cssText+='text-decoration:line-through;color:#8a7a5c;';
+    const who=document.createElement('span'); who.style.cssText='font-size:11px;color:#8a7a5c;'; who.textContent='Tâche'+(t.list?' · '+t.list:'');
+    row.append(box,title,who);
+    if(t.notes) row.title=t.notes;
+    list.appendChild(row);
+  });
   document.getElementById('dayPanel').classList.add('open');
   document.getElementById('dayPanelScrim').classList.add('open');
 }
@@ -4196,7 +4275,8 @@ const GOOGLE_CLIENT_ID = '553155346197-0mocoh81lknfp5hlva9c5s3vvatdaofk.apps.goo
 // (choix du second agenda dans « Agendas et vacances… »).
 // drive.file : envoyer dans Drive les photos ajoutées à un nouvel événement
 // (l'appli ne voit que les fichiers qu'elle a elle-même créés).
-const CALENDAR_SCOPE = 'https://www.googleapis.com/auth/calendar.events https://www.googleapis.com/auth/calendar.calendarlist.readonly https://www.googleapis.com/auth/drive.file email profile';
+// tasks.readonly : lire les tâches Google (avec échéance) pour le panneau « À FAIRE ».
+const CALENDAR_SCOPE = 'https://www.googleapis.com/auth/calendar.events https://www.googleapis.com/auth/calendar.calendarlist.readonly https://www.googleapis.com/auth/drive.file https://www.googleapis.com/auth/tasks.readonly email profile';
 let googleTokenClient = null;
 let googleAccessToken = null;
 let googleTokenExpiry = 0;
@@ -4793,10 +4873,16 @@ async function liveSyncFromGoogleCalendar(force){
       }
     }
 
+    // Tâches Google : facultatives (autorisation refusée, API non activée…) —
+    // en cas d'échec, l'agenda s'affiche simplement sans elles.
+    let tasks = [];
+    try{ tasks = await fetchGoogleTasks(); }
+    catch(err){ console.warn('Tâches Google indisponibles', err); }
     endDemo();
     applyEventsData(allEntries);
+    setTasks(tasks);
     try{
-      localStorage.setItem(LIVE_SYNC_CACHE_KEY, JSON.stringify({ts: Date.now(), cfg: cfgSig, events: allEntries, profile, leftName}));
+      localStorage.setItem(LIVE_SYNC_CACHE_KEY, JSON.stringify({ts: Date.now(), cfg: cfgSig, events: allEntries, tasks, profile, leftName}));
     }catch(e){ console.warn('Cache local indisponible', e); }
     sbtn.style.color = '#34a853';
     LAST_SYNC_TS = Date.now(); updateSyncAge();
@@ -4812,11 +4898,38 @@ async function liveSyncFromGoogleCalendar(force){
   }
 }
 
+// Tâches Google ayant une échéance, toutes listes confondues (faites comprises,
+// sur les 400 derniers jours et à venir). L'API ne donne que la date, pas l'heure.
+async function fetchGoogleTasks(){
+  const token = await getGoogleAccessToken();
+  const get = async url => {
+    const r = await fetch(url, { headers: { 'Authorization': 'Bearer ' + token } });
+    if(!r.ok) throw new Error('Google Tasks HTTP ' + r.status);
+    return r.json();
+  };
+  const lists = (await get('https://tasks.googleapis.com/tasks/v1/users/@me/lists?maxResults=100')).items || [];
+  const dueMin = new Date(Date.now() - 400*86400000).toISOString();
+  const out = [];
+  for(const l of lists){
+    let pageToken = '';
+    do{
+      const d = await get('https://tasks.googleapis.com/tasks/v1/lists/' + encodeURIComponent(l.id) + '/tasks?showCompleted=true&showHidden=true&maxResults=100&dueMin=' + encodeURIComponent(dueMin) + (pageToken ? '&pageToken=' + encodeURIComponent(pageToken) : ''));
+      (d.items || []).forEach(t => {
+        if(!t.due || !t.title || t.deleted) return;
+        out.push({ day: dayIndexFromDateStr(t.due.slice(0,10)), title: String(t.title).slice(0,60), done: t.status === 'completed', notes: t.notes ? String(t.notes).slice(0,300) : '', list: l.title || '' });
+      });
+      pageToken = d.nextPageToken || '';
+    }while(pageToken);
+  }
+  return out;
+}
+
 function readLiveSyncCache(){
   try{ return JSON.parse(localStorage.getItem(LIVE_SYNC_CACHE_KEY) || 'null'); }catch(e){ return null; }
 }
 function applyCachedSync(cached){
   applyEventsData(cached.events || []);
+  setTasks(cached.tasks || []);
   LAST_SYNC_TS = cached.ts || null; updateSyncAge();
   if(cached.profile){ updateGoogleAuthUI(cached.profile); applySideNamesFromProfile(cached.profile, cached.leftName); }
   showWelcome(false);
@@ -4836,6 +4949,7 @@ function signOutGoogle(){
     localStorage.removeItem(CALENDAR_CONFIG_KEY);
   }catch(e){}
   applyEventsData([]);
+  setTasks([]);
   updateGoogleAuthUI(null);
   setSideNames('Moi','');
   LAST_SYNC_TS = null; updateSyncAge();
@@ -5193,6 +5307,16 @@ function demoEvents(){
 function startDemo(){
   demoMode=true;
   applyEventsData(demoEvents());
+  const T=TODAY_DAY;
+  setTasks([
+    { day:T-1, title:'Appeler le plombier', done:true, notes:'', list:'Mes tâches' },
+    { day:T, title:'Acheter du pain', done:false, notes:'', list:'Mes tâches' },
+    { day:T, title:'Arroser les tomates', done:true, notes:'', list:'Mes tâches' },
+    { day:T+3, title:'Réserver le restaurant', done:false, notes:'Pour l\'anniversaire de Léa', list:'Mes tâches' },
+    { day:T+8, title:'Faire réviser le vélo', done:false, notes:'', list:'Mes tâches' },
+    { day:T+10, title:'Préparer la valise', done:false, notes:'', list:'Mes tâches' },
+    { day:T+10, title:'Imprimer les billets', done:false, notes:'', list:'Mes tâches' }
+  ]);
   setSideNames('Moi','Camille');
   showWelcome(false);
   document.getElementById('demoBadge').classList.add('show');
@@ -5211,7 +5335,7 @@ document.getElementById('demoConnect').addEventListener('click', ()=>{
   if(/[?&]demo\b/.test(location.search)) history.replaceState(null,'',location.pathname+location.hash);
   const cached=readLiveSyncCache();
   if(cached && cached.profile){ applyCachedSync(cached); camDay=camDayForCarAt(TODAY_DAY); lastTs=null; playing=false; updatePlay(); }
-  else{ applyEventsData([]); setSideNames('Moi',''); liveSyncFromGoogleCalendar(true); }
+  else{ applyEventsData([]); setTasks([]); setSideNames('Moi',''); liveSyncFromGoogleCalendar(true); }
 });
 document.getElementById('menu-demo').addEventListener('click', e=>{ e.stopPropagation(); menuPanel.classList.remove('open'); startDemo(); });
 

@@ -4,8 +4,8 @@
 
 Application web qui affiche votre **Google Agenda le long d'une route animée** : chaque rendez-vous devient un panneau au bord de la route, et l'on avance dans les semaines à venir en voiture, à trottinette, à vélo ou à pied.
 
-👉 **Ouvrir l'application :** https://jfesteoule.github.io/agenda-jf/
-👉 **Essayer sans compte (agenda fictif) :** https://jfesteoule.github.io/agenda-jf/?demo
+👉 **Ouvrir l'application :** https://routedutemps.fr/
+👉 **Essayer sans compte (agenda fictif) :** https://routedutemps.fr/?demo
 
 ## Fonctions
 
@@ -22,8 +22,8 @@ Application web qui affiche votre **Google Agenda le long d'une route animée** 
 
 L'application fonctionne entièrement dans le navigateur : elle n'a pas de serveur, et les données de votre compte Google ne sont envoyées nulle part ailleurs que chez Google.
 
-- [Règles de confidentialité](https://jfesteoule.github.io/agenda-jf/confidentialite.html)
-- [Conditions d'utilisation](https://jfesteoule.github.io/agenda-jf/conditions.html)
+- [Règles de confidentialité](https://routedutemps.fr/confidentialite.html)
+- [Conditions d'utilisation](https://routedutemps.fr/conditions.html)
 
 ## Technique
 

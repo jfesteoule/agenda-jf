@@ -442,7 +442,7 @@ canvas#c{position:absolute;inset:0;width:100%;height:100%;touch-action:none;poin
     <div class="leg" id="legWeekend"><div class="legline"></div>Week-end</div>
     <div class="leg" id="legVac"><div class="legline" style="background:#ffd600;"></div><span id="legVacTxt">Vacances scolaires</span></div>
     <button id="legSync" class="leg" type="button" style="display:none;cursor:pointer;border:none;font-family:inherit;color:inherit;text-align:left;" title="Relancer la synchro Google Agenda"><i class="ti ti-refresh" style="font-size:12px;"></i><span id="legSyncTxt"></span></button>
-    <div id="appVersion" style="font-size:10px;color:#fff;text-shadow:0 1px 2px rgba(0,0,0,0.6);text-align:right;padding-right:4px;">Version 2026-10-29 21:36 · <a href="confidentialite.html" style="color:#fff">Confidentialité</a> · <a href="conditions.html" style="color:#fff">Conditions</a></div>
+    <div id="appVersion" style="font-size:10px;color:#fff;text-shadow:0 1px 2px rgba(0,0,0,0.6);text-align:right;padding-right:4px;">Version 2026-10-30 08:37 · <a href="confidentialite.html" style="color:#fff">Confidentialité</a> · <a href="conditions.html" style="color:#fff">Conditions</a></div>
   </div>
   <div id="zbx">
     <button class="zb" id="zi">+</button>
@@ -2584,11 +2584,31 @@ function drawEventSign(it,alpha){
 // Panneau « À FAIRE » : petit tableau jaune sur deux pieds, au ras de la
 // chaussée du côté de mon agenda, un peu après le panneau des événements du
 // jour (pour ne pas le cacher). Cases à cocher, tâches faites barrées.
+// Lignes du panneau : chaque tâche, suivie de ses sous-tâches (décalées),
+// au plus 7 lignes ; au-delà, « + N autres ».
+function taskSignRows(tasks){
+  const rows=[];
+  tasks.forEach(t=>{
+    const subs=t.subs||[];
+    rows.push({ title:t.title, done:t.done, level:0, count:subs.length ? subs.filter(x=>x.done).length+'/'+subs.length : '' });
+    subs.forEach(x=>rows.push({ title:x.title, done:x.done, level:1 }));
+  });
+  const MAX=7;
+  if(rows.length>MAX){ const more=rows.length-(MAX-1); rows.length=MAX-1; rows.push({ more }); }
+  return rows;
+}
+// Panneau « À FAIRE » : tableau jaune sur deux pieds, au ras de la chaussée
+// du côté de mon agenda, un peu après le panneau des événements du jour (pour
+// ne pas le cacher). Cases à cocher, tâches faites barrées ; sa hauteur suit
+// le nombre de lignes.
 function drawTaskSign(it,alpha){
-  const L=it.side*(RW+1.55), HW=1.3, B=0.5, T=2.3;
+  const rows=taskSignRows(it.tasks);
+  const RH=0.34, HEAD=0.44, PAD=0.12;
+  const L=it.side*(RW+1.55), HW=1.3, B=0.5, T=B+PAD+HEAD+rows.length*RH+PAD;
   const pa=proj(it.dist,L-HW,T), pb=proj(it.dist,L+HW,B), pg=proj(it.dist,L,0);
   const x0=Math.min(pa.x,pb.x), w=Math.abs(pb.x-pa.x), y0=pa.y, h=pb.y-pa.y;
   if(w<8 || h<=0) return;
+  const k=h/(T-B); // pixels par mètre
   ctx.save();
   ctx.globalAlpha=alpha;
   // pieds
@@ -2597,39 +2617,46 @@ function drawTaskSign(it,alpha){
   ctx.fillRect(x0+w*0.15,y0+h,lw,pg.y-(y0+h));
   ctx.fillRect(x0+w*0.85-lw,y0+h,lw,pg.y-(y0+h));
   // tableau
-  const r=Math.min(w,h)*0.06;
+  const r=Math.min(w,h)*0.05;
   ctx.fillStyle=night?'#8f7d1e':'#ffd43b';
   ctx.strokeStyle='#1d1d1b'; ctx.lineWidth=Math.max(1,w*0.02);
   ctx.beginPath(); ctx.roundRect ? ctx.roundRect(x0,y0,w,h,r) : ctx.rect(x0,y0,w,h); ctx.fill(); ctx.stroke();
   if(w>=26){
-    const hh=h*0.24;
-    ctx.fillStyle='#1d1d1b'; ctx.fillRect(x0+w*0.04,y0+h*0.05,w*0.92,hh);
+    const hy=y0+PAD*k, hh=HEAD*k*0.86;
+    ctx.fillStyle='#1d1d1b'; ctx.fillRect(x0+w*0.04,hy,w*0.92,hh);
     ctx.fillStyle=night?'#d8c45a':'#ffd43b';
     ctx.font=`700 ${(hh*0.72).toFixed(1)}px Oswald, Arial, sans-serif`;
     ctx.textAlign='center'; ctx.textBaseline='middle';
-    ctx.fillText('À FAIRE', x0+w/2, y0+h*0.05+hh*0.55);
-    const rows=it.tasks.length>3 ? it.tasks.slice(0,2) : it.tasks;
-    const rh=(h*0.68)/3, fs=rh*0.52, cb=fs*0.85;
-    ctx.font=`500 ${fs.toFixed(1)}px Archivo, Arial, sans-serif`;
+    ctx.fillText('À FAIRE', x0+w/2, hy+hh*0.55);
+    const rh=RH*k, fs=rh*0.58;
     ctx.textAlign='left';
     rows.forEach((t,i)=>{
-      const cy=y0+h*0.31+rh*(i+0.5), cx=x0+w*0.07;
-      ctx.strokeStyle='#1d1d1b'; ctx.lineWidth=Math.max(1,fs*0.1);
+      const cy=y0+(PAD+HEAD)*k+rh*(i+0.5);
+      if(t.more){
+        ctx.fillStyle='#1d1d1b'; ctx.textAlign='center';
+        ctx.font=`500 ${fs.toFixed(1)}px Archivo, Arial, sans-serif`;
+        ctx.fillText('+ '+t.more+' autres', x0+w/2, cy); ctx.textAlign='left';
+        return;
+      }
+      const sub=t.level>0, f=sub?fs*0.9:fs, cb=f*0.85;
+      const cx=x0+w*(sub?0.13:0.06);
+      ctx.font=`${sub?400:600} ${f.toFixed(1)}px Archivo, Arial, sans-serif`;
+      ctx.strokeStyle='#1d1d1b'; ctx.lineWidth=Math.max(1,f*0.1);
       ctx.strokeRect(cx,cy-cb/2,cb,cb);
       if(t.done){
         ctx.beginPath(); ctx.moveTo(cx+cb*0.18,cy); ctx.lineTo(cx+cb*0.42,cy+cb*0.28); ctx.lineTo(cx+cb*0.85,cy-cb*0.3); ctx.stroke();
       }
-      const tx=cx+cb*1.5, maxW=x0+w*0.95-tx;
+      const tx=cx+cb*1.5;
+      let maxW=x0+w*0.95-tx;
+      if(t.count){ const cw=ctx.measureText(' '+t.count).width; maxW-=cw; }
       let txt=t.title;
       if(ctx.measureText(txt).width>maxW){ while(txt.length>1 && ctx.measureText(txt+'…').width>maxW) txt=txt.slice(0,-1); txt+='…'; }
       ctx.fillStyle=t.done?'rgba(29,29,27,0.55)':'#1d1d1b';
-      ctx.fillText(txt,tx,cy+fs*0.05);
-      if(t.done){ const tw=ctx.measureText(txt).width; ctx.fillRect(tx,cy,tw,Math.max(1,fs*0.08)); }
+      ctx.fillText(txt,tx,cy+f*0.05);
+      const tw=ctx.measureText(txt).width;
+      if(t.done) ctx.fillRect(tx,cy,tw,Math.max(1,f*0.08));
+      if(t.count){ ctx.fillStyle='rgba(29,29,27,0.7)'; ctx.fillText(' '+t.count, tx+tw, cy+f*0.05); }
     });
-    if(it.tasks.length>3){
-      ctx.fillStyle='#1d1d1b'; ctx.textAlign='center';
-      ctx.fillText('+ '+(it.tasks.length-2)+' autres', x0+w/2, y0+h*0.31+rh*2.5);
-    }
   }
   ctx.restore();
   EVENT_HITBOXES.push({day:it.day,x0,x1:x0+w,y0,y1:y0+h});
@@ -4109,6 +4136,14 @@ function openDayPanel(dayIdx){
     row.append(box,title,who);
     if(t.notes) row.title=t.notes;
     list.appendChild(row);
+    (t.subs || []).forEach(x=>{
+      const sr=document.createElement('div');
+      sr.className='dayrow'; sr.style.paddingLeft='34px';
+      const sb=document.createElement('span'); sb.textContent=x.done?'☑':'☐'; sb.style.cssText='font-size:15px;width:14px;';
+      const st=document.createElement('span'); st.style.flex='1'; st.textContent=x.title;
+      if(x.done) st.style.cssText+='text-decoration:line-through;color:#8a7a5c;';
+      sr.append(sb,st); list.appendChild(sr);
+    });
   });
   document.getElementById('dayPanel').classList.add('open');
   document.getElementById('dayPanelScrim').classList.add('open');
@@ -4944,20 +4979,27 @@ async function fetchGoogleTasks(){
     return r.json();
   };
   const lists = (await get('https://tasks.googleapis.com/tasks/v1/users/@me/lists?maxResults=100')).items || [];
-  const dueMin = new Date(Date.now() - 400*86400000).toISOString();
-  const out = [];
+  const out = [], all = [];
   for(const l of lists){
     let pageToken = '';
     do{
-      const d = await get('https://tasks.googleapis.com/tasks/v1/lists/' + encodeURIComponent(l.id) + '/tasks?showCompleted=true&showHidden=true&maxResults=100&dueMin=' + encodeURIComponent(dueMin) + (pageToken ? '&pageToken=' + encodeURIComponent(pageToken) : ''));
-      (d.items || []).forEach(t => {
-        if(!t.due || !t.title || t.deleted) return;
-        out.push({ day: dayIndexFromDateStr(t.due.slice(0,10)), title: String(t.title).slice(0,60), done: t.status === 'completed', notes: t.notes ? String(t.notes).slice(0,300) : '', list: l.title || '' });
-      });
+      const d = await get('https://tasks.googleapis.com/tasks/v1/lists/' + encodeURIComponent(l.id) + '/tasks?showCompleted=true&showHidden=true&maxResults=100' + (pageToken ? '&pageToken=' + encodeURIComponent(pageToken) : ''));
+      (d.items || []).forEach(t => { if(t.title && !t.deleted) all.push({ t, list: l.title || '' }); });
       pageToken = d.nextPageToken || '';
     }while(pageToken);
   }
-  return out;
+  // Sous-tâches (items à cocher d'une tâche) : rattachées à leur tâche, même
+  // sans date ; une sous-tâche datée dont la tâche n'est pas affichée reste seule.
+  const mk = ({t, list}) => ({ id: t.id, day: t.due ? dayIndexFromDateStr(t.due.slice(0,10)) : null, title: String(t.title).slice(0,60), done: t.status === 'completed', notes: t.notes ? String(t.notes).slice(0,300) : '', list, pos: t.position || '', subs: [] });
+  const byId = new Map();
+  all.forEach(x => byId.set(x.t.id, mk(x)));
+  all.forEach(({t}) => {
+    const item = byId.get(t.id), parent = t.parent && byId.get(t.parent);
+    if(parent && parent.day !== null) parent.subs.push(item);
+    else if(item.day !== null) out.push(item);
+  });
+  out.forEach(x => x.subs.sort((a,b) => a.pos < b.pos ? -1 : a.pos > b.pos ? 1 : 0));
+  return out.filter(x => x.day >= TODAY_DAY - 400);
 }
 
 function readLiveSyncCache(){
@@ -5346,11 +5388,13 @@ function startDemo(){
   const T=TODAY_DAY;
   setTasks([
     { day:T-1, title:'Appeler le plombier', done:true, notes:'', list:'Mes tâches' },
-    { day:T, title:'Acheter du pain', done:false, notes:'', list:'Mes tâches' },
+    { day:T, title:'Courses', done:false, notes:'', list:'Mes tâches', subs:[
+      { title:'Pain', done:true }, { title:'Lait', done:false }, { title:'Tomates', done:false } ] },
     { day:T, title:'Arroser les tomates', done:true, notes:'', list:'Mes tâches' },
     { day:T+3, title:'Réserver le restaurant', done:false, notes:'Pour l\'anniversaire de Léa', list:'Mes tâches' },
     { day:T+8, title:'Faire réviser le vélo', done:false, notes:'', list:'Mes tâches' },
-    { day:T+10, title:'Préparer la valise', done:false, notes:'', list:'Mes tâches' },
+    { day:T+10, title:'Préparer la valise', done:false, notes:'', list:'Mes tâches', subs:[
+      { title:'Maillots de bain', done:true }, { title:'Crème solaire', done:false }, { title:'Chargeurs', done:false } ] },
     { day:T+10, title:'Imprimer les billets', done:false, notes:'', list:'Mes tâches' }
   ]);
   setSideNames('Moi','Camille');

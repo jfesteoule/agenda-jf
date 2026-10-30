@@ -62,7 +62,20 @@ canvas#c{position:absolute;inset:0;width:100%;height:100%;touch-action:none;poin
 .appBox input{font-family:'Archivo',Arial,sans-serif;font-size:14px;padding:8px 10px;border:1px solid #ddd;border-radius:8px;color:#2b241c;}
 .appActions{display:flex;gap:8px;justify-content:flex-end;flex-wrap:wrap;}
 .appActions button{padding:9px 16px;font-size:13px;font-weight:500;cursor:pointer;border-radius:8px;}
-#welcomeCard{position:absolute;left:50%;top:50%;transform:translate(-50%,-50%);z-index:900;background:rgba(255,255,255,0.96);border-radius:16px;padding:22px 24px;width:min(360px,calc(100vw - 32px));box-shadow:0 12px 32px rgba(0,0,0,0.28);font-family:'Archivo',Arial,sans-serif;color:#2b241c;text-align:center;}
+#welcomeCard{position:absolute;left:50%;top:50%;transform:translate(-50%,-50%);z-index:900;background:rgba(255,255,255,0.97);border-radius:18px;padding:22px 24px;width:min(560px,calc(100vw - 32px));max-height:calc(100% - 32px);overflow-y:auto;box-sizing:border-box;box-shadow:0 12px 32px rgba(0,0,0,0.28);font-family:'Archivo',Arial,sans-serif;color:#2b241c;text-align:center;}
+#welcomeCard .wc-head{display:flex;align-items:center;justify-content:center;gap:10px;margin-bottom:6px;}
+#welcomeCard .wc-head img{width:44px;height:44px;border-radius:10px;}
+#welcomeCard h2{font-size:24px !important;margin:0 !important;}
+#welcomeCard .wc-tag{font-size:14px;line-height:1.5;color:#2b241c;margin:6px 0 14px;}
+#welcomeCard .wc-shots{display:flex;gap:8px;overflow-x:auto;scroll-snap-type:x mandatory;margin:0 -4px 12px;padding:0 4px 4px;}
+#welcomeCard .wc-shots figure{flex:1 0 30%;min-width:150px;margin:0;scroll-snap-align:center;}
+#welcomeCard .wc-shots img{width:100%;aspect-ratio:480/252;object-fit:cover;border-radius:10px;display:block;box-shadow:0 2px 6px rgba(0,0,0,0.18);}
+#welcomeCard .wc-shots figcaption{font-size:11px;color:#6b6157;margin-top:4px;}
+#welcomeCard ul.wc-feat{list-style:none;padding:0;margin:0 0 16px;display:grid;grid-template-columns:1fr 1fr;gap:6px 12px;text-align:left;font-size:12.5px;line-height:1.35;}
+#welcomeCard .wc-cta{display:flex;flex-direction:column;align-items:center;gap:10px;}
+#welcomeCard #welcomeDemo{margin:0;padding:11px 22px;border-radius:24px;background:#c1502f;color:#fff;text-decoration:none;font-size:14px;box-shadow:0 2px 6px rgba(193,80,47,0.35);}
+#welcomeCard .wc-note{font-size:11.5px !important;color:#6b6157 !important;margin:14px 0 0 !important;}
+@media (max-width:480px){ #welcomeCard{padding:18px 16px;} #welcomeCard ul.wc-feat{grid-template-columns:1fr;} #welcomeCard .wc-shots figure{flex-basis:78%;} }
 #welcomeCard[hidden]{display:none;}
 #welcomeCard h2{margin:0 0 8px;font-family:'Oswald',Arial,sans-serif;font-size:20px;font-weight:600;}
 #welcomeCard p{margin:0 0 16px;font-size:13px;line-height:1.5;color:#5f6368;}
@@ -224,11 +237,26 @@ canvas#c{position:absolute;inset:0;width:100%;height:100%;touch-action:none;poin
   <canvas id="c"></canvas>
   <div id="toast" role="status" aria-live="polite"></div>
   <div id="welcomeCard" hidden>
-    <h2>Route du temps</h2>
-    <p>Connectez votre compte Google pour voir défiler votre agenda le long de la route. Vos événements restent dans votre navigateur : rien n'est envoyé ailleurs que chez Google.</p>
-    <button id="welcomeSignIn" type="button"><svg viewBox="0 0 48 48"><path fill="#EA4335" d="M24 9.5c3.54 0 6.71 1.22 9.21 3.6l6.85-6.85C35.9 2.38 30.47 0 24 0 14.62 0 6.51 5.38 2.56 13.22l7.98 6.19C12.43 13.72 17.74 9.5 24 9.5z"/><path fill="#4285F4" d="M46.98 24.55c0-1.57-.15-3.09-.38-4.55H24v9.02h12.94c-.58 2.96-2.26 5.48-4.78 7.18l7.73 6c4.51-4.18 7.09-10.36 7.09-17.65z"/><path fill="#FBBC05" d="M10.53 28.59c-.48-1.45-.76-2.99-.76-4.59s.27-3.14.76-4.59l-7.98-6.19C.92 16.46 0 20.12 0 24c0 3.88.92 7.54 2.56 10.78l7.97-6.19z"/><path fill="#34A853" d="M24 48c6.48 0 11.93-2.13 15.89-5.81l-7.73-6c-2.15 1.45-4.92 2.3-8.16 2.3-6.26 0-11.57-4.22-13.47-9.91l-7.98 6.19C6.51 42.62 14.62 48 24 48z"/></svg>Se connecter avec Google</button>
-    <button id="welcomeDemo" type="button">Essayer d'abord sans compte (démo)</button>
-    <p style="margin:12px 0 0;font-size:11px;"><a href="confidentialite.html" style="color:#6b6157;">Règles de confidentialité</a> · <a href="conditions.html" style="color:#6b6157;">Conditions d'utilisation</a></p>
+    <div class="wc-head"><img src="logo/logo-120.png" alt=""><h2>Route du temps</h2></div>
+    <p class="wc-tag">Votre <strong>Google Agenda devient une route</strong> : vos rendez-vous défilent sur des panneaux au bord du chemin, comme un voyage dans les semaines à venir.</p>
+    <div class="wc-shots">
+      <figure><img src="accueil/route-jour.jpg" alt="La route de jour avec les panneaux des rendez-vous" loading="lazy"><figcaption>Vos rendez-vous et leurs photos</figcaption></figure>
+      <figure><img src="accueil/route-nuit.jpg" alt="La route de nuit, phares allumés" loading="lazy"><figcaption>De nuit, phares allumés</figcaption></figure>
+      <figure><img src="accueil/route-rando.jpg" alt="Panneaux de randonnée et randonneur" loading="lazy"><figcaption>Panneaux de randonnée</figcaption></figure>
+    </div>
+    <ul class="wc-feat">
+      <li>🚗 En voiture, à vélo, à trottinette ou à pied</li>
+      <li>👥 Votre agenda et ceux partagés avec vous</li>
+      <li>📷 Photos et vidéos de vos événements</li>
+      <li>✅ Vos tâches et leurs listes à cocher</li>
+      <li>🌙 Jour, nuit et saisons du paysage</li>
+      <li>🎵 Musique Spotify ou radio en direct</li>
+    </ul>
+    <div class="wc-cta">
+      <button id="welcomeDemo" type="button">▶ Essayer la démo (sans compte)</button>
+      <button id="welcomeSignIn" type="button"><svg viewBox="0 0 48 48"><path fill="#EA4335" d="M24 9.5c3.54 0 6.71 1.22 9.21 3.6l6.85-6.85C35.9 2.38 30.47 0 24 0 14.62 0 6.51 5.38 2.56 13.22l7.98 6.19C12.43 13.72 17.74 9.5 24 9.5z"/><path fill="#4285F4" d="M46.98 24.55c0-1.57-.15-3.09-.38-4.55H24v9.02h12.94c-.58 2.96-2.26 5.48-4.78 7.18l7.73 6c4.51-4.18 7.09-10.36 7.09-17.65z"/><path fill="#FBBC05" d="M10.53 28.59c-.48-1.45-.76-2.99-.76-4.59s.27-3.14.76-4.59l-7.98-6.19C.92 16.46 0 20.12 0 24c0 3.88.92 7.54 2.56 10.78l7.97-6.19z"/><path fill="#34A853" d="M24 48c6.48 0 11.93-2.13 15.89-5.81l-7.73-6c-2.15 1.45-4.92 2.3-8.16 2.3-6.26 0-11.57-4.22-13.47-9.91l-7.98 6.19C6.51 42.62 14.62 48 24 48z"/></svg>Se connecter avec Google</button>
+    </div>
+    <p class="wc-note">Gratuit. L'application fonctionne dans votre navigateur : vos données Google ne sont envoyées nulle part ailleurs que chez Google.<br><a href="confidentialite.html" style="color:#6b6157;">Règles de confidentialité</a> · <a href="conditions.html" style="color:#6b6157;">Conditions d'utilisation</a></p>
   </div>
   <div id="demoBadge"><span>Démo · agenda fictif</span><button id="demoConnect" type="button">Mon agenda</button></div>
   <div id="pastBadge"><span id="pastBadgeTxt">⏪ Retour dans le passé</span><button id="pastExit" type="button">Revenir au présent</button></div>
@@ -277,6 +305,7 @@ canvas#c{position:absolute;inset:0;width:100%;height:100%;touch-action:none;poin
     <button id="menu-install" class="menuitem" style="display:none;"><i class="ti ti-download"></i>Installer l'application</button>
     <button id="menu-right" class="menuitem"><i class="ti ti-user"></i>Masquer mon agenda</button>
     <button id="menu-legend" class="menuitem"><i class="ti ti-list"></i>Masquer la légende</button>
+    <a id="menu-feedback" class="menuitem" href="#" style="text-decoration:none;"><i class="ti ti-message-heart"></i>Donner mon avis</a>
     <button id="menu-demo" class="menuitem"><i class="ti ti-player-play"></i>Voir la démo (agenda fictif)</button>
     <button id="menu-calendars" class="menuitem"><i class="ti ti-users"></i>Agendas et vacances…</button>
     <button id="menu-signout" class="menuitem" style="display:none;"><i class="ti ti-logout"></i>Se déconnecter de Google</button>
@@ -442,7 +471,7 @@ canvas#c{position:absolute;inset:0;width:100%;height:100%;touch-action:none;poin
     <div class="leg" id="legWeekend"><div class="legline"></div>Week-end</div>
     <div class="leg" id="legVac"><div class="legline" style="background:#ffd600;"></div><span id="legVacTxt">Vacances scolaires</span></div>
     <button id="legSync" class="leg" type="button" style="display:none;cursor:pointer;border:none;font-family:inherit;color:inherit;text-align:left;" title="Relancer la synchro Google Agenda"><i class="ti ti-refresh" style="font-size:12px;"></i><span id="legSyncTxt"></span></button>
-    <div id="appVersion" style="font-size:10px;color:#fff;text-shadow:0 1px 2px rgba(0,0,0,0.6);text-align:right;padding-right:4px;">Version 2026-10-30 08:37 · <a href="confidentialite.html" style="color:#fff">Confidentialité</a> · <a href="conditions.html" style="color:#fff">Conditions</a></div>
+    <div id="appVersion" style="font-size:10px;color:#fff;text-shadow:0 1px 2px rgba(0,0,0,0.6);text-align:right;padding-right:4px;">Version 2026-10-30 17:44 · <a href="confidentialite.html" style="color:#fff">Confidentialité</a> · <a href="conditions.html" style="color:#fff">Conditions</a></div>
   </div>
   <div id="zbx">
     <button class="zb" id="zi">+</button>
@@ -5416,6 +5445,16 @@ document.getElementById('demoConnect').addEventListener('click', ()=>{
   const cached=readLiveSyncCache();
   if(cached && cached.profile){ applyCachedSync(cached); camDay=camDayForCarAt(TODAY_DAY); lastTs=null; playing=false; updatePlay(); }
   else{ applyEventsData([]); setTasks([]); setSideNames('Moi',''); liveSyncFromGoogleCalendar(true); }
+});
+// « Donner mon avis » : e-mail pré-rempli vers l'adresse de contact de l'appli
+// (celle affichée par Google sur l'écran de connexion), avec la version et
+// le type d'appareil pour aider à comprendre un éventuel problème.
+const FEEDBACK_EMAIL='jf.esteoule@gmail.com';
+document.getElementById('menu-feedback').addEventListener('click', e=>{
+  e.preventDefault(); menuPanel.classList.remove('open');
+  const ver=(document.getElementById('appVersion')||{}).textContent||'';
+  const body='Bonjour,\n\nMon avis sur la Route du temps :\n\n\n\nCe qui me plaît :\n\nCe qui pourrait être amélioré :\n\n—\n'+ver.trim().split('·')[0].trim()+' · '+(IS_ANDROID?'Android':(/iPhone|iPad/.test(navigator.userAgent)?'iPhone/iPad':'Ordinateur'))+(demoMode?' · démo':'');
+  location.href='mailto:'+FEEDBACK_EMAIL+'?subject='+encodeURIComponent('Route du temps — mon avis')+'&body='+encodeURIComponent(body);
 });
 document.getElementById('menu-demo').addEventListener('click', e=>{ e.stopPropagation(); menuPanel.classList.remove('open'); startDemo(); });
 

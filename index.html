@@ -103,9 +103,10 @@ canvas#c{position:absolute;inset:0;width:100%;height:100%;touch-action:none;poin
   .hudbtn-top{display:none !important;}
 }
 @media (min-width:481px){
-  /* Sur grand écran, chaque action a déjà son icône dans la barre du haut :
-     le menu ☰ (qui duplique ces mêmes actions) ne sert qu'aux petits écrans. */
-  #mbtn{display:none !important;}
+  /* Sur grand écran, le menu ☰ ne garde que ce qui n'a pas d'icône dans la barre du haut
+     (plein écran, démo, avis, agendas, déconnexion, version). */
+  #menu-add,#menu-minical,#menu-datejump,#menu-month,#menu-nophoto,#menu-aerial,#menu-fpv,
+  #menu-walk,#menu-week,#menu-night,#menu-music,#menu-right{display:none !important;}
 }
 #speeds{position:absolute;top:62px;left:12px;z-index:20;display:flex;gap:6px;}
 .sp{background:#fff;border:none;border-radius:20px;padding:5px 11px;font-family:'Archivo',Arial,sans-serif;font-size:12px;font-weight:500;cursor:pointer;box-shadow:0 1px 4px rgba(0,0,0,0.18);color:#444;}
@@ -473,7 +474,7 @@ canvas#c{position:absolute;inset:0;width:100%;height:100%;touch-action:none;poin
     <div class="leg" id="legWeekend"><div class="legline"></div>Week-end</div>
     <div class="leg" id="legVac"><div class="legline" style="background:#ffd600;"></div><span id="legVacTxt">Vacances scolaires</span></div>
     <button id="legSync" class="leg" type="button" style="display:none;cursor:pointer;border:none;font-family:inherit;color:inherit;text-align:left;" title="Relancer la synchro Google Agenda"><i class="ti ti-refresh" style="font-size:12px;"></i><span id="legSyncTxt"></span></button>
-    <div id="appVersion" style="font-size:10px;color:#fff;text-shadow:0 1px 2px rgba(0,0,0,0.6);text-align:right;padding-right:4px;">Version 2026-11-04 18:15 · <a href="confidentialite.html" style="color:#fff">Confidentialité</a> · <a href="conditions.html" style="color:#fff">Conditions</a></div>
+    <div id="appVersion" style="font-size:10px;color:#fff;text-shadow:0 1px 2px rgba(0,0,0,0.6);text-align:right;padding-right:4px;">Version 2026-11-04 18:32 · <a href="confidentialite.html" style="color:#fff">Confidentialité</a> · <a href="conditions.html" style="color:#fff">Conditions</a></div>
   </div>
   <div id="zbx">
     <button class="zb" id="zi">+</button>

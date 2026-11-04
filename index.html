@@ -71,6 +71,7 @@ canvas#c{position:absolute;inset:0;width:100%;height:100%;touch-action:none;poin
 #welcomeCard .wc-shots figure{flex:1 0 30%;min-width:150px;margin:0;scroll-snap-align:center;}
 #welcomeCard .wc-shots img{width:100%;aspect-ratio:480/252;object-fit:cover;border-radius:10px;display:block;box-shadow:0 2px 6px rgba(0,0,0,0.18);}
 #welcomeCard .wc-shots figcaption{font-size:11px;color:#6b6157;margin-top:4px;}
+#welcomeCard ul.wc-feat li.wc-souv{grid-column:1/-1;text-align:center;background:#fbf3e4;border-radius:10px;padding:7px 10px;margin-top:2px;}
 #welcomeCard ul.wc-feat{list-style:none;padding:0;margin:0 0 16px;display:grid;grid-template-columns:1fr 1fr;gap:6px 12px;text-align:left;font-size:12.5px;line-height:1.35;}
 #welcomeCard .wc-cta{display:flex;flex-direction:column;align-items:center;gap:10px;}
 #welcomeCard #welcomeDemo{margin:0;padding:11px 22px;border-radius:24px;background:#c1502f;color:#fff;text-decoration:none;font-size:14px;box-shadow:0 2px 6px rgba(193,80,47,0.35);}
@@ -251,6 +252,7 @@ canvas#c{position:absolute;inset:0;width:100%;height:100%;touch-action:none;poin
       <li>✅ Vos tâches et leurs listes à cocher</li>
       <li>🌙 Jour, nuit et saisons du paysage</li>
       <li>🎵 Musique Spotify ou radio en direct</li>
+      <li class="wc-souv">⏪ <strong>Agenda souvenir</strong> : remontez le temps et revivez vos sorties, voyages et fêtes en photos</li>
     </ul>
     <div class="wc-cta">
       <button id="welcomeDemo" type="button">▶ Essayer la démo (sans compte)</button>
@@ -471,7 +473,7 @@ canvas#c{position:absolute;inset:0;width:100%;height:100%;touch-action:none;poin
     <div class="leg" id="legWeekend"><div class="legline"></div>Week-end</div>
     <div class="leg" id="legVac"><div class="legline" style="background:#ffd600;"></div><span id="legVacTxt">Vacances scolaires</span></div>
     <button id="legSync" class="leg" type="button" style="display:none;cursor:pointer;border:none;font-family:inherit;color:inherit;text-align:left;" title="Relancer la synchro Google Agenda"><i class="ti ti-refresh" style="font-size:12px;"></i><span id="legSyncTxt"></span></button>
-    <div id="appVersion" style="font-size:10px;color:#fff;text-shadow:0 1px 2px rgba(0,0,0,0.6);text-align:right;padding-right:4px;">Version 2026-10-30 17:44 · <a href="confidentialite.html" style="color:#fff">Confidentialité</a> · <a href="conditions.html" style="color:#fff">Conditions</a></div>
+    <div id="appVersion" style="font-size:10px;color:#fff;text-shadow:0 1px 2px rgba(0,0,0,0.6);text-align:right;padding-right:4px;">Version 2026-11-04 18:15 · <a href="confidentialite.html" style="color:#fff">Confidentialité</a> · <a href="conditions.html" style="color:#fff">Conditions</a></div>
   </div>
   <div id="zbx">
     <button class="zb" id="zi">+</button>
@@ -5374,6 +5376,15 @@ function demoEvents(){
   const P=f=>({ url:'demo/'+f+'.jpg' }), V=(f,thumb)=>({ url:'demo/'+f+'.mp4', isVideo:true, thumb:'demo/'+thumb+'.jpg' });
   const R=(d,title,time,endTime,extra)=>ev.push({ day:T+d, title, side:'right', who:'Moi', time:time||undefined, endTime:endTime||undefined, ...extra });
   const L=(d,title,time,endTime,extra)=>ev.push({ day:T+d, title, side:'left', who:'Camille', time:time||undefined, endTime:endTime||undefined, ...extra });
+  // Souvenirs : quelques jours passés avec photos, pour « Retour dans le passé ».
+  R(-12,'Randonnée GR34','09:00','17:00',{ location:'Pointe du Raz', photos:[P('rando-gr34')] });
+  ev.push({ day:T-26, day2:T-20, title:'Voyage à Venise ✈️', side:'right', who:'Moi' });
+  R(-26,'Arrivée à Venise ✈️','11:00',null,{ photos:[P('venise')] });
+  L(-26,'Arrivée à Venise ✈️','11:00',null,{ photos:[P('venise')] });
+  R(-16,'Anniversaire de Paul 🎂','19:30',null,{ photos:[P('anniversaire')] });
+  L(-9,'Repas de famille','12:00',null,{ photos:[P('repas-famille')] });
+  R(-6,'Tennis 🎾','18:00','19:30',{ photos:[P('tennis')] });
+  L(-4,'Concert de jazz 🎷','20:30',null,{ photos:[P('jazz')] });
   R(-2,'Dentiste','09:30','10:00',{ location:'Cabinet du Dr Martin' });
   R(-1,'Bridge au club','14:00','18:00');
   L(-1,'Marché','10:00');

@@ -474,7 +474,7 @@ canvas#c{position:absolute;inset:0;width:100%;height:100%;touch-action:none;poin
     <div class="leg" id="legWeekend"><div class="legline"></div>Week-end</div>
     <div class="leg" id="legVac"><div class="legline" style="background:#ffd600;"></div><span id="legVacTxt">Vacances scolaires</span></div>
     <button id="legSync" class="leg" type="button" style="display:none;cursor:pointer;border:none;font-family:inherit;color:inherit;text-align:left;" title="Relancer la synchro Google Agenda"><i class="ti ti-refresh" style="font-size:12px;"></i><span id="legSyncTxt"></span></button>
-    <div id="appVersion" style="font-size:10px;color:#fff;text-shadow:0 1px 2px rgba(0,0,0,0.6);text-align:right;padding-right:4px;">Version 2026-11-04 18:32 · <a href="confidentialite.html" style="color:#fff">Confidentialité</a> · <a href="conditions.html" style="color:#fff">Conditions</a></div>
+    <div id="appVersion" style="font-size:10px;color:#fff;text-shadow:0 1px 2px rgba(0,0,0,0.6);text-align:right;padding-right:4px;">Version 2026-11-04 18:41 · <a href="confidentialite.html" style="color:#fff">Confidentialité</a> · <a href="conditions.html" style="color:#fff">Conditions</a></div>
   </div>
   <div id="zbx">
     <button class="zb" id="zi">+</button>
@@ -2825,7 +2825,9 @@ function drawMehari(){
   const sway=Math.sin(camDay*0.55)*0.1;
   const T=tilt;
   const CD=9.2+T*4.5;
-  const CL=0.95+sway;
+  // Vue de face (retour vers le présent) : elle roule vers nous, donc sur sa
+  // droite à elle, c'est-à-dire la voie de gauche à l'écran.
+  const CL=(returnMode?-0.95:0.95)+sway;
   const HW=0.77;
   const P=(lat,h)=>{ const p=proj(CD,CL+lat,h+bob); return [p.x,p.y]; };
   const [,yGround]=P(0,0);

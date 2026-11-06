@@ -474,7 +474,7 @@ canvas#c{position:absolute;inset:0;width:100%;height:100%;touch-action:none;poin
     <div class="leg" id="legWeekend"><div class="legline"></div>Week-end</div>
     <div class="leg" id="legVac"><div class="legline" style="background:#ffd600;"></div><span id="legVacTxt">Vacances scolaires</span></div>
     <button id="legSync" class="leg" type="button" style="display:none;cursor:pointer;border:none;font-family:inherit;color:inherit;text-align:left;" title="Relancer la synchro Google Agenda"><i class="ti ti-refresh" style="font-size:12px;"></i><span id="legSyncTxt"></span></button>
-    <div id="appVersion" style="font-size:10px;color:#fff;text-shadow:0 1px 2px rgba(0,0,0,0.6);text-align:right;padding-right:4px;">Version 2026-11-04 18:41 · <a href="confidentialite.html" style="color:#fff">Confidentialité</a> · <a href="conditions.html" style="color:#fff">Conditions</a></div>
+    <div id="appVersion" style="font-size:10px;color:#fff;text-shadow:0 1px 2px rgba(0,0,0,0.6);text-align:right;padding-right:4px;">Version 2026-11-06 19:00 · <a href="confidentialite.html" style="color:#fff">Confidentialité</a> · <a href="conditions.html" style="color:#fff">Conditions</a></div>
   </div>
   <div id="zbx">
     <button class="zb" id="zi">+</button>
@@ -1353,7 +1353,7 @@ function charImg(kind){
 // Flanc comprimé à 40 % dans les images « doux » : pivot plus discret.
 let mehariTurnState=0;
 // Voiture vue de face, phares allumés : « Retour vers le présent ».
-const MEHARI_FRONT_IMG=new Image(); MEHARI_FRONT_IMG.src='mehari-avant-provisoire.png';
+const MEHARI_FRONT_IMG=new Image(); MEHARI_FRONT_IMG.src='mehari-avant-hd.png';
 const MEHARI_HEADLIGHTS={ x:[0.314,0.672], y:0.507 };
 let returnMode=false; // -1 virage à gauche, 0 tout droit, 1 virage à droite
 
@@ -2915,7 +2915,7 @@ function carSpriteLevels(img){
   const wv=Wc/1.55;
   let plw=wv*0.162, plh=wv*0.101, ply=Hc*0.832-Hc*0.286, plx=Wc/2-plw/2;
   // Vue de face (retour vers le présent) : plaque avant, plus large et plus basse.
-  if(img===MEHARI_FRONT_IMG){ plw=Wc*0.204; plh=Hc*0.052; plx=Wc*0.392; ply=Hc*0.6; }
+  if(img===MEHARI_FRONT_IMG){ plw=Wc*0.212; plh=Hc*0.055; plx=Wc*0.387; ply=Hc*0.597; }
   g.fillStyle='#e9e5d7'; g.fillRect(plx,ply,plw,plh);
   g.fillStyle='#2b241c';
   g.font=`500 ${(plh*0.72).toFixed(1)}px Archivo, Arial, sans-serif`;

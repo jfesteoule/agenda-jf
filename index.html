@@ -474,7 +474,7 @@ canvas#c{position:absolute;inset:0;width:100%;height:100%;touch-action:none;poin
     <div class="leg" id="legWeekend"><div class="legline"></div>Week-end</div>
     <div class="leg" id="legVac"><div class="legline" style="background:#ffd600;"></div><span id="legVacTxt">Vacances scolaires</span></div>
     <button id="legSync" class="leg" type="button" style="display:none;cursor:pointer;border:none;font-family:inherit;color:inherit;text-align:left;" title="Relancer la synchro Google Agenda"><i class="ti ti-refresh" style="font-size:12px;"></i><span id="legSyncTxt"></span></button>
-    <div id="appVersion" style="font-size:10px;color:#fff;text-shadow:0 1px 2px rgba(0,0,0,0.6);text-align:right;padding-right:4px;">Version 2026-11-06 19:03 · <a href="confidentialite.html" style="color:#fff">Confidentialité</a> · <a href="conditions.html" style="color:#fff">Conditions</a></div>
+    <div id="appVersion" style="font-size:10px;color:#fff;text-shadow:0 1px 2px rgba(0,0,0,0.6);text-align:right;padding-right:4px;">Version 2026-11-06 19:36 · <a href="confidentialite.html" style="color:#fff">Confidentialité</a> · <a href="conditions.html" style="color:#fff">Conditions</a></div>
   </div>
   <div id="zbx">
     <button class="zb" id="zi">+</button>
@@ -5476,6 +5476,10 @@ document.getElementById('menu-demo').addEventListener('click', e=>{ e.stopPropag
   const cached = readLiveSyncCache();
   if(/[?&]demo\b/.test(location.search)){
     startDemo();
+  }else if(/[?&]accueil\b/.test(location.search)){
+    // Page de présentation affichée même si l'on est déjà connecté (pour la montrer).
+    applyEventsData([]);
+    showWelcome(true);
   }else if(cached && cached.profile){
     applyCachedSync(cached);
   }else{

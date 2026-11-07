@@ -20,7 +20,7 @@
 <body>
 <main>
 <header><img src="logo/logo-192.png" alt=""><h1>Règles de confidentialité</h1></header>
-<p class="muted">Application « Route du temps » — dernière mise à jour : 28 octobre 2026</p>
+<p class="muted">Application « Route du temps » — dernière mise à jour : 7 novembre 2026</p>
 
 <p>« Route du temps » est une application web personnelle qui affiche votre agenda Google sous la forme d'une route. Elle fonctionne entièrement dans votre navigateur : <strong>il n'existe aucun serveur propre à l'application</strong>, et <strong>aucune donnée issue de votre compte Google n'est envoyée ailleurs que chez Google</strong>.</p>
 
@@ -45,6 +45,30 @@
   <li>Pour retrouver les mêmes réglages sur vos autres appareils, une copie de vos réglages (agendas affichés et leurs noms, affichage du week-end, zone de vacances scolaires) est enregistrée dans <strong>votre propre Google Drive</strong>, fichier « Route du temps/reglages.json », grâce à l'autorisation <code>drive.file</code>. Ce fichier ne contient aucun événement.</li>
   <li>Le jeton d'accès Google reste en mémoire le temps de la session et n'est jamais enregistré ni transmis à un tiers.</li>
   <li>Aucun cookie publicitaire, aucun outil de mesure d'audience.</li>
+</ul>
+
+<h2>Protection des données</h2>
+<p>Les données de votre compte Google (événements, tâches, liste d'agendas, profil) sont protégées par les mesures suivantes :</p>
+<ul>
+  <li><strong>Chiffrement en transit</strong> : l'application est servie uniquement en HTTPS, et tous les échanges avec les API Google se font en HTTPS (TLS). Aucune donnée ne circule en clair.</li>
+  <li><strong>Aucun serveur, aucune base de données</strong> : les données sont lues directement par votre navigateur auprès de Google. Elles ne sont jamais copiées sur un serveur de l'application ; le développeur n'y a <strong>aucun accès</strong>.</li>
+  <li><strong>Jeton d'accès protégé</strong> : le jeton OAuth Google est délivré par Google Identity Services, reste uniquement en mémoire (jamais écrit sur le disque ni dans le stockage du navigateur), expire au bout d'une heure et est révoqué auprès de Google lors de la déconnexion.</li>
+  <li><strong>Stockage local isolé</strong> : le cache des événements et des tâches est conservé dans le stockage local du navigateur, accessible uniquement au domaine routedutemps.fr (politique de même origine). Il est entièrement effacé à la déconnexion et peut aussi l'être en vidant les données du site dans le navigateur.</li>
+  <li><strong>Moindre privilège</strong> : l'application ne demande que les autorisations nécessaires. Les tâches et la liste d'agendas sont en lecture seule ; Google Drive est limité aux seuls fichiers créés ou choisis via l'application (<code>drive.file</code>) ; les événements ne sont modifiés que lorsque vous créez vous-même un événement.</li>
+  <li><strong>Aucun tiers</strong> : aucun outil d'analyse d'audience, aucune publicité, aucun script tiers ne reçoit de données Google. Les données Google ne sont jamais utilisées pour entraîner des modèles d'intelligence artificielle ou d'apprentissage automatique.</li>
+  <li><strong>Conservation limitée</strong> : rien n'est conservé en dehors de votre appareil et de votre propre compte Google. Le cache local disparaît à la déconnexion ; le fichier de réglages et les photos restent dans votre Drive jusqu'à ce que vous les supprimiez.</li>
+  <li><strong>Code et hébergement</strong> : le code est hébergé sur GitHub Pages (HTTPS) avec protection du compte par authentification à deux facteurs ; tout problème de sécurité peut être signalé à l'adresse de contact ci-dessous.</li>
+</ul>
+
+<h2>Summary in English — Data protection</h2>
+<ul>
+  <li><strong>Encryption in transit</strong>: the app is served over HTTPS only, and every request to Google APIs uses HTTPS/TLS.</li>
+  <li><strong>No backend</strong>: Google user data (calendar events, tasks, calendar list, basic profile) is fetched by the user's browser directly from Google APIs. It is never sent to, stored on, or accessible by any server of the developer.</li>
+  <li><strong>Token handling</strong>: the OAuth access token (Google Identity Services) is kept in memory only, never persisted, expires after one hour and is revoked on sign-out.</li>
+  <li><strong>Local cache</strong>: a cache of events/tasks is kept in the browser's local storage, isolated to the routedutemps.fr origin, and fully erased on sign-out.</li>
+  <li><strong>Least privilege</strong>: tasks and calendar list are read-only; Drive access is limited to files created or picked through the app (drive.file); events are only created when the user explicitly submits the "Add an event" form.</li>
+  <li><strong>No sharing, no AI training</strong>: no analytics, no ads, no third party receives Google user data, and the data is never used to train AI/ML models. Use of Google user data complies with the Google API Services User Data Policy, including the Limited Use requirements.</li>
+  <li><strong>Deletion</strong>: signing out erases all locally stored data; access can be revoked at any time at myaccount.google.com/permissions.</li>
 </ul>
 
 <h2>Partage avec des tiers</h2>
@@ -72,7 +96,7 @@
 </ul>
 
 <h2>Contact</h2>
-<p>Pour toute question, écrivez à l'adresse de contact indiquée sur l'écran de connexion Google de l'application.</p>
+<p>Pour toute question ou pour signaler un problème de sécurité : <a href="mailto:jf.esteoule@gmail.com">jf.esteoule@gmail.com</a>.</p>
 
 <p class="muted"><a href="./">Retour à l'application</a> · <a href="conditions.html">Conditions d'utilisation</a></p>
 </main>
